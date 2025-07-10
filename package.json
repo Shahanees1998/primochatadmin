@@ -9,9 +9,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
     "prettier": "prettier --write .",
     "prisma:generate": "yarn prisma generate",
     "prepare": "husky install"
@@ -54,7 +53,6 @@
     "quill-image-resize": "^3.0.9",
     "quill-image-resize-module": "^3.0.0",
     "quill-image-resize-module-react": "^3.0.0",
-    "quill-image-uploader": "^1.3.0",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",
     "react-csv": "^2.2.2",
@@ -88,8 +86,6 @@
     "@types/shortid": "^0.0.29",
     "@types/uuid": "^9.0.8",
     "dotenv-cli": "^6.0.0",
-    "eslint": "8.26.0",
-    "eslint-config-next": "^14.0.4",
     "file-loader": "^6.2.0",
     "husky": "^8.0.1",
     "prettier": "^2.7.1",
