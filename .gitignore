@@ -35,6 +35,10 @@ yarn-error.log*
 .env.production
 .env.test
 
+# backup scripts (may contain sensitive data)
+backupScript.sh
+*.sh
+
 # vercel
 .vercel
 
