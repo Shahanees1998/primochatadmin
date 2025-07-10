@@ -1,0 +1,296 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  email             String   @unique
+  password          String
+  firstName         String
+  lastName          String
+  phone             String?
+  role              UserRole @default(MEMBER)
+  status            UserStatus @default(PENDING)
+  profileImage      String?
+  membershipNumber  String?  @unique
+  joinDate          DateTime?
+  lastLogin         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  events            EventMember[]
+  calendarEvents    CalendarEvent[]
+  festiveBoardItems FestiveBoardItem[]
+  notifications     Notification[]
+  messages          Message[]
+  supportRequests   SupportRequest[]
+  documents         Document[]
+  phoneBookEntry    PhoneBookEntry?
+
+  @@map("users")
+}
+
+model Event {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  category    EventCategory
+  type        EventType
+  isRSVP      Boolean  @default(false)
+  maxAttendees Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  members     EventMember[]
+  festiveBoard FestiveBoard?
+
+  @@map("events")
+}
+
+model EventMember {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  eventId   String   @db.ObjectId
+  userId    String   @db.ObjectId
+  status    RSVPStatus @default(PENDING)
+  createdAt DateTime @default(now())
+
+  // Relations
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@map("event_members")
+}
+
+model CalendarEvent {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  isPersonal  Boolean  @default(true)
+  eventId     String?  @db.ObjectId // If linked to a main event
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("calendar_events")
+}
+
+model FestiveBoard {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  eventId     String   @db.ObjectId @unique
+  title       String
+  description String?
+  date        DateTime
+  location    String?
+  maxParticipants Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items       FestiveBoardItem[]
+
+  @@map("festive_boards")
+}
+
+model FestiveBoardItem {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  festiveBoardId String  @db.ObjectId
+  userId        String   @db.ObjectId
+  category      ItemCategory
+  name          String
+  description   String?
+  isAssigned    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  festiveBoard  FestiveBoard @relation(fields: [festiveBoardId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("festive_board_items")
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean  @default(false)
+  isArchived Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Document {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  fileName    String
+  fileUrl     String
+  fileType    String
+  fileSize    Int
+  category    String?
+  tags        String[]
+  permissions DocumentPermission @default(MEMBER_ONLY)
+  uploadedBy  String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  senderId  String   @db.ObjectId
+  content   String
+  type      MessageType @default(TEXT)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model SupportRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  subject     String
+  message     String
+  status      SupportStatus @default(OPEN)
+  priority    Priority @default(MEDIUM)
+  adminResponse String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("support_requests")
+}
+
+model PhoneBookEntry {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId @unique
+  email     String
+  phone     String?
+  address   String?
+  isPublic  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("phone_book_entries")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum EventCategory {
+  REGULAR_MEETING
+  DISTRICT
+  EMERGENT
+  PRACTICE
+  CGP
+  SOCIAL
+}
+
+enum EventType {
+  REGULAR
+  SOCIAL
+  DISTRICT
+  EMERGENT
+}
+
+enum RSVPStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  MAYBE
+}
+
+enum ItemCategory {
+  DESSERT
+  SIDES
+  DRINKS
+  MAIN_COURSE
+}
+
+enum NotificationType {
+  EVENT_UPDATE
+  FESTIVE_BOARD_UPDATE
+  DOCUMENT_UPLOAD
+  CHAT_MESSAGE
+  BROADCAST
+  SUPPORT_RESPONSE
+}
+
+enum DocumentPermission {
+  PUBLIC
+  MEMBER_ONLY
+  ADMIN_ONLY
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+}
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
