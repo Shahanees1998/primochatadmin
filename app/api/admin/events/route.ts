@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
     const type = searchParams.get('type') || '';
+    const sortField = searchParams.get('sortField');
+    const sortOrder = searchParams.get('sortOrder');
 
     const skip = (page - 1) * limit;
 
@@ -30,6 +32,14 @@ export async function GET(request: NextRequest) {
 
     if (type) {
       where.type = type;
+    }
+
+    // Build orderBy clause
+    let orderBy: any = { startDate: 'desc' };
+    if (sortField) {
+      orderBy = {};
+      // sortOrder: 1 = asc, -1 = desc
+      orderBy[sortField] = sortOrder === '1' ? 'asc' : 'desc';
     }
 
     // Get events with pagination
@@ -58,7 +68,7 @@ export async function GET(request: NextRequest) {
         },
         skip,
         take: limit,
-        orderBy: { startDate: 'desc' },
+        orderBy,
       }),
       prisma.event.count({ where }),
     ]);
@@ -69,7 +79,7 @@ export async function GET(request: NextRequest) {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (error) {

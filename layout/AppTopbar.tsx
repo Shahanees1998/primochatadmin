@@ -35,7 +35,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
 
             <div className="topbar-end">
                 <ul className="topbar-menu">
-                    <li className="topbar-search">
+                    {/* <li className="topbar-search">
                         <span className="p-input-icon-left">
                             <i className="pi pi-search"></i>
                             <InputText
@@ -55,7 +55,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                             className="flex-shrink-0"
                             onClick={onConfigButtonClick}
                         ></Button>
-                    </li>
+                    </li> */}
                     <li className="topbar-profile">
                         <button
                             type="button"

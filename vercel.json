@@ -3,6 +3,6 @@
   "installCommand": "yarn install",
   "framework": "nextjs",
   "env": {
-    "DATABASE_URL": "mongodb+srv://anees:devh00d@2022@cluster0.z322glh.mongodb.net/"
+    "DATABASE_URL": "mongodb+srv://AbdulBasit:WLK0OiPod2agOdNf@cluster0.jcpue.mongodb.net/primochatadmin?retryWrites=true&w=majority"
   }
 } 
