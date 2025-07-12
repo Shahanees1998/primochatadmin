@@ -13,6 +13,8 @@ import { InputTextarea } from "primereact/inputtextarea";
 import { Toast } from "primereact/toast";
 import { FilterMatchMode } from "primereact/api";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/apiClient";
+import { Skeleton } from "primereact/skeleton";
 
 interface SupportRequest {
     id: string;
@@ -52,12 +54,21 @@ export default function SupportPage() {
         priority: { value: null, matchMode: FilterMatchMode.EQUALS },
     });
     const [showResponseDialog, setShowResponseDialog] = useState(false);
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
     const [responseForm, setResponseForm] = useState<SupportFormData>({
         status: "OPEN",
         priority: "MEDIUM",
         adminResponse: "",
     });
+    const [createForm, setCreateForm] = useState({
+        userId: "",
+        subject: "",
+        message: "",
+        priority: "MEDIUM",
+    });
+    const [users, setUsers] = useState<any[]>([]);
+    const [usersLoading, setUsersLoading] = useState(false);
     const toast = useRef<Toast>(null);
 
     const statusOptions = [
@@ -76,39 +87,48 @@ export default function SupportPage() {
 
     useEffect(() => {
         loadSupportRequests();
+        loadUsers();
     }, [currentPage, rowsPerPage]);
 
     const loadSupportRequests = async () => {
         setLoading(true);
         try {
-            // Simulate API call
-            const mockRequests: SupportRequest[] = Array.from({ length: 30 }, (_, i) => ({
-                id: `request-${i + 1}`,
-                userId: `user-${(i % 15) + 1}`,
-                subject: `Support Request ${i + 1}`,
-                message: `This is the message content for support request ${i + 1}. User is experiencing issues with ${i % 3 === 0 ? 'login' : i % 3 === 1 ? 'event registration' : 'document access'}.`,
-                status: i % 4 === 0 ? "OPEN" : i % 4 === 1 ? "IN_PROGRESS" : i % 4 === 2 ? "RESOLVED" : "CLOSED",
-                priority: i % 4 === 0 ? "LOW" : i % 4 === 1 ? "MEDIUM" : i % 4 === 2 ? "HIGH" : "URGENT",
-                adminResponse: i > 20 ? `Admin response for request ${i + 1}` : undefined,
-                createdAt: new Date(2024, 0, i + 1).toISOString(),
-                updatedAt: new Date(2024, 0, i + 1).toISOString(),
-                user: {
-                    firstName: `User${(i % 15) + 1}`,
-                    lastName: `Last${(i % 15) + 1}`,
-                    email: `user${(i % 15) + 1}@example.com`,
-                },
-            }));
+            const response = await apiClient.getSupportRequests({
+                page: currentPage,
+                limit: rowsPerPage,
+            });
 
-            const startIndex = (currentPage - 1) * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            const paginatedRequests = mockRequests.slice(startIndex, endIndex);
+            if (response.error) {
+                throw new Error(response.error);
+            }
 
-            setRequests(paginatedRequests);
-            setTotalRecords(mockRequests.length);
+            setRequests(response.data?.supportRequests || []);
+            setTotalRecords(response.data?.pagination?.total || 0);
         } catch (error) {
             showToast("error", "Error", "Failed to load support requests");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadUsers = async () => {
+        setUsersLoading(true);
+        try {
+            const response = await apiClient.getUsers({
+                page: 1,
+                limit: 100,
+                status: 'ACTIVE'
+            });
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            setUsers(response.data?.users || []);
+        } catch (error) {
+            showToast("error", "Error", "Failed to load users");
+        } finally {
+            setUsersLoading(false);
         }
     };
 
@@ -134,20 +154,83 @@ export default function SupportPage() {
         setShowResponseDialog(true);
     };
 
+    const openCreateDialog = () => {
+        setCreateForm({
+            userId: "",
+            subject: "",
+            message: "",
+            priority: "MEDIUM",
+        });
+        setShowCreateDialog(true);
+    };
+
     const saveResponse = async () => {
         if (!selectedRequest) return;
 
         try {
-            const updatedRequests = requests.map(req =>
+            const response = await apiClient.updateSupportRequest(selectedRequest.id, {
+                status: responseForm.status,
+                priority: responseForm.priority,
+                adminResponse: responseForm.adminResponse,
+            });
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            // Update local state
+            setRequests(prev => prev.map(req =>
                 req.id === selectedRequest.id
                     ? { ...req, ...responseForm, updatedAt: new Date().toISOString() }
                     : req
-            );
-            setRequests(updatedRequests);
+            ));
+
             showToast("success", "Success", "Response saved successfully");
             setShowResponseDialog(false);
         } catch (error) {
             showToast("error", "Error", "Failed to save response");
+        }
+    };
+
+    const createSupportRequest = async () => {
+        if (!createForm.userId || !createForm.subject || !createForm.message) {
+            showToast("error", "Error", "Please fill in all required fields");
+            return;
+        }
+
+        try {
+            const response = await apiClient.createSupportRequest({
+                userId: createForm.userId,
+                subject: createForm.subject,
+                message: createForm.message,
+                priority: createForm.priority,
+            });
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            showToast("success", "Success", "Support request created successfully");
+            setShowCreateDialog(false);
+            loadSupportRequests(); // Reload the list
+        } catch (error) {
+            showToast("error", "Error", "Failed to create support request");
+        }
+    };
+
+    const deleteSupportRequest = async (requestId: string) => {
+        try {
+            const response = await apiClient.deleteSupportRequest(requestId);
+            
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            setRequests(prev => prev.filter(req => req.id !== requestId));
+            setTotalRecords(prev => prev - 1);
+            showToast("success", "Success", "Support request deleted successfully");
+        } catch (error) {
+            showToast("error", "Error", "Failed to delete support request");
         }
     };
 
@@ -199,6 +282,18 @@ export default function SupportPage() {
                         showToast("info", "Info", "Email functionality would be implemented here");
                     }}
                 />
+                <Button
+                    icon="pi pi-trash"
+                    size="small"
+                    text
+                    severity="danger"
+                    tooltip="Delete"
+                    onClick={() => {
+                        if (confirm("Are you sure you want to delete this support request?")) {
+                            deleteSupportRequest(rowData.id);
+                        }
+                    }}
+                />
             </div>
         );
     };
@@ -231,7 +326,7 @@ export default function SupportPage() {
         <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
             <div className="flex flex-column">
                 <h2 className="text-2xl font-bold m-0">Support Requests</h2>
-                <span className="text-600">Manage and respond to member support requests</span>
+                <span className="text-600">Manage and respond to user support requests</span>
             </div>
             <div className="flex gap-2">
                 <span className="p-input-icon-left">
@@ -244,16 +339,32 @@ export default function SupportPage() {
                     />
                 </span>
                 <Button
-                    label="Export"
-                    icon="pi pi-download"
-                    severity="secondary"
-                    onClick={() => {
-                        showToast("info", "Info", "Export functionality would be implemented here");
-                    }}
+                    label="Create Request"
+                    icon="pi pi-plus"
+                    onClick={openCreateDialog}
+                    severity="success"
                 />
             </div>
         </div>
     );
+
+    if (loading) {
+        return (
+            <div className="grid">
+                <div className="col-12">
+                    <Card>
+                        <div className="flex flex-column gap-3">
+                            <Skeleton height="2rem" width="200px" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="grid">
@@ -278,19 +389,19 @@ export default function SupportPage() {
                         emptyMessage="No support requests found."
                         responsiveLayout="scroll"
                     >
-                        <Column field="subject" header="Subject" sortable style={{ minWidth: "200px" }} />
-                        <Column field="user" header="User" body={userBodyTemplate} style={{ minWidth: "150px" }} />
-                        <Column field="message" header="Message" body={messageBodyTemplate} style={{ minWidth: "250px" }} />
+                        <Column field="user" header="User" body={userBodyTemplate} style={{ minWidth: "200px" }} />
+                        <Column field="subject" header="Subject" style={{ minWidth: "200px" }} />
+                        <Column field="message" header="Message" body={messageBodyTemplate} style={{ minWidth: "300px" }} />
                         <Column field="status" header="Status" body={(rowData) => (
-                            <Tag value={rowData.status.replace("_", " ")} severity={getStatusSeverity(rowData.status)} />
-                        )} sortable style={{ minWidth: "120px" }} />
+                            <Tag value={rowData.status.replace('_', ' ')} severity={getStatusSeverity(rowData.status)} />
+                        )} style={{ minWidth: "120px" }} />
                         <Column field="priority" header="Priority" body={(rowData) => (
                             <Tag value={rowData.priority} severity={getPrioritySeverity(rowData.priority)} />
-                        )} sortable style={{ minWidth: "120px" }} />
+                        )} style={{ minWidth: "120px" }} />
                         <Column field="createdAt" header="Created" body={(rowData) => (
                             new Date(rowData.createdAt).toLocaleDateString()
                         )} sortable style={{ minWidth: "120px" }} />
-                        <Column body={actionBodyTemplate} style={{ width: "150px" }} />
+                        <Column body={actionBodyTemplate} style={{ width: "200px" }} />
                     </DataTable>
                 </Card>
             </div>
@@ -298,14 +409,13 @@ export default function SupportPage() {
             {/* Response Dialog */}
             <Dialog
                 visible={showResponseDialog}
-                style={{ width: "700px" }}
-                header={`Respond to: ${selectedRequest?.subject}`}
+                style={{ width: "600px" }}
+                header="Respond to Support Request"
                 modal
-                className="p-fluid"
                 onHide={() => setShowResponseDialog(false)}
                 footer={
                     <div className="flex gap-2 justify-content-end">
-                        <Button label="Cancel" icon="pi pi-times" text onClick={() => setShowResponseDialog(false)} />
+                        <Button label="Cancel" icon="pi pi-times" onClick={() => setShowResponseDialog(false)} text />
                         <Button label="Save Response" icon="pi pi-check" onClick={saveResponse} />
                     </div>
                 }
@@ -313,49 +423,100 @@ export default function SupportPage() {
                 {selectedRequest && (
                     <div className="grid">
                         <div className="col-12">
-                            <h4>Original Request</h4>
-                            <div className="p-3 surface-100 border-round">
-                                <p><strong>From:</strong> {selectedRequest.user?.firstName} {selectedRequest.user?.lastName}</p>
-                                <p><strong>Subject:</strong> {selectedRequest.subject}</p>
-                                <p><strong>Message:</strong></p>
-                                <p className="text-600">{selectedRequest.message}</p>
-                            </div>
+                            <h4>Request Details</h4>
+                            <p><strong>Subject:</strong> {selectedRequest.subject}</p>
+                            <p><strong>Message:</strong> {selectedRequest.message}</p>
                         </div>
-
-                        <div className="col-12 md:col-6">
-                            <label htmlFor="status" className="font-bold">Status</label>
+                        <div className="col-6">
+                            <label className="block text-sm font-medium mb-2">Status</label>
                             <Dropdown
-                                id="status"
                                 value={responseForm.status}
                                 options={statusOptions}
-                                onChange={(e) => setResponseForm({ ...responseForm, status: e.value })}
+                                onChange={(e) => setResponseForm(prev => ({ ...prev, status: e.value }))}
                                 placeholder="Select Status"
+                                className="w-full"
                             />
                         </div>
-
-                        <div className="col-12 md:col-6">
-                            <label htmlFor="priority" className="font-bold">Priority</label>
+                        <div className="col-6">
+                            <label className="block text-sm font-medium mb-2">Priority</label>
                             <Dropdown
-                                id="priority"
                                 value={responseForm.priority}
                                 options={priorityOptions}
-                                onChange={(e) => setResponseForm({ ...responseForm, priority: e.value })}
+                                onChange={(e) => setResponseForm(prev => ({ ...prev, priority: e.value }))}
                                 placeholder="Select Priority"
+                                className="w-full"
                             />
                         </div>
-
                         <div className="col-12">
-                            <label htmlFor="adminResponse" className="font-bold">Admin Response</label>
+                            <label className="block text-sm font-medium mb-2">Admin Response</label>
                             <InputTextarea
-                                id="adminResponse"
                                 value={responseForm.adminResponse}
-                                onChange={(e) => setResponseForm({ ...responseForm, adminResponse: e.target.value })}
+                                onChange={(e) => setResponseForm(prev => ({ ...prev, adminResponse: e.target.value }))}
                                 rows={5}
-                                placeholder="Enter your response to the user..."
+                                placeholder="Enter your response..."
+                                className="w-full"
                             />
                         </div>
                     </div>
                 )}
+            </Dialog>
+
+            {/* Create Dialog */}
+            <Dialog
+                visible={showCreateDialog}
+                style={{ width: "600px" }}
+                header="Create Support Request"
+                modal
+                onHide={() => setShowCreateDialog(false)}
+                footer={
+                    <div className="flex gap-2 justify-content-end">
+                        <Button label="Cancel" icon="pi pi-times" onClick={() => setShowCreateDialog(false)} text />
+                        <Button label="Create Request" icon="pi pi-check" onClick={createSupportRequest} />
+                    </div>
+                }
+            >
+                <div className="grid">
+                    <div className="col-12">
+                        <label className="block text-sm font-medium mb-2">User</label>
+                        <Dropdown
+                            value={createForm.userId}
+                            options={users.map(user => ({ label: `${user.firstName} ${user.lastName}`, value: user.id }))}
+                            onChange={(e) => setCreateForm(prev => ({ ...prev, userId: e.value }))}
+                            placeholder="Select User"
+                            className="w-full"
+                            loading={usersLoading}
+                        />
+                    </div>
+                    <div className="col-12">
+                        <label className="block text-sm font-medium mb-2">Subject</label>
+                        <InputText
+                            value={createForm.subject}
+                            onChange={(e) => setCreateForm(prev => ({ ...prev, subject: e.target.value }))}
+                            placeholder="Enter subject..."
+                            className="w-full"
+                        />
+                    </div>
+                    <div className="col-6">
+                        <label className="block text-sm font-medium mb-2">Priority</label>
+                        <Dropdown
+                            value={createForm.priority}
+                            options={priorityOptions}
+                            onChange={(e) => setCreateForm(prev => ({ ...prev, priority: e.value }))}
+                            placeholder="Select Priority"
+                            className="w-full"
+                        />
+                    </div>
+                    <div className="col-12">
+                        <label className="block text-sm font-medium mb-2">Message</label>
+                        <InputTextarea
+                            value={createForm.message}
+                            onChange={(e) => setCreateForm(prev => ({ ...prev, message: e.target.value }))}
+                            rows={5}
+                            placeholder="Enter message..."
+                            className="w-full"
+                        />
+                    </div>
+                </div>
             </Dialog>
 
             <Toast ref={toast} />

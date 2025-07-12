@@ -106,6 +106,11 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-bell",
                     to: "/admin/communications/notifications",
                 },
+                {
+                    label: "Phone Book",
+                    icon: "pi pi-fw pi-phone",
+                    to: "/admin/phonebook",
+                },
             ],
         },
         {
@@ -129,11 +134,7 @@ const AppMenu = () => {
                 },
             ],
         },
-        {
-            label: "Phone Book",
-            icon: "pi pi-phone",
-            to: "/admin/phonebook",
-        },
+
         {
             label: "Settings",
             icon: "pi pi-cog",

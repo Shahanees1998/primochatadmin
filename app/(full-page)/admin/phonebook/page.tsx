@@ -12,41 +12,32 @@ import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { FilterMatchMode } from "primereact/api";
+import { Skeleton } from "primereact/skeleton";
 import { useRouter } from "next/navigation";
 
 interface PhoneBookEntry {
     id: string;
     userId: string;
-    firstName: string;
-    lastName: string;
     email: string;
-    phone: string;
-    mobile?: string;
+    phone?: string;
     address?: string;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-    country?: string;
     isPublic: boolean;
     createdAt: string;
     updatedAt: string;
     user?: {
+        firstName: string;
+        lastName: string;
+        email: string;
         role: string;
         status: string;
     };
 }
 
 interface PhoneBookFormData {
-    firstName: string;
-    lastName: string;
+    userId: string;
     email: string;
     phone: string;
-    mobile: string;
     address: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
     isPublic: boolean;
 }
 
@@ -67,33 +58,39 @@ export default function PhoneBookPage() {
     const [showEntryDialog, setShowEntryDialog] = useState(false);
     const [editingEntry, setEditingEntry] = useState<PhoneBookEntry | null>(null);
     const [entryForm, setEntryForm] = useState<PhoneBookFormData>({
-        firstName: "",
-        lastName: "",
+        userId: "",
         email: "",
         phone: "",
-        mobile: "",
         address: "",
-        city: "",
-        state: "",
-        postalCode: "",
-        country: "",
         isPublic: true,
     });
+    const [users, setUsers] = useState<any[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
     const toast = useRef<Toast>(null);
-
-    const countryOptions = [
-        { label: "United States", value: "US" },
-        { label: "Canada", value: "CA" },
-        { label: "United Kingdom", value: "UK" },
-        { label: "Australia", value: "AU" },
-        { label: "Germany", value: "DE" },
-        { label: "France", value: "FR" },
-        { label: "Other", value: "OTHER" },
-    ];
 
     useEffect(() => {
         loadPhoneBookEntries();
     }, [currentPage, rowsPerPage, globalFilterValue]);
+
+    useEffect(() => {
+        loadUsers();
+    }, []);
+
+    const loadUsers = async () => {
+        setLoadingUsers(true);
+        try {
+            const response = await fetch('/api/admin/users?page=1&limit=100&status=ACTIVE');
+            if (!response.ok) {
+                throw new Error('Failed to fetch users');
+            }
+            const data = await response.json();
+            setUsers(data.users || []);
+        } catch (error) {
+            showToast("error", "Error", "Failed to load users");
+        } finally {
+            setLoadingUsers(false);
+        }
+    };
 
     const loadPhoneBookEntries = async () => {
         setLoading(true);
@@ -135,16 +132,10 @@ export default function PhoneBookPage() {
     const openNewEntryDialog = () => {
         setEditingEntry(null);
         setEntryForm({
-            firstName: "",
-            lastName: "",
+            userId: "",
             email: "",
             phone: "",
-            mobile: "",
             address: "",
-            city: "",
-            state: "",
-            postalCode: "",
-            country: "",
             isPublic: true,
         });
         setShowEntryDialog(true);
@@ -153,16 +144,10 @@ export default function PhoneBookPage() {
     const openEditEntryDialog = (entry: PhoneBookEntry) => {
         setEditingEntry(entry);
         setEntryForm({
-            firstName: entry.firstName,
-            lastName: entry.lastName,
+            userId: entry.userId,
             email: entry.email,
-            phone: entry.phone,
-            mobile: entry.mobile || "",
+            phone: entry.phone || "",
             address: entry.address || "",
-            city: entry.city || "",
-            state: entry.state || "",
-            postalCode: entry.postalCode || "",
-            country: entry.country || "",
             isPublic: entry.isPublic,
         });
         setShowEntryDialog(true);
@@ -213,7 +198,7 @@ export default function PhoneBookPage() {
 
     const confirmDeleteEntry = (entry: PhoneBookEntry) => {
         confirmDialog({
-            message: `Are you sure you want to delete "${entry.firstName} ${entry.lastName}"?`,
+            message: `Are you sure you want to delete "${entry.user?.firstName} ${entry.user?.lastName}"?`,
             header: "Delete Confirmation",
             icon: "pi pi-exclamation-triangle",
             acceptClassName: "p-button-danger",
@@ -278,7 +263,7 @@ export default function PhoneBookPage() {
     const nameBodyTemplate = (rowData: PhoneBookEntry) => {
         return (
             <div>
-                <div className="font-semibold">{`${rowData.firstName} ${rowData.lastName}`}</div>
+                <div className="font-semibold">{`${rowData.user?.firstName} ${rowData.user?.lastName}`}</div>
                 <div className="text-sm text-600">{rowData.email}</div>
             </div>
         );
@@ -288,7 +273,6 @@ export default function PhoneBookPage() {
         return (
             <div>
                 <div className="font-semibold">{rowData.phone}</div>
-                {rowData.mobile && <div className="text-sm text-600">{rowData.mobile}</div>}
             </div>
         );
     };
@@ -297,7 +281,6 @@ export default function PhoneBookPage() {
         return (
             <div>
                 <div className="text-sm">{rowData.address}</div>
-                <div className="text-sm text-600">{`${rowData.city}, ${rowData.state} ${rowData.postalCode}`}</div>
             </div>
         );
     };
@@ -334,6 +317,31 @@ export default function PhoneBookPage() {
         </div>
     );
 
+    if (loading) {
+        return (
+            <div className="grid">
+                <div className="col-12">
+                    <Card>
+                        <div className="flex flex-column gap-3">
+                            <Skeleton height="2rem" width="200px" />
+                            <Skeleton height="1rem" width="300px" />
+                            <div className="flex gap-2">
+                                <Skeleton height="2.5rem" width="200px" />
+                                <Skeleton height="2.5rem" width="120px" />
+                                <Skeleton height="2.5rem" width="100px" />
+                            </div>
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="grid">
             <div className="col-12">
@@ -349,7 +357,6 @@ export default function PhoneBookPage() {
                             setCurrentPage((e.page || 0) + 1);
                             setRowsPerPage(e.rows || 10);
                         }}
-                        loading={loading}
                         filters={filters}
                         filterDisplay="menu"
                         globalFilterFields={["firstName", "lastName", "email", "phone", "city"]}
@@ -357,10 +364,9 @@ export default function PhoneBookPage() {
                         emptyMessage="No phone book entries found."
                         responsiveLayout="scroll"
                     >
-                        <Column field="firstName" header="Name" body={nameBodyTemplate} sortable style={{ minWidth: "200px" }} />
+                        <Column field="user.firstName" header="Name" body={nameBodyTemplate} sortable style={{ minWidth: "200px" }} />
                         <Column field="phone" header="Contact" body={contactBodyTemplate} style={{ minWidth: "150px" }} />
                         <Column field="address" header="Address" body={addressBodyTemplate} style={{ minWidth: "200px" }} />
-                        <Column field="city" header="City" sortable style={{ minWidth: "120px" }} />
                         <Column field="isPublic" header="Public" body={(rowData) => (
                             <Tag value={rowData.isPublic ? "Yes" : "No"} severity={rowData.isPublic ? "success" : "secondary"} />
                         )} style={{ minWidth: "100px" }} />
@@ -388,22 +394,27 @@ export default function PhoneBookPage() {
                 }
             >
                 <div className="grid">
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="firstName" className="font-bold">First Name *</label>
-                        <InputText
-                            id="firstName"
-                            value={entryForm.firstName}
-                            onChange={(e) => setEntryForm({ ...entryForm, firstName: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="lastName" className="font-bold">Last Name *</label>
-                        <InputText
-                            id="lastName"
-                            value={entryForm.lastName}
-                            onChange={(e) => setEntryForm({ ...entryForm, lastName: e.target.value })}
-                            required
+                    <div className="col-12">
+                        <label htmlFor="userId" className="font-bold">User *</label>
+                        <Dropdown
+                            id="userId"
+                            value={entryForm.userId}
+                            options={users.map(user => ({ 
+                                label: `${user.firstName} ${user.lastName} (${user.email})`, 
+                                value: user.id 
+                            }))}
+                            onChange={(e) => {
+                                const selectedUser = users.find(u => u.id === e.value);
+                                setEntryForm({ 
+                                    ...entryForm, 
+                                    userId: e.value,
+                                    email: selectedUser?.email || entryForm.email
+                                });
+                            }}
+                            placeholder="Select User"
+                            loading={loadingUsers}
+                            filter
+                            showClear
                         />
                     </div>
                     <div className="col-12 md:col-6">
@@ -417,30 +428,11 @@ export default function PhoneBookPage() {
                         />
                     </div>
                     <div className="col-12 md:col-6">
-                        <label htmlFor="phone" className="font-bold">Phone *</label>
+                        <label htmlFor="phone" className="font-bold">Phone</label>
                         <InputText
                             id="phone"
                             value={entryForm.phone}
                             onChange={(e) => setEntryForm({ ...entryForm, phone: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="mobile" className="font-bold">Mobile</label>
-                        <InputText
-                            id="mobile"
-                            value={entryForm.mobile}
-                            onChange={(e) => setEntryForm({ ...entryForm, mobile: e.target.value })}
-                        />
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="country" className="font-bold">Country</label>
-                        <Dropdown
-                            id="country"
-                            value={entryForm.country}
-                            options={countryOptions}
-                            onChange={(e) => setEntryForm({ ...entryForm, country: e.value })}
-                            placeholder="Select Country"
                         />
                     </div>
                     <div className="col-12">
@@ -449,30 +441,6 @@ export default function PhoneBookPage() {
                             id="address"
                             value={entryForm.address}
                             onChange={(e) => setEntryForm({ ...entryForm, address: e.target.value })}
-                        />
-                    </div>
-                    <div className="col-12 md:col-4">
-                        <label htmlFor="city" className="font-bold">City</label>
-                        <InputText
-                            id="city"
-                            value={entryForm.city}
-                            onChange={(e) => setEntryForm({ ...entryForm, city: e.target.value })}
-                        />
-                    </div>
-                    <div className="col-12 md:col-4">
-                        <label htmlFor="state" className="font-bold">State</label>
-                        <InputText
-                            id="state"
-                            value={entryForm.state}
-                            onChange={(e) => setEntryForm({ ...entryForm, state: e.target.value })}
-                        />
-                    </div>
-                    <div className="col-12 md:col-4">
-                        <label htmlFor="postalCode" className="font-bold">Postal Code</label>
-                        <InputText
-                            id="postalCode"
-                            value={entryForm.postalCode}
-                            onChange={(e) => setEntryForm({ ...entryForm, postalCode: e.target.value })}
                         />
                     </div>
                     <div className="col-12">

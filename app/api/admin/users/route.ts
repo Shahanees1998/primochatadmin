@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Create new user with default password
+        // Create new user with default password and phonebook entry
         const user = await prisma.user.create({
             data: {
                 firstName,
@@ -122,6 +122,13 @@ export async function POST(request: NextRequest) {
                 status: status || 'PENDING',
                 membershipNumber,
                 joinDate: joinDate ? new Date(joinDate) : null,
+                phoneBookEntry: {
+                    create: {
+                        email,
+                        phone: phone || null,
+                        isPublic: true,
+                    },
+                },
             },
             select: {
                 id: true,

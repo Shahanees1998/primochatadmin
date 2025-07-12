@@ -12,6 +12,7 @@ import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { FilterMatchMode } from "primereact/api";
+import { Skeleton } from "primereact/skeleton";
 import { useRouter } from "next/navigation";
 
 interface Moderator {
@@ -26,6 +27,7 @@ interface Moderator {
         lastName: string;
         email: string;
         role: string;
+        status: string;
     };
 }
 
@@ -45,6 +47,8 @@ export default function ModeratorsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [globalFilterValue, setGlobalFilterValue] = useState("");
+    const [sortField, setSortField] = useState<string | undefined>(undefined);
+    const [sortOrder, setSortOrder] = useState<1 | 0 | -1 | undefined>(undefined);
     const [filters, setFilters] = useState({
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         isActive: { value: null, matchMode: FilterMatchMode.EQUALS },
@@ -57,6 +61,8 @@ export default function ModeratorsPage() {
         assignedAreas: [],
         isActive: true,
     });
+    const [saving, setSaving] = useState(false);
+    const [deleting, setDeleting] = useState<string | null>(null);
     const toast = useRef<Toast>(null);
 
     const permissionOptions = [
@@ -77,34 +83,27 @@ export default function ModeratorsPage() {
 
     useEffect(() => {
         loadModerators();
+    }, [currentPage, rowsPerPage, globalFilterValue, sortField, sortOrder]);
+
+    useEffect(() => {
         loadUsers();
-    }, [currentPage, rowsPerPage]);
+    }, []);
 
     const loadModerators = async () => {
         setLoading(true);
         try {
-            // Simulate API call
-            const mockModerators: Moderator[] = Array.from({ length: 15 }, (_, i) => ({
-                id: `mod-${i + 1}`,
-                userId: `user-${i + 1}`,
-                permissions: i % 3 === 0 ? ["CHAT_MODERATION", "CONTENT_REVIEW"] : i % 3 === 1 ? ["USER_MANAGEMENT", "SUPPORT_REQUESTS"] : ["EVENT_MODERATION"],
-                isActive: i < 12,
-                assignedAreas: i % 4 === 0 ? ["GENERAL_CHAT", "EVENT_DISCUSSIONS"] : i % 4 === 1 ? ["SUPPORT_FORUM"] : i % 4 === 2 ? ["DOCUMENT_COMMENTS"] : ["FESTIVE_BOARD"],
-                createdAt: new Date(2024, 0, i + 1).toISOString(),
-                user: {
-                    firstName: `Moderator${i + 1}`,
-                    lastName: `Last${i + 1}`,
-                    email: `moderator${i + 1}@example.com`,
-                    role: "MEMBER",
-                },
-            }));
-
-            const startIndex = (currentPage - 1) * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            const paginatedModerators = mockModerators.slice(startIndex, endIndex);
-
-            setModerators(paginatedModerators);
-            setTotalRecords(mockModerators.length);
+            const params = new URLSearchParams({
+                page: currentPage.toString(),
+                limit: rowsPerPage.toString(),
+                search: globalFilterValue,
+            });
+            if (sortField) params.append('sortField', sortField);
+            if (sortOrder) params.append('sortOrder', sortOrder === 1 ? 'asc' : 'desc');
+            const response = await fetch(`/api/admin/moderators?${params}`);
+            if (!response.ok) throw new Error('Failed to fetch moderators');
+            const data = await response.json();
+            setModerators(data.moderators);
+            setTotalRecords(data.pagination.total);
         } catch (error) {
             showToast("error", "Error", "Failed to load moderators");
         } finally {
@@ -114,15 +113,10 @@ export default function ModeratorsPage() {
 
     const loadUsers = async () => {
         try {
-            // Simulate loading users for dropdown
-            const mockUsers = Array.from({ length: 20 }, (_, i) => ({
-                id: `user-${i + 1}`,
-                firstName: `User${i + 1}`,
-                lastName: `Last${i + 1}`,
-                email: `user${i + 1}@example.com`,
-                role: i < 5 ? "ADMIN" : "MEMBER",
-            }));
-            setUsers(mockUsers);
+            const response = await fetch('/api/admin/users?page=1&limit=100&status=ACTIVE');
+            if (!response.ok) throw new Error('Failed to fetch users');
+            const data = await response.json();
+            setUsers(data.users || []);
         } catch (error) {
             showToast("error", "Error", "Failed to load users");
         }
@@ -130,10 +124,8 @@ export default function ModeratorsPage() {
 
     const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        let _filters = { ...filters };
-        (_filters["global"] as any).value = value;
-        setFilters(_filters);
         setGlobalFilterValue(value);
+        setCurrentPage(1);
     };
 
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {
@@ -167,29 +159,38 @@ export default function ModeratorsPage() {
             showToast("error", "Error", "Please select a user and at least one permission");
             return;
         }
-
+        
+        setSaving(true);
         try {
             if (editingModerator) {
-                const updatedModerators = moderators.map(mod =>
-                    mod.id === editingModerator.id
-                        ? { ...mod, ...moderatorForm }
-                        : mod
-                );
-                setModerators(updatedModerators);
+                // Update
+                const response = await fetch(`/api/admin/moderators`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: editingModerator.id,
+                        ...moderatorForm,
+                    }),
+                });
+                if (!response.ok) throw new Error('Failed to update moderator');
                 showToast("success", "Success", "Moderator updated successfully");
             } else {
-                const newModerator: Moderator = {
-                    id: `mod-${Date.now()}`,
-                    ...moderatorForm,
-                    createdAt: new Date().toISOString(),
-                };
-                setModerators([newModerator, ...moderators]);
-                setTotalRecords(prev => prev + 1);
+                // Create
+                const response = await fetch(`/api/admin/moderators`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(moderatorForm),
+                });
+                if (!response.ok) throw new Error('Failed to add moderator');
                 showToast("success", "Success", "Moderator added successfully");
             }
             setShowModeratorDialog(false);
+            await loadModerators();
         } catch (error) {
+            console.error('Error saving moderator:', error);
             showToast("error", "Error", "Failed to save moderator");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -198,23 +199,29 @@ export default function ModeratorsPage() {
             message: `Are you sure you want to remove "${moderator.user?.firstName} ${moderator.user?.lastName}" as a moderator?`,
             header: "Remove Moderator",
             icon: "pi pi-exclamation-triangle",
-            acceptClassName: "p-button-danger",
             accept: () => deleteModerator(moderator.id),
         });
     };
 
     const deleteModerator = async (moderatorId: string) => {
+        setDeleting(moderatorId);
         try {
-            const updatedModerators = moderators.filter(mod => mod.id !== moderatorId);
-            setModerators(updatedModerators);
-            setTotalRecords(prev => prev - 1);
-            showToast("success", "Success", "Moderator removed successfully");
+            const response = await fetch(`/api/admin/moderators/${moderatorId}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error('Failed to delete moderator');
+            showToast("success", "Success", "Moderator deleted successfully");
+            await loadModerators();
         } catch (error) {
-            showToast("error", "Error", "Failed to remove moderator");
+            console.error('Error deleting moderator:', error);
+            showToast("error", "Error", "Failed to delete moderator");
+        } finally {
+            setDeleting(null);
         }
     };
 
     const actionBodyTemplate = (rowData: Moderator) => {
+        const isDeleting = deleting === rowData.id;
         return (
             <div className="flex gap-2">
                 <Button
@@ -222,16 +229,19 @@ export default function ModeratorsPage() {
                     size="small"
                     text
                     severity="secondary"
-                    tooltip="Edit Moderator"
+                    tooltip="Edit"
                     onClick={() => openEditModeratorDialog(rowData)}
+                    disabled={isDeleting}
                 />
                 <Button
-                    icon="pi pi-trash"
+                    icon={isDeleting ? "pi pi-spinner pi-spin" : "pi pi-trash"}
                     size="small"
                     text
                     severity="danger"
-                    tooltip="Remove Moderator"
+                    tooltip="Delete"
                     onClick={() => confirmDeleteModerator(rowData)}
+                    loading={isDeleting}
+                    disabled={isDeleting}
                 />
             </div>
         );
@@ -292,6 +302,7 @@ export default function ModeratorsPage() {
                         onChange={onGlobalFilterChange}
                         placeholder="Search moderators..."
                         className="w-full"
+                        disabled={loading}
                     />
                 </span>
                 <Button
@@ -299,10 +310,35 @@ export default function ModeratorsPage() {
                     icon="pi pi-user-plus"
                     onClick={openNewModeratorDialog}
                     severity="success"
+                    disabled={saving}
                 />
             </div>
         </div>
     );
+
+    if (loading) {
+        return (
+            <div className="grid">
+                <div className="col-12">
+                    <Card>
+                        <div className="flex flex-column gap-3">
+                            <Skeleton height="2rem" width="200px" />
+                            <Skeleton height="1rem" width="300px" />
+                            <div className="flex gap-2">
+                                <Skeleton height="2.5rem" width="200px" />
+                                <Skeleton height="2.5rem" width="120px" />
+                            </div>
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="grid">
@@ -319,7 +355,12 @@ export default function ModeratorsPage() {
                             setCurrentPage((e.page || 0) + 1);
                             setRowsPerPage(e.rows || 10);
                         }}
-                        loading={loading}
+                        onSort={(e) => {
+                            setSortField(e.sortField);
+                            setSortOrder((e.sortOrder ?? 0) as 1 | 0 | -1);
+                        }}
+                        sortField={sortField}
+                        sortOrder={sortOrder}
                         filters={filters}
                         filterDisplay="menu"
                         globalFilterFields={["user.firstName", "user.lastName", "user.email"]}
@@ -351,8 +392,20 @@ export default function ModeratorsPage() {
                 onHide={() => setShowModeratorDialog(false)}
                 footer={
                     <div className="flex gap-2 justify-content-end">
-                        <Button label="Cancel" icon="pi pi-times" text onClick={() => setShowModeratorDialog(false)} />
-                        <Button label="Save" icon="pi pi-check" onClick={saveModerator} />
+                        <Button 
+                            label="Cancel" 
+                            icon="pi pi-times" 
+                            text 
+                            onClick={() => setShowModeratorDialog(false)}
+                            disabled={saving}
+                        />
+                        <Button 
+                            label="Save" 
+                            icon="pi pi-check" 
+                            onClick={saveModerator}
+                            loading={saving}
+                            disabled={saving}
+                        />
                     </div>
                 }
             >
@@ -362,11 +415,14 @@ export default function ModeratorsPage() {
                         <Dropdown
                             id="userId"
                             value={moderatorForm.userId}
-                            options={users}
-                            optionLabel="firstName"
-                            optionValue="id"
+                            options={users.map(user => ({
+                                label: `${user.firstName} ${user.lastName} (${user.email})`,
+                                value: user.id
+                            }))}
                             onChange={(e) => setModeratorForm({ ...moderatorForm, userId: e.value })}
                             placeholder="Select User"
+                            filter
+                            showClear
                         />
                     </div>
                     <div className="col-12">

@@ -51,17 +51,64 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-// DELETE /api/admin/notifications/[id] - Delete notification
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    await prisma.notification.delete({ where: { id: params.id } });
-    return NextResponse.json({ message: 'Notification deleted successfully' });
-  } catch (error) {
-    console.error('Delete notification error:', error);
-    const err = error as any;
-    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
-      return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
+export async function PATCH(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const action = searchParams.get('action');
+
+        if (action === 'read') {
+            const notification = await prisma.notification.update({
+                where: { id: params.id },
+                data: { isRead: true },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                        },
+                    },
+                },
+            });
+
+            return NextResponse.json({
+                ...notification,
+                createdAt: notification.createdAt.toISOString(),
+            });
+        }
+
+        return NextResponse.json(
+            { error: 'Invalid action' },
+            { status: 400 }
+        );
+    } catch (error) {
+        console.error('Error updating notification:', error);
+        return NextResponse.json(
+            { error: 'Failed to update notification' },
+            { status: 500 }
+        );
     }
-    return NextResponse.json({ error: 'Failed to delete notification' }, { status: 500 });
-  }
+}
+
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        await prisma.notification.delete({
+            where: { id: params.id },
+        });
+
+        return NextResponse.json({ message: 'Notification deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting notification:', error);
+        return NextResponse.json(
+            { error: 'Failed to delete notification' },
+            { status: 500 }
+        );
+    }
 } 

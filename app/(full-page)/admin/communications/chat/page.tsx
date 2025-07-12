@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card } from "primereact/card";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
@@ -10,8 +10,12 @@ import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
 import { Skeleton } from "primereact/skeleton";
+import { Badge } from "primereact/badge";
+import { Tooltip } from "primereact/tooltip";
 import { apiClient } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
+import { useSocket } from "@/hooks/useSocket";
+import { ChatMessage } from "@/types/socket";
 
 interface User {
     id: string;
@@ -59,6 +63,10 @@ export default function ChatPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const toast = useRef<Toast>(null);
 
+    const currentUserId = "admin"; // Replace with real user ID from auth context in production
+    const socket = useSocket({ userId: currentUserId });
+    const [typingUsers, setTypingUsers] = useState<{ [chatId: string]: string[] }>({});
+
     useEffect(() => {
         loadUsers();
         loadChatRooms();
@@ -73,6 +81,46 @@ export default function ChatPage() {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // Real-time: join/leave chat room
+    useEffect(() => {
+        if (selectedChat && socket.isConnected) {
+            socket.joinChat(selectedChat.id);
+            return () => socket.leaveChat(selectedChat.id);
+        }
+    }, [selectedChat, socket.isConnected]);
+
+    // Real-time: receive new messages
+    useEffect(() => {
+        socket.onNewMessage(({ chatRoomId, message }) => {
+            if (selectedChat && chatRoomId === selectedChat.id) {
+                setMessages((prev) => [...prev, message]);
+            }
+        });
+        return () => socket.offNewMessage();
+    }, [selectedChat, socket]);
+
+    // Real-time: typing indicator
+    useEffect(() => {
+        socket.onUserTyping(({ chatRoomId, userId, isTyping }) => {
+            setTypingUsers((prev) => {
+                const users = new Set(prev[chatRoomId] || []);
+                if (isTyping) users.add(userId); else users.delete(userId);
+                return { ...prev, [chatRoomId]: Array.from(users) };
+            });
+        });
+        return () => socket.offUserTyping();
+    }, [socket]);
+
+    // Real-time: mark messages as read
+    useEffect(() => {
+        socket.onMessageRead(({ chatRoomId, messageId, userId }) => {
+            if (selectedChat && chatRoomId === selectedChat.id) {
+                setMessages((prev) => prev.map(m => m.id === messageId ? { ...m, isRead: true } : m));
+            }
+        });
+        return () => socket.offMessageRead();
+    }, [selectedChat, socket]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -127,35 +175,52 @@ export default function ChatPage() {
         }
     };
 
+    // Send message (real-time)
     const sendMessage = async () => {
         if (!newMessage.trim() || !selectedChat) return;
-
-        try {
-            const response = await apiClient.sendMessage({
-                chatRoomId: selectedChat.id,
-                content: newMessage,
-                type: 'TEXT'
-            });
-
-            if (response.error) {
-                throw new Error(response.error);
-            }
-
-            // Add new message to the list
-            const newMsg = response.data;
-            setMessages(prev => [...prev, newMsg]);
-            setNewMessage("");
-
-            // Update last message in chat room
-            setChatRooms(prev => prev.map(room => 
-                room.id === selectedChat.id 
-                    ? { ...room, lastMessage: newMsg, unreadCount: 0 }
-                    : room
-            ));
-        } catch (error) {
-            showToast("error", "Error", "Failed to send message");
-        }
+        const senderUser = users.find(u => u.id === currentUserId);
+        const msg: ChatMessage = {
+            id: Math.random().toString(36).substr(2, 9),
+            chatRoomId: selectedChat.id,
+            senderId: currentUserId,
+            content: newMessage,
+            type: 'TEXT',
+            isRead: false,
+            createdAt: new Date().toISOString(),
+            sender: senderUser
+                ? {
+                    id: senderUser.id,
+                    firstName: senderUser.firstName,
+                    lastName: senderUser.lastName,
+                    email: senderUser.email,
+                    profileImage: senderUser.profileImage,
+                    status: senderUser.status,
+                }
+                : undefined,
+        };
+        setMessages((prev) => [...prev, msg]);
+        setNewMessage("");
+        socket.sendMessage(selectedChat.id, msg);
     };
+
+    // Typing indicator
+    const handleTyping = useCallback(() => {
+        if (selectedChat) {
+            socket.startTyping(selectedChat.id, currentUserId);
+            setTimeout(() => socket.stopTyping(selectedChat.id, currentUserId), 2000);
+        }
+    }, [selectedChat, currentUserId, socket]);
+
+    // Mark all messages as read when opening chat
+    useEffect(() => {
+        if (selectedChat) {
+            messages.forEach((msg) => {
+                if (!msg.isRead && msg.senderId !== currentUserId) {
+                    socket.markMessageAsRead(selectedChat.id, msg.id, currentUserId);
+                }
+            });
+        }
+    }, [selectedChat, messages, currentUserId, socket]);
 
     const createNewChat = async () => {
         if (selectedUsers.length === 0) return;
@@ -291,13 +356,13 @@ export default function ChatPage() {
                                                         {chat.isGroup ? (
                                                             <div className="flex flex-column gap-1">
                                                                 {chat.participants.slice(0, 2).map((user, index) => (
-                                                                    <Avatar
-                                                                        key={user.id}
-                                                                        image={user.profileImage}
-                                                                        label={`${user.firstName[0]}${user.lastName[0]}`}
-                                                                        size="small"
-                                                                        className={index === 1 ? 'ml-2' : ''}
-                                                                    />
+                                                                                                                            <Avatar
+                                                            key={user.id}
+                                                            image={user.profileImage}
+                                                            label={`${user.firstName[0]}${user.lastName[0]}`}
+                                                            size="normal"
+                                                            className={index === 1 ? 'ml-2' : ''}
+                                                        />
                                                                 ))}
                                                             </div>
                                                         ) : (
@@ -352,7 +417,7 @@ export default function ChatPage() {
                                                             key={user.id}
                                                             image={user.profileImage}
                                                             label={`${user.firstName[0]}${user.lastName[0]}`}
-                                                            size="small"
+                                                            size="normal"
                                                             className={index === 1 ? 'ml-2' : ''}
                                                         />
                                                     ))}
@@ -410,6 +475,11 @@ export default function ChatPage() {
                                                         </div>
                                                     </div>
                                                 ))}
+                                                {typingUsers[selectedChat?.id || ""]?.length > 0 && (
+                                                    <div className="text-xs text-blue-500 mt-2">
+                                                        {typingUsers[selectedChat.id].map(uid => users.find(u => u.id === uid)?.firstName).join(', ')} typing...
+                                                    </div>
+                                                )}
                                                 <div ref={messagesEndRef} />
                                             </div>
                                         )}
@@ -423,7 +493,10 @@ export default function ChatPage() {
                                                 onChange={(e) => setNewMessage(e.target.value)}
                                                 placeholder="Type a message..."
                                                 className="flex-1"
-                                                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                                                onKeyPress={(e) => {
+                                                    if (e.key === 'Enter') sendMessage();
+                                                    else handleTyping();
+                                                }}
                                             />
                                             <Button 
                                                 icon="pi pi-send" 
@@ -521,7 +594,7 @@ export default function ChatPage() {
                                                 <Avatar
                                                     image={user.profileImage}
                                                     label={`${user.firstName[0]}${user.lastName[0]}`}
-                                                    size="large"
+                                                    size="normal"
                                                 />
                                                 <div className="flex-1">
                                                     <h4 className="m-0 text-sm">{user.firstName} {user.lastName}</h4>
@@ -543,11 +616,11 @@ export default function ChatPage() {
                             <div className="flex flex-wrap gap-2">
                                 {selectedUsers.map((user) => (
                                     <div key={user.id} className="flex align-items-center gap-2 p-2 surface-100 border-round">
-                                        <Avatar
-                                            image={user.profileImage}
-                                            label={`${user.firstName[0]}${user.lastName[0]}`}
-                                            size="small"
-                                        />
+                                                                                    <Avatar
+                                                image={user.profileImage}
+                                                label={`${user.firstName[0]}${user.lastName[0]}`}
+                                                size="normal"
+                                            />
                                         <span className="text-sm">{user.firstName} {user.lastName}</span>
                                         <Button
                                             icon="pi pi-times"

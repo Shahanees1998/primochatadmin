@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
           sender: {
             select: { id: true, firstName: true, lastName: true, email: true, profileImage: true },
           },
+          chatRoom: {
+            select: { id: true, name: true },
+          },
         },
         skip,
         take: limit,
@@ -39,19 +42,23 @@ export async function GET(request: NextRequest) {
 // POST /api/chat - Send message
 export async function POST(request: NextRequest) {
   try {
-    const { senderId, content, type = 'TEXT' } = await request.json();
-    if (!senderId || !content) {
-      return NextResponse.json({ error: 'Sender ID and content are required' }, { status: 400 });
+    const { senderId, content, type = 'TEXT', chatRoomId } = await request.json();
+    if (!senderId || !content || !chatRoomId) {
+      return NextResponse.json({ error: 'Sender ID, content, and chat room ID are required' }, { status: 400 });
     }
     const message = await prisma.message.create({
       data: {
         senderId,
         content,
         type,
+        chatRoomId,
       },
       include: {
         sender: {
           select: { id: true, firstName: true, lastName: true, email: true, profileImage: true },
+        },
+        chatRoom: {
+          select: { id: true, name: true },
         },
       },
     });

@@ -12,7 +12,9 @@ import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { FilterMatchMode } from "primereact/api";
+import { Skeleton } from "primereact/skeleton";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/apiClient";
 
 interface ChatMessage {
     id: string;
@@ -77,36 +79,27 @@ export default function ModerationPage() {
 
     useEffect(() => {
         loadMessages();
-    }, [currentPage, rowsPerPage]);
+    }, [currentPage, rowsPerPage, globalFilterValue]);
 
     const loadMessages = async () => {
         setLoading(true);
         try {
-            // Simulate API call
-            const mockMessages: ChatMessage[] = Array.from({ length: 25 }, (_, i) => ({
-                id: `msg-${i + 1}`,
-                senderId: `user-${(i % 10) + 1}`,
-                content: `This is message content ${i + 1}. ${i % 5 === 0 ? 'This message contains potentially inappropriate content that needs moderation.' : 'This is a normal message.'}`,
-                type: "TEXT",
-                isFlagged: i % 3 === 0,
-                flagReason: i % 3 === 0 ? (i % 4 === 0 ? "INAPPROPRIATE" : i % 4 === 1 ? "SPAM" : "HARASSMENT") : undefined,
-                isModerated: i > 15,
-                moderationAction: i > 15 ? (i % 3 === 0 ? "WARN" : "HIDE") : undefined,
-                createdAt: new Date(2024, 0, i + 1).toISOString(),
-                sender: {
-                    firstName: `User${(i % 10) + 1}`,
-                    lastName: `Last${(i % 10) + 1}`,
-                    email: `user${(i % 10) + 1}@example.com`,
-                },
-            }));
+            const response = await apiClient.getFlaggedMessages({
+                page: currentPage,
+                limit: rowsPerPage,
+                search: globalFilterValue || undefined,
+                sortField: 'createdAt',
+                sortOrder: -1,
+            });
 
-            const startIndex = (currentPage - 1) * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            const paginatedMessages = mockMessages.slice(startIndex, endIndex);
+            if (response.error) {
+                throw new Error(response.error);
+            }
 
-            setMessages(paginatedMessages);
-            setTotalRecords(mockMessages.length);
+            setMessages(response.data?.messages || []);
+            setTotalRecords(response.data?.pagination?.total || 0);
         } catch (error) {
+            console.error('Error loading messages:', error);
             showToast("error", "Error", "Failed to load messages");
         } finally {
             setLoading(false);
@@ -119,6 +112,9 @@ export default function ModerationPage() {
         (_filters["global"] as any).value = value;
         setFilters(_filters);
         setGlobalFilterValue(value);
+        
+        // Reset to first page when searching
+        setCurrentPage(1);
     };
 
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {
@@ -142,18 +138,22 @@ export default function ModerationPage() {
         }
 
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const response = await apiClient.moderateMessage(moderationForm.messageId, {
+                isModerated: true,
+                moderationAction: moderationForm.action,
+                flagReason: moderationForm.reason,
+            });
 
-            const updatedMessages = messages.map(msg =>
-                msg.id === moderationForm.messageId
-                    ? { ...msg, isModerated: true, moderationAction: moderationForm.action }
-                    : msg
-            );
-            setMessages(updatedMessages);
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            // Reload messages to get updated data
+            await loadMessages();
             setShowModerationDialog(false);
             showToast("success", "Success", `Moderation action applied: ${moderationForm.action}`);
         } catch (error) {
+            console.error('Error applying moderation:', error);
             showToast("error", "Error", "Failed to apply moderation action");
         }
     };
@@ -170,11 +170,17 @@ export default function ModerationPage() {
 
     const deleteMessage = async (messageId: string) => {
         try {
-            const updatedMessages = messages.filter(msg => msg.id !== messageId);
-            setMessages(updatedMessages);
-            setTotalRecords(prev => prev - 1);
+            const response = await apiClient.deleteModeratedMessage(messageId);
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            // Reload messages to get updated data
+            await loadMessages();
             showToast("success", "Success", "Message deleted successfully");
         } catch (error) {
+            console.error('Error deleting message:', error);
             showToast("error", "Error", "Failed to delete message");
         }
     };
@@ -217,9 +223,7 @@ export default function ModerationPage() {
                     size="small"
                     text
                     tooltip="View Details"
-                    onClick={() => {
-                        showToast("info", "Info", "View functionality would be implemented here");
-                    }}
+                    onClick={() => openModerationDialog(rowData)}
                 />
                 <Button
                     icon="pi pi-trash"
@@ -274,16 +278,37 @@ export default function ModerationPage() {
                     />
                 </span>
                 <Button
-                    label="Flagged Only"
-                    icon="pi pi-flag"
-                    severity="warning"
-                    onClick={() => {
-                        showToast("info", "Info", "Filter functionality would be implemented here");
-                    }}
+                    label="Refresh"
+                    icon="pi pi-refresh"
+                    onClick={() => loadMessages()}
                 />
             </div>
         </div>
     );
+
+    if (loading) {
+        return (
+            <div className="grid">
+                <div className="col-12">
+                    <Card>
+                        <div className="flex flex-column gap-3">
+                            <Skeleton height="2rem" width="200px" />
+                            <Skeleton height="1rem" width="300px" />
+                            <div className="flex gap-2">
+                                <Skeleton height="2.5rem" width="200px" />
+                                <Skeleton height="2.5rem" width="120px" />
+                            </div>
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                            <Skeleton height="4rem" />
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="grid">
@@ -300,7 +325,6 @@ export default function ModerationPage() {
                             setCurrentPage((e.page || 0) + 1);
                             setRowsPerPage(e.rows || 10);
                         }}
-                        loading={loading}
                         filters={filters}
                         filterDisplay="menu"
                         globalFilterFields={["content"]}

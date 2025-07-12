@@ -6,7 +6,7 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const phoneBookEntry = await prisma.phoneBookEntry.findUnique({
+        const moderator = await prisma.moderator.findUnique({
             where: { id: params.id },
             include: {
                 user: {
@@ -21,18 +21,18 @@ export async function GET(
             },
         });
 
-        if (!phoneBookEntry) {
+        if (!moderator) {
             return NextResponse.json(
-                { error: 'Phone book entry not found' },
+                { error: 'Moderator not found' },
                 { status: 404 }
             );
         }
 
-        return NextResponse.json(phoneBookEntry);
+        return NextResponse.json(moderator);
     } catch (error) {
-        console.error('Error fetching phone book entry:', error);
+        console.error('Error fetching moderator:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch phone book entry' },
+            { error: 'Failed to fetch moderator' },
             { status: 500 }
         );
     }
@@ -44,19 +44,21 @@ export async function PUT(
 ) {
     try {
         const body = await request.json();
-        const { email, phone, address, isPublic } = body;
+        const { permissions, assignedAreas, isActive } = body;
 
-        const phoneBookEntry = await prisma.phoneBookEntry.update({
+        const moderator = await prisma.moderator.update({
             where: { id: params.id },
             data: {
-                email,
-                phone,
-                address,
-                isPublic,
+                permissions,
+                assignedAreas,
+                isActive,
             },
             include: {
                 user: {
                     select: {
+                        firstName: true,
+                        lastName: true,
+                        email: true,
                         role: true,
                         status: true,
                     },
@@ -64,11 +66,11 @@ export async function PUT(
             },
         });
 
-        return NextResponse.json(phoneBookEntry);
+        return NextResponse.json(moderator);
     } catch (error) {
-        console.error('Error updating phone book entry:', error);
+        console.error('Error updating moderator:', error);
         return NextResponse.json(
-            { error: 'Failed to update phone book entry' },
+            { error: 'Failed to update moderator' },
             { status: 500 }
         );
     }
@@ -79,13 +81,13 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        await prisma.phoneBookEntry.delete({ where: { id: params.id } });
+        await prisma.moderator.delete({ where: { id: params.id } });
 
-        return NextResponse.json({ message: 'Phone book entry deleted successfully' });
+        return NextResponse.json({ message: 'Moderator deleted successfully' });
     } catch (error) {
-        console.error('Error deleting phone book entry:', error);
+        console.error('Error deleting moderator:', error);
         return NextResponse.json(
-            { error: 'Failed to delete phone book entry' },
+            { error: 'Failed to delete moderator' },
             { status: 500 }
         );
     }

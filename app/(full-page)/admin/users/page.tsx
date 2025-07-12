@@ -171,7 +171,7 @@ export default function UsersPage() {
                 joinDate: userForm.joinDate?.toISOString(),
             };
 
-            let response;
+            let response: any;
             if (editingUser) {
                 // Update existing user
                 response = await apiClient.updateUser(editingUser.id, userData);

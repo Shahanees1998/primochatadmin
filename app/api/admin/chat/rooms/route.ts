@@ -1,17 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// Helper function to get or create admin user
+async function getOrCreateAdminUser() {
+    // First try to find an existing admin user
+    let adminUser = await prisma.user.findFirst({
+        where: {
+            role: 'ADMIN',
+            status: 'ACTIVE'
+        }
+    });
+
+    // If no admin user exists, create one
+    if (!adminUser) {
+        adminUser = await prisma.user.create({
+            data: {
+                firstName: 'Admin',
+                lastName: 'User',
+                email: 'admin@primochat.com',
+                password: 'adminPassword123', // This should be changed in production
+                role: 'ADMIN',
+                status: 'ACTIVE',
+                membershipNumber: 'ADMIN001'
+            }
+        });
+    }
+
+    return adminUser;
+}
+
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId') || 'admin'; // This should come from auth context
+        const userId = searchParams.get('userId');
+
+        // Get or create admin user
+        const adminUser = await getOrCreateAdminUser();
+        const currentUserId = userId || adminUser.id;
 
         // Get all chat rooms where the user is a participant
         const chatRooms = await prisma.chatRoom.findMany({
             where: {
                 participants: {
                     some: {
-                        userId: userId
+                        userId: currentUserId
                     }
                 }
             },
@@ -51,7 +83,7 @@ export async function GET(request: NextRequest) {
                             where: {
                                 isRead: false,
                                 senderId: {
-                                    not: userId,
+                                    not: currentUserId,
                                 },
                             },
                         },
@@ -98,7 +130,10 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { participantIds, isGroup, name } = body;
-        const currentUserId = 'admin'; // This should come from auth context
+
+        // Get or create admin user
+        const adminUser = await getOrCreateAdminUser();
+        const currentUserId = adminUser.id;
 
         // Validate required fields
         if (!participantIds || participantIds.length === 0) {
@@ -109,7 +144,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Add current user to participants if not already included
-        const allParticipantIds = participantIds.includes(currentUserId) 
+        const allParticipantIds: string[] = participantIds.includes(currentUserId) 
             ? participantIds 
             : [currentUserId, ...participantIds];
 
@@ -145,7 +180,16 @@ export async function POST(request: NextRequest) {
             });
 
             if (existingChat) {
-                return NextResponse.json(existingChat, { status: 200 });
+                const transformedExistingChat = {
+                    id: existingChat.id,
+                    isGroup: existingChat.isGroup,
+                    name: existingChat.name,
+                    participants: existingChat.participants.map(p => p.user),
+                    lastMessage: undefined,
+                    unreadCount: 0,
+                    updatedAt: existingChat.updatedAt.toISOString(),
+                };
+                return NextResponse.json(transformedExistingChat, { status: 200 });
             }
         }
 
@@ -155,7 +199,7 @@ export async function POST(request: NextRequest) {
                 isGroup,
                 name: isGroup ? name : undefined,
                 participants: {
-                    create: allParticipantIds.map(userId => ({
+                    create: allParticipantIds.map((userId: string) => ({
                         userId,
                     })),
                 },

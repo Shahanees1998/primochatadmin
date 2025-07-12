@@ -39,6 +39,8 @@ model User {
   supportRequests   SupportRequest[]
   documents         Document[]
   phoneBookEntry    PhoneBookEntry?
+  announcements     Announcement[]
+  moderator         Moderator?
 
   @@map("users")
 }
@@ -206,6 +208,10 @@ model Message {
   content    String
   type       MessageType @default(TEXT)
   isRead     Boolean  @default(false)
+  isFlagged  Boolean  @default(false)
+  flagReason String?
+  isModerated Boolean @default(false)
+  moderationAction String?
   createdAt  DateTime @default(now())
 
   // Relations
@@ -246,6 +252,40 @@ model PhoneBookEntry {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("phone_book_entries")
+}
+
+model Announcement {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  content        String
+  type           AnnouncementType
+  status         AnnouncementStatus @default(DRAFT)
+  targetAudience TargetAudience
+  publishedAt    DateTime?
+  expiresAt      DateTime?
+  createdById    String           @db.ObjectId
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  createdBy      User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@map("announcements")
+}
+
+model Moderator {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId @unique
+  permissions    String[]
+  assignedAreas  String[]
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("moderators")
 }
 
 // Enums
@@ -324,4 +364,25 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum AnnouncementType {
+  GENERAL
+  IMPORTANT
+  URGENT
+  EVENT
+  UPDATE
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TargetAudience {
+  ALL
+  MEMBERS
+  ADMINS
+  NEW_MEMBERS
 }

@@ -5,7 +5,25 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { chatRoomId, content, type } = body;
-        const senderId = 'admin'; // This should come from auth context
+        // Get or create admin user
+        const adminUser = await prisma.user.findFirst({
+            where: {
+                role: 'ADMIN',
+                status: 'ACTIVE'
+            }
+        }) || await prisma.user.create({
+            data: {
+                firstName: 'Admin',
+                lastName: 'User',
+                email: 'admin@primochat.com',
+                password: 'adminPassword123',
+                role: 'ADMIN',
+                status: 'ACTIVE',
+                membershipNumber: 'ADMIN001'
+            }
+        });
+        
+        const senderId = adminUser.id;
 
         if (!chatRoomId || !content) {
             return NextResponse.json(

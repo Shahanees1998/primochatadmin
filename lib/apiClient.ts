@@ -313,17 +313,42 @@ class ApiClient {
     async getNotifications(params?: {
         page?: number;
         limit?: number;
-        isRead?: boolean;
+        search?: string;
+        type?: string;
+        status?: string;
+        sortField?: string;
+        sortOrder?: number;
     }) {
-        return this.get('/notifications', params);
+        const searchParams = new URLSearchParams();
+        if (params?.page) searchParams.append('page', params.page.toString());
+        if (params?.limit) searchParams.append('limit', params.limit.toString());
+        if (params?.search) searchParams.append('search', params.search);
+        if (params?.type) searchParams.append('type', params.type);
+        if (params?.status) searchParams.append('status', params.status);
+        if (params?.sortField) searchParams.append('sortField', params.sortField);
+        if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder.toString());
+        
+        return this.get<{
+            notifications: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        }>(`/admin/notifications?${searchParams.toString()}`);
     }
 
     async markNotificationAsRead(id: string) {
-        return this.patch(`/notifications/${id}`, { isRead: true });
+        return this.patch(`/admin/notifications/${id}/read`, {});
     }
 
     async markAllNotificationsAsRead() {
-        return this.patch('/notifications/mark-all-read', {});
+        return this.patch('/admin/notifications/mark-all-read', {});
+    }
+
+    async deleteNotification(id: string) {
+        return this.delete(`/admin/notifications/${id}`);
     }
 
     // Support methods
@@ -333,19 +358,36 @@ class ApiClient {
         status?: string;
         priority?: string;
     }) {
-        return this.get('/support', params);
+        return this.get<{
+            supportRequests: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        }>('/admin/support', params);
+    }
+
+    async getSupportRequest(id: string) {
+        return this.get<any>(`/admin/support/${id}`);
     }
 
     async createSupportRequest(requestData: {
+        userId: string;
         subject: string;
         message: string;
         priority?: string;
     }) {
-        return this.post('/support', requestData);
+        return this.post<any>('/admin/support', requestData);
     }
 
     async updateSupportRequest(id: string, requestData: any) {
-        return this.put(`/support/${id}`, requestData);
+        return this.put<any>(`/admin/support/${id}`, requestData);
+    }
+
+    async deleteSupportRequest(id: string) {
+        return this.delete(`/admin/support/${id}`);
     }
 
     // Phonebook methods
@@ -354,25 +396,42 @@ class ApiClient {
         limit?: number;
         search?: string;
     }) {
-        return this.get('/phonebook', params);
+        return this.get<{
+            phoneBookEntries: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        }>('/admin/phonebook', params);
+    }
+
+    async getPhonebookEntry(id: string) {
+        return this.get<any>(`/admin/phonebook/${id}`);
     }
 
     async createPhonebookEntry(entryData: {
-        name: string;
-        phone: string;
-        email?: string;
+        userId: string;
+        email: string;
+        phone?: string;
         address?: string;
-        department?: string;
+        isPublic?: boolean;
     }) {
-        return this.post('/phonebook', entryData);
+        return this.post<any>('/admin/phonebook', entryData);
     }
 
-    async updatePhonebookEntry(id: string, entryData: any) {
-        return this.put(`/phonebook/${id}`, entryData);
+    async updatePhonebookEntry(id: string, entryData: {
+        email?: string;
+        phone?: string;
+        address?: string;
+        isPublic?: boolean;
+    }) {
+        return this.put<any>(`/admin/phonebook/${id}`, entryData);
     }
 
     async deletePhonebookEntry(id: string) {
-        return this.delete(`/phonebook/${id}`);
+        return this.delete(`/admin/phonebook/${id}`);
     }
 
     // Festive Board methods
@@ -515,6 +574,104 @@ class ApiClient {
 
     async deleteMessage(messageId: string) {
         return this.delete(`/admin/chat/messages/${messageId}`);
+    }
+
+    // Moderation methods
+    async getFlaggedMessages(params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        isFlagged?: boolean;
+        isModerated?: boolean;
+        sortField?: string;
+        sortOrder?: number;
+    }) {
+        const searchParams = new URLSearchParams();
+        if (params?.page) searchParams.append('page', params.page.toString());
+        if (params?.limit) searchParams.append('limit', params.limit.toString());
+        if (params?.search) searchParams.append('search', params.search);
+        if (params?.isFlagged !== undefined) searchParams.append('isFlagged', params.isFlagged.toString());
+        if (params?.isModerated !== undefined) searchParams.append('isModerated', params.isModerated.toString());
+        if (params?.sortField) searchParams.append('sortField', params.sortField);
+        if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder.toString());
+        
+        return this.get<{
+            messages: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        }>(`/admin/moderation?${searchParams.toString()}`);
+    }
+
+    async moderateMessage(messageId: string, data: {
+        isModerated: boolean;
+        moderationAction: string;
+        flagReason?: string;
+    }) {
+        return this.put<any>(`/admin/moderation/${messageId}`, data);
+    }
+
+    async deleteModeratedMessage(messageId: string) {
+        return this.delete(`/admin/moderation/${messageId}`);
+    }
+
+    // Announcement methods
+    async getAnnouncements(params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        type?: string;
+        status?: string;
+        sortField?: string;
+        sortOrder?: number;
+    }) {
+        const searchParams = new URLSearchParams();
+        if (params?.page) searchParams.append('page', params.page.toString());
+        if (params?.limit) searchParams.append('limit', params.limit.toString());
+        if (params?.search) searchParams.append('search', params.search);
+        if (params?.type) searchParams.append('type', params.type);
+        if (params?.status) searchParams.append('status', params.status);
+        if (params?.sortField) searchParams.append('sortField', params.sortField);
+        if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder.toString());
+        
+        return this.get<{
+            announcements: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        }>(`/admin/announcements?${searchParams.toString()}`);
+    }
+
+    async createAnnouncement(data: {
+        title: string;
+        content: string;
+        type: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'EVENT' | 'UPDATE';
+        status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+        targetAudience: 'ALL' | 'MEMBERS' | 'ADMINS' | 'NEW_MEMBERS';
+        expiresAt?: string;
+    }) {
+        return this.post<any>('/admin/announcements', data);
+    }
+
+    async updateAnnouncement(id: string, data: {
+        title?: string;
+        content?: string;
+        type?: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'EVENT' | 'UPDATE';
+        status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+        targetAudience?: 'ALL' | 'MEMBERS' | 'ADMINS' | 'NEW_MEMBERS';
+        expiresAt?: string;
+    }) {
+        return this.put<any>(`/admin/announcements/${id}`, data);
+    }
+
+    async deleteAnnouncement(id: string) {
+        return this.delete(`/admin/announcements/${id}`);
     }
 }
 

@@ -200,7 +200,7 @@ export default function EventsPage() {
                 endDate: eventForm.endDate?.toISOString(),
             };
 
-            let response;
+            let response: any;
             if (editingEvent) {
                 // Update existing event
                 response = await apiClient.updateEvent(editingEvent.id, eventData);

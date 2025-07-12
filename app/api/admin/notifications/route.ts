@@ -8,7 +8,9 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '10');
         const search = searchParams.get('search') || '';
         const type = searchParams.get('type') || '';
-        const isRead = searchParams.get('isRead') || '';
+        const status = searchParams.get('status') || '';
+        const sortField = searchParams.get('sortField') || 'createdAt';
+        const sortOrder = parseInt(searchParams.get('sortOrder') || '-1');
 
         const skip = (page - 1) * limit;
 
@@ -26,9 +28,23 @@ export async function GET(request: NextRequest) {
             where.type = type;
         }
 
-        if (isRead !== '') {
-            where.isRead = isRead === 'true';
+        if (status) {
+            switch (status) {
+                case 'unread':
+                    where.isRead = false;
+                    break;
+                case 'read':
+                    where.isRead = true;
+                    break;
+                case 'archived':
+                    where.isArchived = true;
+                    break;
+            }
         }
+
+        // Build orderBy clause
+        const orderBy: any = {};
+        orderBy[sortField] = sortOrder === 1 ? 'asc' : 'desc';
 
         // Get notifications with pagination
         const [notifications, total] = await Promise.all([
@@ -36,10 +52,11 @@ export async function GET(request: NextRequest) {
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' },
+                orderBy,
                 include: {
                     user: {
                         select: {
+                            id: true,
                             firstName: true,
                             lastName: true,
                             email: true,
@@ -51,7 +68,10 @@ export async function GET(request: NextRequest) {
         ]);
 
         return NextResponse.json({
-            notifications,
+            notifications: notifications.map(notification => ({
+                ...notification,
+                createdAt: notification.createdAt.toISOString(),
+            })),
             pagination: {
                 page,
                 limit,
@@ -68,97 +88,28 @@ export async function GET(request: NextRequest) {
     }
 }
 
-export async function POST(request: NextRequest) {
+export async function PATCH(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { userId, title, message, type, targetUsers } = body;
+        const { searchParams } = new URL(request.url);
+        const action = searchParams.get('action');
 
-        // Validate required fields
-        if (!title || !message || !type) {
-            return NextResponse.json(
-                { error: 'Title, message, and type are required' },
-                { status: 400 }
-            );
-        }
-
-        // If targetUsers is specified, create notifications for multiple users
-        if (targetUsers && targetUsers.length > 0) {
-            const notifications = [];
-            
-            for (const targetUserId of targetUsers) {
-                // Check if user exists
-                const existingUser = await prisma.user.findUnique({
-                    where: { id: targetUserId },
-                });
-
-                if (existingUser) {
-                    const notification = await prisma.notification.create({
-                        data: {
-                            userId: targetUserId,
-                            title,
-                            message,
-                            type,
-                        },
-                        include: {
-                            user: {
-                                select: {
-                                    firstName: true,
-                                    lastName: true,
-                                    email: true,
-                                },
-                            },
-                        },
-                    });
-                    notifications.push(notification);
-                }
-            }
-
-            return NextResponse.json(notifications, { status: 201 });
-        } else {
-            // Create single notification
-            if (!userId) {
-                return NextResponse.json(
-                    { error: 'User ID is required when not using targetUsers' },
-                    { status: 400 }
-                );
-            }
-
-            // Check if user exists
-            const existingUser = await prisma.user.findUnique({
-                where: { id: userId },
+        if (action === 'mark-all-read') {
+            await prisma.notification.updateMany({
+                where: { isRead: false },
+                data: { isRead: true },
             });
 
-            if (!existingUser) {
-                return NextResponse.json(
-                    { error: 'User not found' },
-                    { status: 404 }
-                );
-            }
-
-            const notification = await prisma.notification.create({
-                data: {
-                    userId,
-                    title,
-                    message,
-                    type,
-                },
-                include: {
-                    user: {
-                        select: {
-                            firstName: true,
-                            lastName: true,
-                            email: true,
-                        },
-                    },
-                },
-            });
-
-            return NextResponse.json(notification, { status: 201 });
+            return NextResponse.json({ message: 'All notifications marked as read' });
         }
-    } catch (error) {
-        console.error('Error creating notification:', error);
+
         return NextResponse.json(
-            { error: 'Failed to create notification' },
+            { error: 'Invalid action' },
+            { status: 400 }
+        );
+    } catch (error) {
+        console.error('Error updating notifications:', error);
+        return NextResponse.json(
+            { error: 'Failed to update notifications' },
             { status: 500 }
         );
     }
