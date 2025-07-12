@@ -4,13 +4,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 import { InputText } from "primereact/inputtext";
-import { useContext, useState } from "react";
+import { useContext, useState, Suspense } from "react";
 import { LayoutContext } from "../../../../layout/context/layoutcontext";
 import { signIn, useSession } from "next-auth/react";
 import { Toast } from "primereact/toast";
 import { useRef } from "react";
 
-const Login: Page = () => {
+const LoginContent = () => {
     const [rememberMe, setRememberMe] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -236,6 +236,21 @@ const Login: Page = () => {
                 </div>
             </div>
         </>
+    );
+};
+
+const Login: Page = () => {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex justify-content-center align-items-center">
+                <div className="text-center">
+                    <i className="pi pi-spinner pi-spin text-4xl mb-3"></i>
+                    <p>Loading...</p>
+                </div>
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     );
 };
 

@@ -28,10 +28,4 @@ async function handleSocketRequest(request: NextRequest) {
 // 1. Use a custom server with socket.io
 // 2. Use a third-party service like Pusher
 // 3. Use WebSocket API with a separate socket server
-// 4. Use Server-Sent Events (SSE)
-
-// For now, we'll create a simple WebSocket handler
-export function GET_WEBSOCKET(request: NextRequest) {
-    // This would be handled by a custom server or middleware
-    return new NextResponse('WebSocket endpoint', { status: 200 });
-} 
+// 4. Use Server-Sent Events (SSE) 

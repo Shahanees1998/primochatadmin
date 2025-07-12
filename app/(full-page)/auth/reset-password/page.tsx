@@ -3,11 +3,11 @@ import type { Page } from "@/types/index";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { useContext, useState, useRef, useEffect } from "react";
+import { useContext, useState, useRef, useEffect, Suspense } from "react";
 import { LayoutContext } from "../../../../layout/context/layoutcontext";
 import { Toast } from "primereact/toast";
 
-const ResetPassword: Page = () => {
+const ResetPasswordContent = () => {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -242,6 +242,21 @@ const ResetPassword: Page = () => {
                 </div>
             </div>
         </>
+    );
+};
+
+const ResetPassword: Page = () => {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex justify-content-center align-items-center">
+                <div className="text-center">
+                    <i className="pi pi-spinner pi-spin text-4xl mb-3"></i>
+                    <p>Loading...</p>
+                </div>
+            </div>
+        }>
+            <ResetPasswordContent />
+        </Suspense>
     );
 };
 
