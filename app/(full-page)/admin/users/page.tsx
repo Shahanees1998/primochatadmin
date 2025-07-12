@@ -42,6 +42,7 @@ interface UserFormData {
     status: string;
     membershipNumber: string;
     joinDate: Date | null;
+    password?: string;
 }
 
 export default function UsersPage() {
@@ -71,6 +72,7 @@ export default function UsersPage() {
         status: "PENDING",
         membershipNumber: "",
         joinDate: null,
+        password: "",
     });
     const toast = useRef<Toast>(null);
     const [error, setError] = useState<string | null>(null);
@@ -144,6 +146,7 @@ export default function UsersPage() {
             status: "PENDING",
             membershipNumber: "",
             joinDate: null,
+            password: "",
         });
         setShowUserDialog(true);
     };
@@ -170,7 +173,9 @@ export default function UsersPage() {
                 ...userForm,
                 joinDate: userForm.joinDate?.toISOString(),
             };
-
+            if (!editingUser && !userForm.password) {
+                delete userData.password;
+            }
             let response: any;
             if (editingUser) {
                 // Update existing user
@@ -495,6 +500,19 @@ export default function UsersPage() {
                             style={{ minWidth: 0 }}
                         />
                     </div>
+                    {!editingUser && (
+                        <div className="col-12">
+                            <label htmlFor="password" className="font-bold">Password</label>
+                            <InputText
+                                id="password"
+                                type="password"
+                                value={userForm.password}
+                                onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                                placeholder="Set password (leave blank for default)"
+                                className="w-full"
+                            />
+                        </div>
+                    )}
                 </div>
             </Dialog>
 

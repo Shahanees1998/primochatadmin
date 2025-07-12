@@ -31,8 +31,8 @@ const Error: Page = () => {
                     strokeLinejoin="miter"
                 ></path>
             </svg>
-            <div className="px-5 min-h-screen flex justify-content-center align-items-center">
-                <div className="z-1 text-center">
+            <div className="min-h-screen flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+                <div className="border-1 surface-border surface-card border-round py-7 px-4 md:px-7 z-1">
                     <div className="text-900 font-bold text-8xl mb-4">
                         ERROR
                     </div>

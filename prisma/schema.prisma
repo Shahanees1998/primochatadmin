@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "mongodb"
-  url      = "mongodb+srv://AbdulBasit:WLK0OiPod2agOdNf@cluster0.jcpue.mongodb.net/primochatadmin?retryWrites=true&w=majority"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -26,6 +26,8 @@ model User {
   membershipNumber  String?  @unique
   joinDate          DateTime?
   lastLogin         DateTime?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

@@ -1,3 +1,6 @@
+require('dotenv').config({ path: '.env' });
+require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: 'prisma/.env' });
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');

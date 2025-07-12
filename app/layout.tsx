@@ -1,5 +1,6 @@
 "use client";
 import { LayoutProvider } from "../layout/context/layoutcontext";
+import { Providers } from "./providers";
 
 import "primeflex/primeflex.css";
 import "primeicons/primeicons.css";
@@ -23,9 +24,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
                 ></link>
             </head>
             <body>
-                <PrimeReactProvider>
-                    <LayoutProvider>{children}</LayoutProvider>
-                </PrimeReactProvider>
+                <Providers>
+                    <PrimeReactProvider>
+                        <LayoutProvider>{children}</LayoutProvider>
+                    </PrimeReactProvider>
+                </Providers>
             </body>
         </html>
     );

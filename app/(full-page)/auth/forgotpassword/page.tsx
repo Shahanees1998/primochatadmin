@@ -3,16 +3,73 @@ import type { Page } from "@/types/index";
 import { useRouter } from "next/navigation";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { useContext } from "react";
+import { useContext, useState, useRef } from "react";
 import { LayoutContext } from "../../../../layout/context/layoutcontext";
+import { Toast } from "primereact/toast";
 
 const ForgotPassword: Page = () => {
+    const [email, setEmail] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
     const router = useRouter();
     const { layoutConfig } = useContext(LayoutContext);
+    const toast = useRef<Toast>(null);
     const dark = layoutConfig.colorScheme !== "light";
+
+    const handleSubmit = async () => {
+        if (!email) {
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Please enter your email address',
+                life: 3000
+            });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setSubmitted(true);
+                toast.current?.show({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Password reset email sent successfully',
+                    life: 3000
+                });
+            } else {
+                toast.current?.show({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: data.error || 'Failed to send reset email',
+                    life: 3000
+                });
+            }
+        } catch (error) {
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'An unexpected error occurred',
+                life: 3000
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <>
+            <Toast ref={toast} />
             <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 1600 800"
@@ -41,40 +98,66 @@ const ForgotPassword: Page = () => {
                     d="M1397.5 154.8c47.2-10.6 93.6-25.3 138.6-43.8c21.7-8.9 43-18.8 63.9-29.5V0H643.4c62.9 41.7 129.7 78.2 202.1 107.4C1020.4 178.1 1214.2 196.1 1397.5 154.8z"
                 />
             </svg>
-            <div className="px-5 min-h-screen flex justify-content-center align-items-center">
+            <div className="min-h-screen flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
                 <div className="border-1 surface-border surface-card border-round py-7 px-4 md:px-7 z-1">
                     <div className="mb-4">
                         <div className="text-900 text-xl font-bold mb-2">
                             Forgot Password
                         </div>
                         <span className="text-600 font-medium">
-                            Enter your email to reset your password
+                            {submitted 
+                                ? "Check your email for password reset instructions"
+                                : "Enter your email to reset your password"
+                            }
                         </span>
                     </div>
-                    <div className="flex flex-column">
-                        <span className="p-input-icon-left w-full mb-4">
-                            <i className="pi pi-envelope"></i>
-                            <InputText
-                                id="email"
-                                type="text"
-                                className="w-full md:w-25rem"
-                                placeholder="Email"
-                            />
-                        </span>
-                        <div className="flex flex-wrap gap-2 justify-content-between">
+                    {!submitted ? (
+                        <div className="flex flex-column">
+                            <span className="p-input-icon-left w-full mb-4">
+                                <i className="pi pi-envelope"></i>
+                                <InputText
+                                    id="email"
+                                    type="email"
+                                    className="w-full md:w-25rem"
+                                    placeholder="Email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    disabled={loading}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                                />
+                            </span>
+                            <div className="flex flex-wrap gap-2 justify-content-between">
+                                <Button
+                                    label="Back to Login"
+                                    outlined
+                                    className="flex-auto"
+                                    onClick={() => router.push("/auth/login")}
+                                    disabled={loading}
+                                ></Button>
+                                <Button
+                                    label={loading ? "Sending..." : "Submit"}
+                                    className="flex-auto"
+                                    onClick={handleSubmit}
+                                    loading={loading}
+                                    disabled={loading}
+                                ></Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-column">
+                            <div className="text-center mb-4">
+                                <i className="pi pi-check-circle text-6xl text-green-500 mb-3"></i>
+                                <p className="text-600">
+                                    We've sent a password reset link to <strong>{email}</strong>
+                                </p>
+                            </div>
                             <Button
-                                label="Cancel"
-                                outlined
-                                className="flex-auto"
-                                onClick={() => router.push("/")}
-                            ></Button>
-                            <Button
-                                label="Submit"
-                                className="flex-auto"
-                                onClick={() => router.push("/")}
+                                label="Back to Login"
+                                className="w-full"
+                                onClick={() => router.push("/auth/login")}
                             ></Button>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </>

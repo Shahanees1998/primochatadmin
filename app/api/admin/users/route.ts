@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 export async function GET(request: NextRequest) {
     try {
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { firstName, lastName, email, phone, role, status, membershipNumber, joinDate } = body;
+        const { firstName, lastName, email, phone, role, status, membershipNumber, joinDate, password } = body;
 
         // Validate required fields
         if (!firstName || !lastName || !email) {
@@ -110,13 +111,17 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Create new user with default password and phonebook entry
+        // Hash the password (admin can set, or use default)
+        const plainPassword = password || 'defaultPassword123';
+        const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+        // Create new user with hashed password and phonebook entry
         const user = await prisma.user.create({
             data: {
                 firstName,
                 lastName,
                 email,
-                password: 'defaultPassword123', // This should be changed by user on first login
+                password: hashedPassword,
                 phone,
                 role: role || 'MEMBER',
                 status: status || 'PENDING',

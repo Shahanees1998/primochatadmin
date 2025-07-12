@@ -1,20 +1,81 @@
 "use client";
 import type { Page } from "@/types/index";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 import { InputText } from "primereact/inputtext";
 import { useContext, useState } from "react";
 import { LayoutContext } from "../../../../layout/context/layoutcontext";
+import { signIn, useSession } from "next-auth/react";
+import { Toast } from "primereact/toast";
+import { useRef } from "react";
 
 const Login: Page = () => {
     const [rememberMe, setRememberMe] = useState(false);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { layoutConfig } = useContext(LayoutContext);
+    const { data: session } = useSession();
+    const toast = useRef<Toast>(null);
     const dark = layoutConfig.colorScheme !== "light";
+
+    // Redirect if already logged in
+    console.log('************************************************* session', session)
+    if (session != null) {
+        console.log('::::::::::::::::::::::::::::::::::::::::::::; seesion', session)
+        const callbackUrl = searchParams.get('callbackUrl') || '/admin';
+        router.push(callbackUrl);
+        return null;
+    }
+
+    const handleLogin = async () => {
+        if (!email || !password) {
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Please enter both email and password',
+                life: 3000
+            });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const result = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
+            });
+            console.log(email, password,'=============================================', result)
+            if (result?.error) {
+                toast.current?.show({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: result.error,
+                    life: 3000
+                });
+            } else {
+                const callbackUrl = searchParams.get('callbackUrl') || '/admin';
+                router.push(callbackUrl);
+            }
+        } catch (error) {
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'An unexpected error occurred',
+                life: 3000
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <>
+            <Toast ref={toast} />
             <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 1600 800"
@@ -43,7 +104,7 @@ const Login: Page = () => {
                     d="M1397.5 154.8c47.2-10.6 93.6-25.3 138.6-43.8c21.7-8.9 43-18.8 63.9-29.5V0H643.4c62.9 41.7 129.7 78.2 202.1 107.4C1020.4 178.1 1214.2 196.1 1397.5 154.8z"
                 />
             </svg>
-            <div className="px-5 min-h-screen flex justify-content-center align-items-center">
+            <div className="min-h-screen flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
                 <div className="border-1 surface-border surface-card border-round py-7 px-4 md:px-7 z-1">
                     <div className="mb-4">
                         <div className="text-900 text-xl font-bold mb-2">
@@ -58,9 +119,12 @@ const Login: Page = () => {
                             <i className="pi pi-envelope"></i>
                             <InputText
                                 id="email"
-                                type="text"
+                                type="email"
                                 className="w-full md:w-25rem"
                                 placeholder="Email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={loading}
                             />
                         </span>
                         <span className="p-input-icon-left w-full mb-4">
@@ -70,33 +134,42 @@ const Login: Page = () => {
                                 type="password"
                                 className="w-full md:w-25rem"
                                 placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={loading}
+                                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                             />
                         </span>
-                        <div className="mb-4 flex flex-wrap gap-3">
-                            <div>
+                        <div className="mb-4 flex flex-wrap gap-3 align-items-center">
+                            <div className="flex align-items-center">
                                 <Checkbox
                                     name="checkbox"
                                     checked={rememberMe}
-                                    onChange={(e) =>
-                                        setRememberMe(e.checked ?? false)
-                                    }
+                                    onChange={(e) => setRememberMe(e.checked ?? false)}
                                     className="mr-2"
-                                ></Checkbox>
+                                    disabled={loading}
+                                />
                                 <label
                                     htmlFor="checkbox"
-                                    className="text-900 font-medium mr-8"
+                                    className="text-900 font-medium mr-8 mb-0"
+                                    style={{ verticalAlign: 'middle' }}
                                 >
                                     Remember Me
                                 </label>
                             </div>
-                            <a className="text-600 cursor-pointer hover:text-primary cursor-pointer ml-auto transition-colors transition-duration-300">
+                            <a
+                                className="text-600 cursor-pointer hover:text-primary ml-auto transition-colors transition-duration-300"
+                                onClick={() => router.push('/auth/forgotpassword')}
+                            >
                                 Reset password
                             </a>
                         </div>
                         <Button
-                            label="Log In"
+                            label={loading ? "Logging In..." : "Log In"}
                             className="w-full"
-                            onClick={() => router.push("/")}
+                            onClick={handleLogin}
+                            loading={loading}
+                            disabled={loading}
                         ></Button>
                     </div>
                 </div>
