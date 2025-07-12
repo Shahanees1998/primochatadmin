@@ -15,12 +15,15 @@ const Login: Page = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [emailError, setEmailError] = useState("");
+    const [passwordError, setPasswordError] = useState("");
     const router = useRouter();
     const searchParams = useSearchParams();
     const { layoutConfig } = useContext(LayoutContext);
     const { data: session } = useSession();
     const toast = useRef<Toast>(null);
     const dark = layoutConfig.colorScheme !== "light";
+    const [showPassword, setShowPassword] = useState(false);
 
     // Redirect if already logged in
     console.log('************************************************* session', session)
@@ -32,13 +35,26 @@ const Login: Page = () => {
     }
 
     const handleLogin = async () => {
-        if (!email || !password) {
-            toast.current?.show({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Please enter both email and password',
-                life: 3000
-            });
+        // Clear previous errors
+        setEmailError("");
+        setPasswordError("");
+        
+        // Validate inputs
+        let hasError = false;
+        if (!email) {
+            setEmailError("Email is required");
+            hasError = true;
+        } else if (!email.includes('@')) {
+            setEmailError("Please enter a valid email address");
+            hasError = true;
+        }
+        
+        if (!password) {
+            setPasswordError("Password is required");
+            hasError = true;
+        }
+        
+        if (hasError) {
             return;
         }
 
@@ -49,24 +65,37 @@ const Login: Page = () => {
                 password,
                 redirect: false,
             });
-            console.log(email, password,'=============================================', result)
             if (result?.error) {
+                // Handle specific error messages
+                let errorMessage = result.error;
+                if (result.error === 'CredentialsSignin') {
+                    errorMessage = 'Invalid email or password';
+                } else if (result.error === 'No account found with this email address') {
+                    setEmailError('No account found with this email address');
+                    errorMessage = 'No account found with this email address';
+                } else if (result.error === 'Incorrect password') {
+                    setPasswordError('Incorrect password');
+                    errorMessage = 'Incorrect password';
+                } else if (result.error === 'Account is not active. Please contact admin.') {
+                    errorMessage = 'Account is not active. Please contact admin.';
+                }
                 toast.current?.show({
                     severity: 'error',
-                    summary: 'Error',
-                    detail: result.error,
-                    life: 3000
+                    summary: 'Login Failed',
+                    detail: errorMessage,
+                    life: 4000
                 });
-            } else {
+            } else if (result?.ok) {
                 const callbackUrl = searchParams.get('callbackUrl') || '/admin';
                 router.push(callbackUrl);
             }
         } catch (error) {
+            console.error('Login error:', error);
             toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'An unexpected error occurred',
-                life: 3000
+                detail: 'An unexpected error occurred. Please try again.',
+                life: 4000
             });
         } finally {
             setLoading(false);
@@ -104,7 +133,7 @@ const Login: Page = () => {
                     d="M1397.5 154.8c47.2-10.6 93.6-25.3 138.6-43.8c21.7-8.9 43-18.8 63.9-29.5V0H643.4c62.9 41.7 129.7 78.2 202.1 107.4C1020.4 178.1 1214.2 196.1 1397.5 154.8z"
                 />
             </svg>
-            <div className="min-h-screen flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="min-h-screen flex justify-content-center align-items-center">
                 <div className="border-1 surface-border surface-card border-round py-7 px-4 md:px-7 z-1">
                     <div className="mb-4">
                         <div className="text-900 text-xl font-bold mb-2">
@@ -120,37 +149,69 @@ const Login: Page = () => {
                             <InputText
                                 id="email"
                                 type="email"
-                                className="w-full md:w-25rem"
+                                className={`w-full md:w-25rem ${emailError ? 'p-invalid' : ''}`}
                                 placeholder="Email"
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                onChange={(e) => {
+                                    setEmail(e.target.value);
+                                    if (emailError) setEmailError("");
+                                }}
                                 disabled={loading}
                             />
                         </span>
-                        <span className="p-input-icon-left w-full mb-4">
-                            <i className="pi pi-lock"></i>
+                        {emailError && (
+                            <small className="p-error block mb-3">{emailError}</small>
+                        )}
+                        <div style={{ position: "relative" }} className="w-full mb-4">
                             <InputText
                                 id="password"
-                                type="password"
-                                className="w-full md:w-25rem"
+                                type={showPassword ? "text" : "password"}
+                                className={`w-full md:w-25rem ${passwordError ? 'p-invalid' : ''}`}
                                 placeholder="Password"
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                onChange={(e) => {
+                                    setPassword(e.target.value);
+                                    if (passwordError) setPasswordError("");
+                                }}
                                 disabled={loading}
                                 onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                                style={{ paddingRight: "2.5rem" }}
                             />
-                        </span>
+                            <button
+                                type="button"
+                                tabIndex={-1}
+                                onClick={() => setShowPassword((v) => !v)}
+                                style={{
+                                    position: "absolute",
+                                    right: "0.75rem",
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    padding: 0,
+                                    zIndex: 2,
+                                }}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                <i className={`pi ${showPassword ? "pi-eye-slash" : "pi-eye"}`}></i>
+                            </button>
+                        </div>
+                        {passwordError && (
+                            <small className="p-error block mb-3">{passwordError}</small>
+                        )}
                         <div className="mb-4 flex flex-wrap gap-3 align-items-center">
                             <div className="flex align-items-center">
-                                <Checkbox
-                                    name="checkbox"
+                                <input
+                                    type="checkbox"
+                                    id="rememberMe"
                                     checked={rememberMe}
-                                    onChange={(e) => setRememberMe(e.checked ?? false)}
-                                    className="mr-2"
+                                    onChange={e => setRememberMe(e.target.checked)}
                                     disabled={loading}
+                                    className="mr-2"
                                 />
                                 <label
-                                    htmlFor="checkbox"
+                                    htmlFor="rememberMe"
                                     className="text-900 font-medium mr-8 mb-0"
                                     style={{ verticalAlign: 'middle' }}
                                 >

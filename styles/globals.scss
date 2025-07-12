@@ -849,6 +849,33 @@ p strong {
 .ql-size-large {
   font-size: 28px !important;
 }
+
+// Loading animations
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+// Hover effects for interactive cards
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.hover\:shadow-lg:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.transition-shadow {
+  transition: box-shadow 0.15s ease-in-out;
+}
 .ql-size-huge {
   font-size: 38px !important;
 }
@@ -861,4 +888,14 @@ p strong {
   left: 50% !important;
   top: 50% !important;
   z-index: -1 !important;
+}
+
+.login-center-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #a3a8f0 0%, #696eff 100%);
+  margin: 0;
+  padding: 0;
 }

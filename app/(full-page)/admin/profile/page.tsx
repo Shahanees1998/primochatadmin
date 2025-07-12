@@ -3,15 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import { Card } from "primereact/card";
 import { InputText } from "primereact/inputtext";
-import { InputTextarea } from "primereact/inputtextarea";
 import { Button } from "primereact/button";
-import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
 import { Avatar } from "primereact/avatar";
 import { Divider } from "primereact/divider";
 import { Skeleton } from "primereact/skeleton";
 import { apiClient } from "@/lib/apiClient";
 import { Dialog } from "primereact/dialog";
+import { useSession } from "next-auth/react";
+import { Tag } from "primereact/tag";
 
 interface UserProfile {
     id: string;
@@ -29,28 +29,16 @@ interface UserProfile {
     updatedAt: string;
 }
 
-interface ProfileFormData {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    membershipNumber: string;
-}
-
-interface PasswordFormData {
-    currentPassword: string;
-    newPassword: string;
-    confirmPassword: string;
-}
-
 export default function ProfilePage() {
+    const { data: session, update } = useSession();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [changingPassword, setChangingPassword] = useState(false);
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
     
-    const [profileForm, setProfileForm] = useState<ProfileFormData>({
+    const [profileForm, setProfileForm] = useState({
         firstName: "",
         lastName: "",
         email: "",
@@ -58,54 +46,44 @@ export default function ProfilePage() {
         membershipNumber: "",
     });
 
-    const [passwordForm, setPasswordForm] = useState<PasswordFormData>({
+    const [passwordForm, setPasswordForm] = useState({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
     });
 
+    const [showCurrent, setShowCurrent] = useState(false);
+    const [showNew, setShowNew] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+
     const toast = useRef<Toast>(null);
 
-    const roleOptions = [
-        { label: "Admin", value: "ADMIN" },
-        { label: "Member", value: "MEMBER" },
-    ];
-
-    const statusOptions = [
-        { label: "Active", value: "ACTIVE" },
-        { label: "Pending", value: "PENDING" },
-        { label: "Inactive", value: "INACTIVE" },
-        { label: "Suspended", value: "SUSPENDED" },
-    ];
-
     useEffect(() => {
-        loadProfile();
-    }, []);
+        if (session?.user?.id) {
+            loadProfile();
+        }
+    }, [session?.user?.id]);
 
     const loadProfile = async () => {
+        if (!session?.user?.id) return;
+        
         setLoading(true);
         try {
-            // Get admin user profile
-            const response = await apiClient.getUsers({
-                page: 1,
-                limit: 1,
-                role: 'ADMIN',
-                status: 'ACTIVE'
-            });
+            const response = await apiClient.getUser(session.user.id);
 
             if (response.error) {
                 throw new Error(response.error);
             }
 
-            const adminUser = response.data?.users?.[0];
-            if (adminUser) {
-                setProfile(adminUser);
+            const userProfile = response.data as UserProfile;
+            if (userProfile) {
+                setProfile(userProfile);
                 setProfileForm({
-                    firstName: adminUser.firstName || "",
-                    lastName: adminUser.lastName || "",
-                    email: adminUser.email || "",
-                    phone: adminUser.phone || "",
-                    membershipNumber: adminUser.membershipNumber || "",
+                    firstName: userProfile.firstName || "",
+                    lastName: userProfile.lastName || "",
+                    email: userProfile.email || "",
+                    phone: userProfile.phone || "",
+                    membershipNumber: userProfile.membershipNumber || "",
                 });
             }
         } catch (error) {
@@ -120,7 +98,7 @@ export default function ProfilePage() {
     };
 
     const saveProfile = async () => {
-        if (!profile) return;
+        if (!profile || !session?.user?.id) return;
 
         setSaving(true);
         try {
@@ -137,7 +115,22 @@ export default function ProfilePage() {
             }
 
             // Update local state
-            setProfile(prev => prev ? { ...prev, ...profileForm } : null);
+            setProfile(prev => prev ? { ...prev, ...profileForm } as UserProfile : null);
+            
+            // Update session with new user data
+            if (session) {
+                await update({
+                    ...session,
+                    user: {
+                        ...session.user,
+                        name: `${profileForm.firstName} ${profileForm.lastName}`,
+                        firstName: profileForm.firstName,
+                        lastName: profileForm.lastName,
+                        email: profileForm.email,
+                    }
+                });
+            }
+
             showToast("success", "Success", "Profile updated successfully");
         } catch (error) {
             showToast("error", "Error", "Failed to update profile");
@@ -159,9 +152,18 @@ export default function ProfilePage() {
 
         setChangingPassword(true);
         try {
-            // This would typically be a separate API endpoint for password change
-            // For now, we'll simulate it
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (!session?.user?.id) {
+                throw new Error('User session not found');
+            }
+            const response = await apiClient.changePassword(
+                session.user.id,
+                passwordForm.currentPassword,
+                passwordForm.newPassword
+            );
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
             
             showToast("success", "Success", "Password changed successfully");
             setShowPasswordDialog(false);
@@ -171,9 +173,61 @@ export default function ProfilePage() {
                 confirmPassword: "",
             });
         } catch (error) {
-            showToast("error", "Error", "Failed to change password");
+            showToast("error", "Error", "Failed to change password. Please check your current password.");
         } finally {
             setChangingPassword(false);
+        }
+    };
+
+    const handleImageUpload = async (file: File) => {
+        if (!session?.user?.id) return;
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            showToast("error", "Error", "Please upload a valid image file (JPEG, PNG, GIF)");
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showToast("error", "Error", "Image size must be less than 5MB");
+            return;
+        }
+
+        setUploadingImage(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('userId', session.user.id);
+
+            const response = await apiClient.uploadProfileImage(formData);
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            if (response.data?.imageUrl) {
+                // Update local state
+                setProfile(prev => prev ? { ...prev, profileImage: response.data!.imageUrl } : null);
+                
+                // Update session
+                if (session) {
+                    await update({
+                        ...session,
+                        user: {
+                            ...session.user,
+                            profileImage: response.data.imageUrl,
+                        }
+                    });
+                }
+            }
+
+            showToast("success", "Success", "Profile image updated successfully");
+        } catch (error) {
+            showToast("error", "Error", "Failed to upload profile image");
+        } finally {
+            setUploadingImage(false);
         }
     };
 
@@ -187,16 +241,112 @@ export default function ProfilePage() {
         });
     };
 
+    const formatRelativeTime = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+        
+        if (diffInMinutes < 1) return 'Just now';
+        if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+        if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+        return `${Math.floor(diffInMinutes / 1440)}d ago`;
+    };
+
+    const getUserInitials = () => {
+        if (profile?.firstName && profile?.lastName) {
+            return `${profile.firstName[0]}${profile.lastName[0]}`;
+        }
+        return 'U';
+    };
+
+    const ProfileSkeleton = () => (
+        <div className="grid">
+            <div className="col-12">
+                <Card>
+                    <div className="flex flex-column gap-4">
+                        {/* Header Skeleton */}
+                        <div className="flex align-items-center gap-3">
+                            <Skeleton shape="circle" size="4rem" />
+                            <div>
+                                <Skeleton height="2rem" width="200px" className="mb-2" />
+                                <Skeleton height="1rem" width="300px" />
+                            </div>
+                        </div>
+
+                        <Divider />
+
+                        {/* Main Content Skeleton */}
+                        <div className="grid">
+                            <div className="col-12 lg:col-8">
+                                <Skeleton height="1.5rem" width="150px" className="mb-3" />
+                                
+                                <div className="grid">
+                                    <div className="col-12 md:col-6">
+                                        <Skeleton height="1rem" className="mb-2" />
+                                        <Skeleton height="3rem" />
+                                    </div>
+                                    <div className="col-12 md:col-6">
+                                        <Skeleton height="1rem" className="mb-2" />
+                                        <Skeleton height="3rem" />
+                                    </div>
+                                    <div className="col-12 md:col-6">
+                                        <Skeleton height="1rem" className="mb-2" />
+                                        <Skeleton height="3rem" />
+                                    </div>
+                                    <div className="col-12 md:col-6">
+                                        <Skeleton height="1rem" className="mb-2" />
+                                        <Skeleton height="3rem" />
+                                    </div>
+                                    <div className="col-12 md:col-6">
+                                        <Skeleton height="1rem" className="mb-2" />
+                                        <Skeleton height="3rem" />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2 mt-4">
+                                    <Skeleton height="3rem" width="120px" />
+                                    <Skeleton height="3rem" width="140px" />
+                                </div>
+                            </div>
+
+                            <div className="col-12 lg:col-4">
+                                <Skeleton height="1.5rem" width="150px" className="mb-3" />
+                                
+                                <div className="flex flex-column gap-3">
+                                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                                        <div key={i} className="p-3 surface-100 border-round">
+                                            <Skeleton height="1rem" className="mb-2" />
+                                            <Skeleton height="1.5rem" width="60%" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        </div>
+    );
+
     if (loading) {
+        return <ProfileSkeleton />;
+    }
+
+    if (!profile) {
         return (
             <div className="grid">
                 <div className="col-12">
                     <Card>
-                        <div className="flex flex-column gap-3">
-                            <Skeleton height="2rem" width="200px" />
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
+                        <div className="text-center p-4">
+                            <i className="pi pi-user text-4xl text-400 mb-3"></i>
+                            <h3 className="text-xl font-semibold mb-2">Profile Not Found</h3>
+                            <p className="text-600">Unable to load your profile information.</p>
+                            <Button 
+                                label="Retry" 
+                                icon="pi pi-refresh" 
+                                onClick={loadProfile}
+                                className="mt-3"
+                            />
                         </div>
                     </Card>
                 </div>
@@ -211,12 +361,34 @@ export default function ProfilePage() {
                     <div className="flex flex-column gap-4">
                         {/* Header */}
                         <div className="flex align-items-center gap-3">
-                            <Avatar
-                                image={profile?.profileImage}
-                                label={profile?.firstName?.charAt(0)}
-                                size="xlarge"
-                                shape="circle"
-                            />
+                            <div className="relative">
+                                <Avatar
+                                    image={profile?.profileImage}
+                                    label={getUserInitials()}
+                                    size="xlarge"
+                                    shape="circle"
+                                    className="bg-primary"
+                                />
+                                <Button
+                                    icon="pi pi-camera"
+                                    size="small"
+                                    severity="secondary"
+                                    className="absolute bottom-0 right-0 border-circle"
+                                    onClick={() => {
+                                        const input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.accept = 'image/*';
+                                        input.onchange = (e) => {
+                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                            if (file) {
+                                                handleImageUpload(file);
+                                            }
+                                        };
+                                        input.click();
+                                    }}
+                                    loading={uploadingImage}
+                                />
+                            </div>
                             <div>
                                 <h2 className="text-2xl font-bold m-0">Profile Settings</h2>
                                 <p className="text-600 m-0">Manage your account information and preferences</p>
@@ -232,7 +404,7 @@ export default function ProfilePage() {
                                 
                                 <div className="grid">
                                     <div className="col-12 md:col-6">
-                                        <label className="block text-sm font-medium mb-2">First Name</label>
+                                        <label className="block text-sm font-medium mb-2">First Name *</label>
                                         <InputText
                                             value={profileForm.firstName}
                                             onChange={(e) => setProfileForm(prev => ({ ...prev, firstName: e.target.value }))}
@@ -241,7 +413,7 @@ export default function ProfilePage() {
                                         />
                                     </div>
                                     <div className="col-12 md:col-6">
-                                        <label className="block text-sm font-medium mb-2">Last Name</label>
+                                        <label className="block text-sm font-medium mb-2">Last Name *</label>
                                         <InputText
                                             value={profileForm.lastName}
                                             onChange={(e) => setProfileForm(prev => ({ ...prev, lastName: e.target.value }))}
@@ -250,7 +422,7 @@ export default function ProfilePage() {
                                         />
                                     </div>
                                     <div className="col-12 md:col-6">
-                                        <label className="block text-sm font-medium mb-2">Email</label>
+                                        <label className="block text-sm font-medium mb-2">Email *</label>
                                         <InputText
                                             value={profileForm.email}
                                             onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
@@ -286,6 +458,7 @@ export default function ProfilePage() {
                                         onClick={saveProfile}
                                         loading={saving}
                                         severity="success"
+                                        disabled={!profileForm.firstName || !profileForm.lastName || !profileForm.email}
                                     />
                                     <Button
                                         label="Change Password"
@@ -302,11 +475,25 @@ export default function ProfilePage() {
                                 <div className="flex flex-column gap-3">
                                     <div className="p-3 surface-100 border-round">
                                         <div className="text-sm text-600">Role</div>
-                                        <div className="font-semibold">{profile?.role}</div>
+                                        <div className="flex align-items-center gap-2">
+                                            <Tag 
+                                                value={profile?.role} 
+                                                severity={profile?.role === 'ADMIN' ? 'danger' : 'info'}
+                                            />
+                                        </div>
                                     </div>
                                     <div className="p-3 surface-100 border-round">
                                         <div className="text-sm text-600">Status</div>
-                                        <div className="font-semibold">{profile?.status}</div>
+                                        <div className="flex align-items-center gap-2">
+                                            <Tag 
+                                                value={profile?.status} 
+                                                severity={
+                                                    profile?.status === 'ACTIVE' ? 'success' : 
+                                                    profile?.status === 'PENDING' ? 'warning' : 
+                                                    profile?.status === 'SUSPENDED' ? 'danger' : 'secondary'
+                                                }
+                                            />
+                                        </div>
                                     </div>
                                     <div className="p-3 surface-100 border-round">
                                         <div className="text-sm text-600">Member Since</div>
@@ -317,13 +504,19 @@ export default function ProfilePage() {
                                     <div className="p-3 surface-100 border-round">
                                         <div className="text-sm text-600">Last Login</div>
                                         <div className="font-semibold">
-                                            {profile?.lastLogin ? formatDate(profile.lastLogin) : 'Never'}
+                                            {profile?.lastLogin ? formatRelativeTime(profile.lastLogin) : 'Never'}
                                         </div>
                                     </div>
                                     <div className="p-3 surface-100 border-round">
                                         <div className="text-sm text-600">Account Created</div>
                                         <div className="font-semibold">
                                             {profile?.createdAt ? formatDate(profile.createdAt) : 'Unknown'}
+                                        </div>
+                                    </div>
+                                    <div className="p-3 surface-100 border-round">
+                                        <div className="text-sm text-600">Last Updated</div>
+                                        <div className="font-semibold">
+                                            {profile?.updatedAt ? formatRelativeTime(profile.updatedAt) : 'Unknown'}
                                         </div>
                                     </div>
                                 </div>
@@ -354,40 +547,108 @@ export default function ProfilePage() {
                                 icon="pi pi-check"
                                 onClick={changePassword}
                                 loading={changingPassword}
+                                disabled={!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
                             />
                         </div>
                     }
                 >
                     <div className="flex flex-column gap-3">
                         <div>
-                            <label className="block text-sm font-medium mb-2">Current Password</label>
-                            <InputText
-                                value={passwordForm.currentPassword}
-                                onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-                                placeholder="Enter current password"
-                                className="w-full"
-                                type="password"
-                            />
+                            <label className="block text-sm font-medium mb-2">Current Password *</label>
+                            <div style={{ position: "relative" }} className="w-full">
+                                <InputText
+                                    value={passwordForm.currentPassword}
+                                    onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                                    placeholder="Enter current password"
+                                    className="w-full"
+                                    type={showCurrent ? "text" : "password"}
+                                    style={{ paddingRight: "2.5rem" }}
+                                />
+                                <button
+                                    type="button"
+                                    tabIndex={-1}
+                                    onClick={() => setShowCurrent((v) => !v)}
+                                    style={{
+                                        position: "absolute",
+                                        right: "0.75rem",
+                                        top: "50%",
+                                        transform: "translateY(-50%)",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        padding: 0,
+                                        zIndex: 2,
+                                    }}
+                                    aria-label={showCurrent ? "Hide password" : "Show password"}
+                                >
+                                    <i className={`pi ${showCurrent ? "pi-eye-slash" : "pi-eye"}`}></i>
+                                </button>
+                            </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">New Password</label>
-                            <InputText
-                                value={passwordForm.newPassword}
-                                onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                                placeholder="Enter new password"
-                                className="w-full"
-                                type="password"
-                            />
+                            <label className="block text-sm font-medium mb-2">New Password *</label>
+                            <div style={{ position: "relative" }} className="w-full">
+                                <InputText
+                                    value={passwordForm.newPassword}
+                                    onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                                    placeholder="Enter new password"
+                                    className="w-full"
+                                    type={showNew ? "text" : "password"}
+                                    style={{ paddingRight: "2.5rem" }}
+                                />
+                                <button
+                                    type="button"
+                                    tabIndex={-1}
+                                    onClick={() => setShowNew((v) => !v)}
+                                    style={{
+                                        position: "absolute",
+                                        right: "0.75rem",
+                                        top: "50%",
+                                        transform: "translateY(-50%)",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        padding: 0,
+                                        zIndex: 2,
+                                    }}
+                                    aria-label={showNew ? "Hide password" : "Show password"}
+                                >
+                                    <i className={`pi ${showNew ? "pi-eye-slash" : "pi-eye"}`}></i>
+                                </button>
+                            </div>
+                            <small className="text-600">Password must be at least 6 characters long</small>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">Confirm New Password</label>
-                            <InputText
-                                value={passwordForm.confirmPassword}
-                                onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                                placeholder="Confirm new password"
-                                className="w-full"
-                                type="password"
-                            />
+                            <label className="block text-sm font-medium mb-2">Confirm New Password *</label>
+                            <div style={{ position: "relative" }} className="w-full">
+                                <InputText
+                                    value={passwordForm.confirmPassword}
+                                    onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                    placeholder="Confirm new password"
+                                    className="w-full"
+                                    type={showConfirm ? "text" : "password"}
+                                    style={{ paddingRight: "2.5rem" }}
+                                />
+                                <button
+                                    type="button"
+                                    tabIndex={-1}
+                                    onClick={() => setShowConfirm((v) => !v)}
+                                    style={{
+                                        position: "absolute",
+                                        right: "0.75rem",
+                                        top: "50%",
+                                        transform: "translateY(-50%)",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        padding: 0,
+                                        zIndex: 2,
+                                    }}
+                                    aria-label={showConfirm ? "Hide password" : "Show password"}
+                                >
+                                    <i className={`pi ${showConfirm ? "pi-eye-slash" : "pi-eye"}`}></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </Dialog>

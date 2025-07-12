@@ -196,6 +196,10 @@ class ApiClient {
         return this.post('/auth/reset-password', { token, password });
     }
 
+    async changePassword(userId: string, currentPassword: string, newPassword: string) {
+        return this.post('/users/change-password', { userId, currentPassword, newPassword });
+    }
+
     // Event methods
     async getEvents(params?: {
         page?: number;
@@ -309,6 +313,10 @@ class ApiClient {
         return this.post('/documents', formData);
     }
 
+    async uploadProfileImage(formData: FormData) {
+        return this.post<{ imageUrl: string }>('/users/profile-image', formData);
+    }
+
     // Notification methods
     async getNotifications(params?: {
         page?: number;
@@ -340,7 +348,7 @@ class ApiClient {
     }
 
     async markNotificationAsRead(id: string) {
-        return this.patch(`/admin/notifications/${id}/read`, {});
+        return this.patch(`/admin/notifications/${id}?action=read`, {});
     }
 
     async markAllNotificationsAsRead() {
@@ -672,6 +680,34 @@ class ApiClient {
 
     async deleteAnnouncement(id: string) {
         return this.delete(`/admin/announcements/${id}`);
+    }
+
+    // Dashboard methods
+    async getDashboard() {
+        return this.get<{
+            stats: {
+                totalUsers: number;
+                pendingApprovals: number;
+                activeEvents: number;
+                supportRequests: number;
+                documents: number;
+                festiveBoards: number;
+            };
+            recentActivity: Array<{
+                id: string;
+                type: string;
+                description: string;
+                timestamp: string;
+                user: string;
+                status?: string;
+                startDate?: string;
+            }>;
+            growthData: {
+                labels: string[];
+                newMembers: number[];
+                events: number[];
+            };
+        }>('/admin/dashboard');
     }
 }
 

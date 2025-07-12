@@ -14,7 +14,7 @@ const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new Error('Please provide both email and password');
         }
         try {
           const user = await prisma.user.findUnique({
@@ -32,14 +32,14 @@ const authOptions = {
             },
           });
           if (!user) {
-            return null;
+            throw new Error('No account found with this email address');
           }
           if (user.status !== 'ACTIVE') {
             throw new Error('Account is not active. Please contact admin.');
           }
           const isValidPassword = await bcrypt.compare(credentials.password, user.password);
           if (!isValidPassword) {
-            return null;
+            throw new Error('Incorrect password');
           }
           await prisma.user.update({
             where: { id: user.id },
@@ -58,7 +58,7 @@ const authOptions = {
           };
         } catch (error) {
           console.error('Auth error:', error);
-          return null;
+          throw error;
         }
       }
     })

@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import Layout from "../../layout/layout";
 
 interface MainLayoutProps {
     children: React.ReactNode;
@@ -25,5 +24,5 @@ export const metadata: Metadata = {
 };
 
 export default function MainLayout({ children }: MainLayoutProps) {
-    return <Layout>{children}</Layout>;
+    return <div>{children}</div>;
 }

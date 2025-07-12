@@ -388,3 +388,21 @@ enum TargetAudience {
   ADMINS
   NEW_MEMBERS
 }
+
+model SystemSettings {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  siteName            String
+  siteDescription     String?
+  contactEmail        String
+  maxFileSize         Int      @default(10)
+  allowedFileTypes    String   @default("pdf,doc,docx,jpg,jpeg,png")
+  defaultUserRole     UserRole @default(MEMBER)
+  enableNotifications Boolean  @default(true)
+  enableChat          Boolean  @default(true)
+  enableEvents        Boolean  @default(true)
+  enableDocuments     Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("system_settings")
+}
