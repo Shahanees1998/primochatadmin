@@ -33,9 +33,10 @@ interface Document {
     uploadedBy: string;
     createdAt: string;
     updatedAt: string;
-    uploader?: {
+    user?: {
         firstName: string;
         lastName: string;
+        email: string;
     };
 }
 
@@ -427,8 +428,8 @@ export default function DocumentsPage() {
                         <Column field="permissions" header="Permissions" body={(rowData) => (
                             <Tag value={rowData.permissions.replace("_", " ")} severity={getPermissionSeverity(rowData.permissions)} />
                         )} sortable style={{ minWidth: "120px" }} />
-                        <Column field="uploader" header="Uploaded By" body={(rowData) => (
-                            rowData.uploader ? `${rowData.uploader.firstName} ${rowData.uploader.lastName}` : "Unknown"
+                        <Column field="user" header="Uploaded By" body={(rowData) => (
+                            rowData.user ? `${rowData.user.firstName} ${rowData.user.lastName}` : "Unknown"
                         )} style={{ minWidth: "150px" }} />
                             <Column field="createdAt" header="Upload Date" body={(rowData) => (
                                 new Date(rowData.createdAt).toLocaleDateString()
