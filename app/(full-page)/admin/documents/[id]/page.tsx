@@ -12,6 +12,7 @@ import { Dropdown } from "primereact/dropdown";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { apiClient } from "@/lib/apiClient";
+import FilePreview from "@/components/FilePreview";
 
 interface Document {
     id: string;
@@ -199,14 +200,21 @@ export default function DocumentViewPage() {
         }
     };
 
-    const downloadDocument = () => {
+    const downloadDocument = async () => {
         if (!document) return;
         
-        const link = window.document.createElement('a');
-        link.href = document.fileUrl;
-        link.download = document.fileName;
-        link.click();
-        showToast("success", "Success", "Download started");
+        try {
+            const link = window.document.createElement('a');
+            link.href = document.fileUrl;
+            link.download = document.fileName;
+            link.target = '_blank';
+            window.document.body.appendChild(link);
+            link.click();
+            window.document.body.removeChild(link);
+            showToast("success", "Success", "Download started");
+        } catch (error) {
+            showToast("error", "Error", "Failed to download document");
+        }
     };
 
     const formatDate = (dateString: string) => {
@@ -386,19 +394,14 @@ export default function DocumentViewPage() {
                     <div className="col-12 lg:col-4">
                         <Card>
                             <h3 className="text-lg font-semibold mb-3">File Preview</h3>
-                            <div className="text-center p-4 border-2 border-dashed border-gray-300 border-round">
-                                <i className={`${getFileIcon(document.fileType)} text-6xl text-gray-400 mb-3`}></i>
-                                <div className="font-semibold text-lg">{document.fileName}</div>
-                                <div className="text-600">{formatFileSize(document.fileSize)}</div>
-                                <div className="text-sm text-500">{document.fileType}</div>
-                                <Button
-                                    label="Download File"
-                                    icon="pi pi-download"
-                                    onClick={downloadDocument}
-                                    severity="info"
-                                    className="mt-3"
-                                />
-                            </div>
+                                                        <FilePreview
+                                fileUrl={document.fileUrl}
+                                fileName={document.fileName}
+                                fileType={document.fileType}
+                                fileSize={document.fileSize}
+                                onDownload={downloadDocument}
+                                showPreview={true}
+                            />
                         </Card>
                     </div>
                 </div>

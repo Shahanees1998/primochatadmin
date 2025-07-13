@@ -310,11 +310,67 @@ class ApiClient {
     }
 
     async uploadDocument(formData: FormData) {
-        return this.post('/documents', formData);
+        // For FormData, we need to override the default headers
+        const url = `${this.baseURL}/admin/documents`;
+        
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData,
+                // Don't set Content-Type header - let the browser set it for FormData
+            });
+
+            if (!response.ok) {
+                let errorMessage = 'An error occurred';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorData.message || errorMessage;
+                } catch {
+                    errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                }
+                return { error: errorMessage };
+            }
+
+            const data = await response.json();
+            return { data };
+        } catch (error) {
+            console.error('Upload request failed:', error);
+            return {
+                error: error instanceof Error ? error.message : 'Network error occurred'
+            };
+        }
     }
 
     async uploadProfileImage(formData: FormData) {
-        return this.post<{ imageUrl: string }>('/users/profile-image', formData);
+        // For FormData, we need to override the default headers
+        const url = `${this.baseURL}/users/profile-image`;
+        
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData,
+                // Don't set Content-Type header - let the browser set it for FormData
+            });
+
+            if (!response.ok) {
+                let errorMessage = 'An error occurred';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorData.message || errorMessage;
+                } catch {
+                    errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                }
+                return { error: errorMessage };
+            }
+
+            const data = await response.json();
+            return { data };
+        } catch (error) {
+            console.error('Profile image upload request failed:', error);
+            return {
+                error: error instanceof Error ? error.message : 'Network error occurred'
+            };
+        }
     }
 
     // Notification methods

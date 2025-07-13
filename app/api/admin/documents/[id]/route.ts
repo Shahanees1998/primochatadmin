@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { unlink } from 'fs/promises';
-import { join } from 'path';
+import { deleteFromCloudinary } from '@/lib/cloudinary';
 
 // GET /api/admin/documents/[id] - Get specific document
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -33,7 +32,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (description !== undefined) updateData.description = description;
     if (category !== undefined) updateData.category = category;
     if (tags) updateData.tags = tags;
-    if (permissions) updateData.permissions = permissions;
+    if (permissions) updateData.permissions = permissions as 'PUBLIC' | 'MEMBER_ONLY' | 'ADMIN_ONLY';
     const document = await prisma.document.update({
       where: { id: params.id },
       data: updateData,
@@ -63,13 +62,19 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
-    // Delete file from filesystem
-    const filePath = join(process.cwd(), 'public', document.fileUrl);
+
+    // Extract public_id from Cloudinary URL
+    const urlParts = document.fileUrl.split('/');
+    const publicId = urlParts[urlParts.length - 1].split('.')[0]; // Remove file extension
+    
+    // Delete file from Cloudinary
     try {
-      await unlink(filePath);
-    } catch (fileError) {
-      console.warn('File not found for deletion:', filePath);
+      await deleteFromCloudinary(publicId);
+    } catch (cloudinaryError) {
+      console.warn('Failed to delete file from Cloudinary:', cloudinaryError);
+      // Continue with database deletion even if Cloudinary deletion fails
     }
+
     // Delete document record
     await prisma.document.delete({ where: { id: params.id } });
     return NextResponse.json({ message: 'Document deleted successfully' });

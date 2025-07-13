@@ -60,15 +60,31 @@ export async function PUT(
 
         // If email is being updated, check if it already exists for other users
         if (email) {
-            const existingUser = await prisma.user.findFirst({
+            const existingUserByEmail = await prisma.user.findFirst({
                 where: {
                     email,
                     id: { not: params.id },
                 },
             });
-            if (existingUser) {
+            if (existingUserByEmail) {
                 return NextResponse.json(
                     { error: 'Email already exists' },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // If membership number is being updated, check if it already exists for other users
+        if (membershipNumber) {
+            const existingUserByMembership = await prisma.user.findFirst({
+                where: {
+                    membershipNumber,
+                    id: { not: params.id },
+                },
+            });
+            if (existingUserByMembership) {
+                return NextResponse.json(
+                    { error: 'Membership number already exists' },
                     { status: 400 }
                 );
             }

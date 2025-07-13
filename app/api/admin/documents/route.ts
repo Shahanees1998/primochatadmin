@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { uploadToCloudinary, validateFile } from '@/lib/cloudinary';
 
 export async function GET(request: NextRequest) {
     try {
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
 
         // Build where clause
         const where: any = {};
-        
+
         if (search) {
             where.OR = [
                 { title: { contains: search, mode: 'insensitive' } },
@@ -81,13 +82,57 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { title, description, fileName, fileUrl, fileType, fileSize, category, tags, permissions, uploadedBy } = body;
-
-        // Validate required fields
-        if (!title || !fileName || !fileUrl || !fileType || !category || !permissions) {
+        let formData;
+        try {
+            formData = await request.formData();
+            console.log('FormData created successfully');
+        } catch (error) {
+            console.error('Error creating FormData:', error);
             return NextResponse.json(
-                { error: 'Title, file name, file URL, file type, category, and permissions are required' },
+                { error: 'Invalid request format. Expected multipart/form-data' },
+                { status: 400 }
+            );
+        }
+
+        const fileData = formData.get('file');
+        const file = fileData as File;
+        const title = formData.get('title') as string;
+        const description = formData.get('description') as string;
+        const category = formData.get('category') as string;
+        const tags = formData.get('tags') as string;
+        const permissions = formData.get('permissions') as string;
+        const uploadedBy = formData.get('uploadedBy') as string;
+        // Validate required fields
+        if (!file || !title || !category || !permissions) {
+            return NextResponse.json(
+                { error: 'File, title, category, and permissions are required' },
+                { status: 400 }
+            );
+        }
+
+        // Validate file
+        const allowedTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'text/plain',
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp'
+        ];
+
+        const validation = validateFile(file, {
+            allowedTypes,
+            maxSize: 50 * 1024 * 1024 // 50MB
+        });
+        if (!validation.isValid) {
+            return NextResponse.json(
+                { error: validation.error },
                 { status: 400 }
             );
         }
@@ -111,20 +156,29 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Create new document
+        // Upload file to Cloudinary
+        const cloudinaryResult = await uploadToCloudinary(file, {
+            folder: 'primochat/documents',
+            resource_type: 'auto',
+            max_bytes: 50 * 1024 * 1024 // 50MB
+        });
+        // Parse tags
+        const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        const data = {
+            title,
+            description,
+            fileName: file.name,
+            fileUrl: cloudinaryResult.secure_url,
+            filePublicId: cloudinaryResult.public_id, // Store the full public_id
+            fileType: file.type,
+            fileSize: file.size,
+            category,
+            tags: tagsArray,
+            permissions: permissions as 'PUBLIC' | 'MEMBER_ONLY' | 'ADMIN_ONLY',
+            uploadedBy: uploadedBy || adminUser.id,
+        }
         const document = await prisma.document.create({
-            data: {
-                title,
-                description,
-                fileName,
-                fileUrl,
-                fileType,
-                fileSize: parseInt(fileSize) || 0,
-                category,
-                tags: tags || [],
-                permissions,
-                uploadedBy: uploadedBy || adminUser.id,
-            },
+            data,
             include: {
                 user: {
                     select: {

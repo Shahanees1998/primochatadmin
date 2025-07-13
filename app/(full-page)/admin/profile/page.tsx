@@ -12,6 +12,8 @@ import { apiClient } from "@/lib/apiClient";
 import { Dialog } from "primereact/dialog";
 import { useSession } from "next-auth/react";
 import { Tag } from "primereact/tag";
+import ProfileImageUpload from "@/components/ProfileImageUpload";
+import { getProfileImageUrl } from "@/lib/cloudinary-client";
 
 interface UserProfile {
     id: string;
@@ -22,6 +24,7 @@ interface UserProfile {
     role: string;
     status: string;
     profileImage?: string;
+    profileImagePublicId?: string;
     membershipNumber?: string;
     joinDate?: string;
     lastLogin?: string;
@@ -36,7 +39,6 @@ export default function ProfilePage() {
     const [saving, setSaving] = useState(false);
     const [changingPassword, setChangingPassword] = useState(false);
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-    const [uploadingImage, setUploadingImage] = useState(false);
     
     const [profileForm, setProfileForm] = useState({
         firstName: "",
@@ -179,57 +181,7 @@ export default function ProfilePage() {
         }
     };
 
-    const handleImageUpload = async (file: File) => {
-        if (!session?.user?.id) return;
 
-        // Validate file type
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-        if (!allowedTypes.includes(file.type)) {
-            showToast("error", "Error", "Please upload a valid image file (JPEG, PNG, GIF)");
-            return;
-        }
-
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showToast("error", "Error", "Image size must be less than 5MB");
-            return;
-        }
-
-        setUploadingImage(true);
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('userId', session.user.id);
-
-            const response = await apiClient.uploadProfileImage(formData);
-
-            if (response.error) {
-                throw new Error(response.error);
-            }
-
-            if (response.data?.imageUrl) {
-                // Update local state
-                setProfile(prev => prev ? { ...prev, profileImage: response.data!.imageUrl } : null);
-                
-                // Update session
-                if (session) {
-                    await update({
-                        ...session,
-                        user: {
-                            ...session.user,
-                            profileImage: response.data.imageUrl,
-                        }
-                    });
-                }
-            }
-
-            showToast("success", "Success", "Profile image updated successfully");
-        } catch (error) {
-            showToast("error", "Error", "Failed to upload profile image");
-        } finally {
-            setUploadingImage(false);
-        }
-    };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -363,36 +315,49 @@ export default function ProfilePage() {
                         <div className="flex align-items-center gap-3">
                             <div className="relative">
                                 <Avatar
-                                    image={profile?.profileImage}
+                                    image={profile?.profileImagePublicId ? 
+                                        getProfileImageUrl(profile.profileImagePublicId, 'large') : 
+                                        profile?.profileImage
+                                    }
                                     label={getUserInitials()}
                                     size="xlarge"
                                     shape="circle"
                                     className="bg-primary"
-                                />
-                                <Button
-                                    icon="pi pi-camera"
-                                    size="small"
-                                    severity="secondary"
-                                    className="absolute bottom-0 right-0 border-circle"
-                                    onClick={() => {
-                                        const input = document.createElement('input');
-                                        input.type = 'file';
-                                        input.accept = 'image/*';
-                                        input.onchange = (e) => {
-                                            const file = (e.target as HTMLInputElement).files?.[0];
-                                            if (file) {
-                                                handleImageUpload(file);
-                                            }
-                                        };
-                                        input.click();
-                                    }}
-                                    loading={uploadingImage}
                                 />
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold m-0">Profile Settings</h2>
                                 <p className="text-600 m-0">Manage your account information and preferences</p>
                             </div>
+                        </div>
+
+                        {/* Profile Image Upload Section */}
+                        <div className="flex justify-content-center">
+                            <ProfileImageUpload
+                                currentImageUrl={profile?.profileImage}
+                                currentImagePublicId={profile?.profileImagePublicId}
+                                userId={profile?.id || ''}
+                                onImageUploaded={(imageUrl, publicId) => {
+                                    // Update local state
+                                    setProfile(prev => prev ? { 
+                                        ...prev, 
+                                        profileImage: imageUrl,
+                                        profileImagePublicId: publicId || prev.profileImagePublicId
+                                    } : null);
+                                    
+                                    // Update session
+                                    if (session) {
+                                        update({
+                                            ...session,
+                                            user: {
+                                                ...session.user,
+                                                profileImage: imageUrl,
+                                            }
+                                        });
+                                    }
+                                }}
+                                size="medium"
+                            />
                         </div>
 
                         <Divider />

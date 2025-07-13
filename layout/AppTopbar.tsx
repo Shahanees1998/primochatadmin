@@ -1,14 +1,58 @@
+'use client'
+
 import type { AppTopbarRef } from "@/types/index";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { forwardRef, useContext, useImperativeHandle, useRef } from "react";
+import { forwardRef, useContext, useEffect, useImperativeHandle, useRef, useState } from "react";
 import AppBreadcrumb from "./AppBreadCrumb";
 import { LayoutContext } from "./context/layoutcontext";
+import { useSession } from "next-auth/react";
+import { Toast } from "primereact/toast";
+import { apiClient } from "@/lib/apiClient";
+import { getProfileImageUrl } from "@/lib/cloudinary-client";
+import { Avatar } from "primereact/avatar";
 
 const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
     const { onMenuToggle, showProfileSidebar, showConfigSidebar } =
         useContext(LayoutContext);
     const menubuttonRef = useRef(null);
+    const { data: session } = useSession();
+    const [profile, setProfile] = useState<any | null>(null);
+    const toast = useRef<Toast>(null);
+
+    useEffect(() => {
+        if (session?.user?.id) {
+            loadProfile();
+        }
+    }, [session?.user?.id]);
+
+
+    const getUserInitials = () => {
+        if (profile?.firstName && profile?.lastName) {
+            return `${profile.firstName[0]}${profile.lastName[0]}`;
+        }
+        return 'U';
+    };
+
+
+    const loadProfile = async () => {
+        if (!session?.user?.id) return;
+        try {
+            const response = await apiClient.getUser(session.user.id);
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            const userProfile = response.data as any;
+            if (userProfile) {
+                setProfile(userProfile);
+            }
+        }
+        catch (error) {
+            console.error('Error loading profile:', error);
+        }
+    }
 
     const onConfigButtonClick = () => {
         showConfigSidebar();
@@ -56,18 +100,22 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                             onClick={onConfigButtonClick}
                         ></Button>
                     </li> */}
-                    <li className="topbar-profile">
                         <button
                             type="button"
-                            className="p-link"
+                            style={{border : 'none', cursor:'pointer'}}
                             onClick={showProfileSidebar}
                         >
-                            <img
-                                src="/layout/images/avatar/avatar.png"
-                                alt="Profile"
-                            />
+                             <Avatar
+                                    image={profile?.profileImagePublicId ? 
+                                        getProfileImageUrl(profile.profileImagePublicId, 'large') : 
+                                        profile?.profileImage
+                                    }
+                                    label={getUserInitials()}
+                                    size="large"
+                                    shape="circle"
+                                    className="bg-primary"
+                                />
                         </button>
-                    </li>
                 </ul>
             </div>
         </div>

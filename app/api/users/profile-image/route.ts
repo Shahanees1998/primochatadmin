@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { uploadToCloudinary, validateFile } from '@/lib/cloudinary';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Profile image upload request received');
+    console.log('Content-Type:', request.headers.get('content-type'));
+    
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const userId = formData.get('userId') as string;
+    
+    console.log('Profile image form data:', {
+      hasFile: !!file,
+      fileName: file?.name,
+      fileSize: file?.size,
+      userId
+    });
 
     if (!file || !userId) {
       return NextResponse.json(
@@ -14,34 +25,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
+    // Validate file type and size
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const validation = validateFile(file, {
+      allowedTypes,
+      maxSize: 5 * 1024 * 1024 // 5MB
+    });
+
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only JPEG, PNG, and GIF are allowed' },
+        { error: validation.error },
         { status: 400 }
       );
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: 'File size must be less than 5MB' },
-        { status: 400 }
-      );
-    }
-
-    // In a real application, you would upload the file to a cloud storage service
-    // For now, we'll simulate the upload and return a placeholder URL
-    const imageUrl = `/api/users/${userId}/profile-image?t=${Date.now()}`;
+    // Upload image to Cloudinary with optimization
+    const cloudinaryResult = await uploadToCloudinary(file, {
+      folder: 'primochat/profile-images',
+      resource_type: 'image',
+      transformation: [
+        { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+        { quality: 'auto', fetch_format: 'auto' }
+      ],
+      max_bytes: 5 * 1024 * 1024 // 5MB
+    });
 
     // Update user's profile image in database
     await prisma.user.update({
       where: { id: userId },
-      data: { profileImage: imageUrl },
+      data: { 
+        profileImage: cloudinaryResult.secure_url,
+        profileImagePublicId: cloudinaryResult.public_id
+      },
     });
 
-    return NextResponse.json({ imageUrl });
+    return NextResponse.json({ 
+      imageUrl: cloudinaryResult.secure_url,
+      publicId: cloudinaryResult.public_id
+    });
   } catch (error) {
     console.error('Profile image upload error:', error);
     return NextResponse.json(

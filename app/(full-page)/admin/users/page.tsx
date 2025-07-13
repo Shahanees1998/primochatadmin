@@ -17,6 +17,7 @@ import { FilterMatchMode, FilterOperator } from "primereact/api";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "primereact/skeleton";
 import { apiClient } from "@/lib/apiClient";
+import { getProfileImageUrl } from "@/lib/cloudinary-client";
 
 interface User {
     id: string;
@@ -27,6 +28,7 @@ interface User {
     role: string;
     status: string;
     profileImage?: string;
+    profileImagePublicId?: string;
     membershipNumber?: string;
     joinDate?: string | null;
     lastLogin?: string;
@@ -255,8 +257,11 @@ export default function UsersPage() {
         return (
             <div className="flex align-items-center gap-2">
                 <Avatar
-                    image={rowData.profileImage}
-                    icon={!rowData.profileImage ? "pi pi-user" : undefined}
+                    image={rowData.profileImagePublicId ? 
+                        getProfileImageUrl(rowData.profileImagePublicId, 'small') : 
+                        rowData.profileImage
+                    }
+                    icon={!rowData.profileImage && !rowData.profileImagePublicId ? "pi pi-user" : undefined}
                     size="normal"
                     shape="circle"
                 />

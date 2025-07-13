@@ -197,21 +197,16 @@ export default function DocumentsPage() {
 
                 showToast("success", "Success", "Document updated successfully");
             } else {
-                // Create new document
-                const documentData = {
-                    title: documentForm.title,
-                    description: documentForm.description,
-                    fileName: uploadedFile!.name,
-                    fileUrl: `/uploads/${uploadedFile!.name}`,
-                    fileType: uploadedFile!.type,
-                    fileSize: uploadedFile!.size,
-                    category: documentForm.category,
-                    tags: documentForm.tags.split(",").map(tag => tag.trim()).filter(tag => tag),
-                    permissions: documentForm.permissions as 'PUBLIC' | 'MEMBER_ONLY' | 'ADMIN_ONLY',
-                    // uploadedBy will be set by the backend to the default admin user
-                };
+                // Create new document with file upload
+                const formData = new FormData();
+                formData.append('file', uploadedFile!);
+                formData.append('title', documentForm.title);
+                formData.append('description', documentForm.description);
+                formData.append('category', documentForm.category);
+                formData.append('tags', documentForm.tags);
+                formData.append('permissions', documentForm.permissions);
 
-                const response = await apiClient.createDocument(documentData);
+                const response = await apiClient.uploadDocument(formData);
 
                 if (response.error) {
                     throw new Error(response.error);
@@ -258,13 +253,19 @@ export default function DocumentsPage() {
         }
     };
 
-    const downloadDocument = (document: Document) => {
-        // Simulate download
-        const link = window.document.createElement('a');
-        link.href = document.fileUrl;
-        link.download = document.fileName;
-        link.click();
-        showToast("success", "Success", "Download started");
+    const downloadDocument = async (document: Document) => {
+        try {
+            const link = window.document.createElement('a');
+            link.href = document.fileUrl;
+            link.download = document.fileName;
+            link.target = '_blank';
+            window.document.body.appendChild(link);
+            link.click();
+            window.document.body.removeChild(link);
+            showToast("success", "Success", "Download started");
+        } catch (error) {
+            showToast("error", "Error", "Failed to download document");
+        }
     };
 
     const getCategorySeverity = (category: string) => {

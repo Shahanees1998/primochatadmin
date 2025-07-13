@@ -9,6 +9,7 @@ import { Dropdown } from "primereact/dropdown";
 import { FileUpload } from "primereact/fileupload";
 import { Toast } from "primereact/toast";
 import { useRouter } from "next/navigation";
+import TestUpload from "@/components/TestUpload";
 
 interface DocumentFormData {
     title: string;
@@ -56,7 +57,7 @@ export default function UploadDocumentPage() {
     const onFileSelect = (event: any) => {
         const file = event.files[0];
         setUploadedFile(file);
-        
+
         // Auto-fill title if not already set
         if (!formData.title && file) {
             const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
@@ -77,28 +78,25 @@ export default function UploadDocumentPage() {
 
         setLoading(true);
         try {
-            // Simulate file upload
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Create FormData for file upload
+            const formDataToSend = new FormData();
+            formDataToSend.append('file', uploadedFile);
+            formDataToSend.append('title', formData.title);
+            formDataToSend.append('description', formData.description);
+            formDataToSend.append('category', formData.category);
+            formDataToSend.append('tags', formData.tags);
+            formDataToSend.append('permissions', formData.permissions);
 
-            const documentData = {
-                title: formData.title,
-                description: formData.description,
-                fileName: uploadedFile.name,
-                fileUrl: `/uploads/${uploadedFile.name}`,
-                fileType: uploadedFile.type,
-                fileSize: uploadedFile.size,
-                category: formData.category,
-                tags: formData.tags.split(",").map(tag => tag.trim()).filter(tag => tag),
-                permissions: formData.permissions,
-                // uploadedBy will be set by the backend to the default admin user
-            };
+            console.log('Frontend: File being uploaded:', {
+                name: uploadedFile.name,
+                size: uploadedFile.size,
+                type: uploadedFile.type
+            });
+            console.log('Frontend: FormData keys:', Array.from(formDataToSend.keys()));
 
             const response = await fetch('/api/admin/documents', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(documentData),
+                body: formDataToSend,
             });
 
             if (!response.ok) {
@@ -107,7 +105,7 @@ export default function UploadDocumentPage() {
             }
 
             showToast("success", "Success", "Document uploaded successfully!");
-            
+
             // Reset form
             setFormData({
                 title: "",
@@ -154,16 +152,16 @@ export default function UploadDocumentPage() {
                             <label className="font-bold mb-2 block">Upload File *</label>
                             <FileUpload
                                 ref={fileUploadRef}
-                                name="document"
-                                url="/api/upload"
+                                name="file"
                                 accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.xlsx,.xls,.ppt,.pptx"
                                 maxFileSize={10000000}
                                 onSelect={onFileSelect}
-                                auto
                                 chooseLabel="Choose File"
                                 uploadLabel="Upload"
                                 cancelLabel="Cancel"
                                 emptyTemplate={<p className="m-0">Drag and drop files here to upload.</p>}
+                                customUpload={true}
+                                uploadHandler={() => { }}
                             />
                             <small className="text-600">Maximum file size: 10MB. Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG, XLSX, PPT</small>
                         </div>
@@ -236,7 +234,7 @@ export default function UploadDocumentPage() {
                                         <div>
                                             <div className="font-semibold">{uploadedFile.name}</div>
                                             <div className="text-sm text-600">
-                                                Size: {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB | 
+                                                Size: {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB |
                                                 Type: {uploadedFile.type || 'Unknown'}
                                             </div>
                                         </div>
@@ -267,6 +265,14 @@ export default function UploadDocumentPage() {
             </div>
 
             <Toast ref={toast} />
+
+
+            {/* Test Upload Component */}
+            <div className="col-12 mt-4">
+                <Card>
+                    <TestUpload />
+                </Card>
+            </div>
         </div>
     );
 } 

@@ -12,6 +12,7 @@ declare module "next-auth" {
       lastName: string
       membershipNumber?: string
       profileImage?: string
+      profileImagePublicId?: string
     }
   }
 
@@ -25,6 +26,7 @@ declare module "next-auth" {
     lastName: string
     membershipNumber?: string
     profileImage?: string
+    profileImagePublicId?: string
   }
 }
 
@@ -37,5 +39,6 @@ declare module "next-auth/jwt" {
     lastName: string
     membershipNumber?: string
     profileImage?: string
+    profileImagePublicId?: string
   }
 } 

@@ -62,17 +62,22 @@ const AppProfileSidebar = () => {
             });
 
             // Load recent messages
-            const messagesResponse = await apiClient.getChatMessages('general', {
-                page: 1,
-                limit: 3
-            });
+            try {
+                const messagesResponse = await apiClient.getChatMessages('general', {
+                    page: 1,
+                    limit: 3
+                });
+
+                if (!messagesResponse.error) {
+                    setMessages(messagesResponse.data?.messages || []);
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                setMessages([]);
+            }
 
             if (!notificationsResponse.error) {
                 setNotifications(notificationsResponse.data?.notifications || []);
-            }
-
-            if (!messagesResponse.error) {
-                setMessages(messagesResponse.data?.messages || []);
             }
         } catch (error) {
             console.error('Error loading sidebar data:', error);

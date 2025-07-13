@@ -23,6 +23,7 @@ model User {
   role              UserRole @default(MEMBER)
   status            UserStatus @default(PENDING)
   profileImage      String?
+  profileImagePublicId String? // Cloudinary public_id for profile image
   membershipNumber  String?  @unique
   joinDate          DateTime?
   lastLogin         DateTime?
@@ -160,6 +161,7 @@ model Document {
   description String?
   fileName    String
   fileUrl     String
+  filePublicId String // Cloudinary public_id for download
   fileType    String
   fileSize    Int
   category    String?

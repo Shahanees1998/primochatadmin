@@ -100,15 +100,29 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if email already exists
-        const existingUser = await prisma.user.findUnique({
+        const existingUserByEmail = await prisma.user.findUnique({
             where: { email },
         });
 
-        if (existingUser) {
+        if (existingUserByEmail) {
             return NextResponse.json(
                 { error: 'Email already exists' },
                 { status: 400 }
             );
+        }
+
+        // Check if membership number already exists (if provided)
+        if (membershipNumber) {
+            const existingUserByMembership = await prisma.user.findUnique({
+                where: { membershipNumber },
+            });
+
+            if (existingUserByMembership) {
+                return NextResponse.json(
+                    { error: 'Membership number already exists' },
+                    { status: 400 }
+                );
+            }
         }
 
         // Hash the password (admin can set, or use default)
