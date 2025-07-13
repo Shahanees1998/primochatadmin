@@ -17,6 +17,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
+                <title>PrimoChat Admin - Community Management System</title>
+                <meta name="description" content="Administrative dashboard for PrimoChat community management" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
+                <link rel="apple-touch-icon" href="/images/logo.svg" />
                 <link
                     id="theme-link"
                     href={`/theme/theme-light/indigo/theme.css`}
