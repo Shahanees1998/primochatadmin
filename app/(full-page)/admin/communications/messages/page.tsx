@@ -530,7 +530,7 @@ export default function MessagesPage() {
                                 </div>
 
                                 {/* Messages Area */}
-                                <ScrollPanel className="flex-1 p-3">
+                                <ScrollPanel className="flex-1 p-3 pt-4">
                                     {messagesLoading ? (
                                         <div className="flex flex-column gap-3">
                                             {Array.from({ length: 5 }).map((_, i) => (
