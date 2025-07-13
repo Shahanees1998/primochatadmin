@@ -86,14 +86,6 @@ export default function UploadDocumentPage() {
             formDataToSend.append('category', formData.category);
             formDataToSend.append('tags', formData.tags);
             formDataToSend.append('permissions', formData.permissions);
-
-            console.log('Frontend: File being uploaded:', {
-                name: uploadedFile.name,
-                size: uploadedFile.size,
-                type: uploadedFile.type
-            });
-            console.log('Frontend: FormData keys:', Array.from(formDataToSend.keys()));
-
             const response = await fetch('/api/admin/documents', {
                 method: 'POST',
                 body: formDataToSend,
@@ -265,14 +257,6 @@ export default function UploadDocumentPage() {
             </div>
 
             <Toast ref={toast} />
-
-
-            {/* Test Upload Component */}
-            <div className="col-12 mt-4">
-                <Card>
-                    <TestUpload />
-                </Card>
-            </div>
         </div>
     );
 } 

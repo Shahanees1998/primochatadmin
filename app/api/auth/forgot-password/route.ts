@@ -61,8 +61,6 @@ export async function POST(request: NextRequest) {
     // For now, we'll just return the token (in production, this should be sent via email)
     // const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/reset-password?token=${jwtToken}`;
     const resetUrl = `https://primoochat.vercel.app/auth/reset-password?token=${jwtToken}`;
-    console.log('Password reset URL:', resetUrl); // Remove this in production
-
     return NextResponse.json({
       message: 'If an account with that email exists, a password reset link has been sent.',
     });

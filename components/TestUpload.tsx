@@ -15,7 +15,6 @@ export default function TestUpload() {
         const file = event.target.files?.[0];
         if (file) {
             setSelectedFile(file);
-            console.log('File selected:', file.name, file.size, file.type);
         }
     };
 
@@ -27,13 +26,6 @@ export default function TestUpload() {
 
         setUploading(true);
         try {
-            console.log('Starting upload test...');
-            console.log('Test file details:', {
-                name: selectedFile.name,
-                size: selectedFile.size,
-                type: selectedFile.type
-            });
-            
             const formData = new FormData();
             formData.append('file', selectedFile);
             formData.append('title', 'Test Document');
@@ -41,24 +33,16 @@ export default function TestUpload() {
             formData.append('category', 'GENERAL');
             formData.append('tags', 'test');
             formData.append('permissions', 'PUBLIC');
-
-            console.log('FormData created, sending request...');
-            console.log('FormData keys:', Array.from(formData.keys()));
-            
             const response = await fetch('/api/admin/documents', {
                 method: 'POST',
                 body: formData,
             });
-
-            console.log('Response received:', response.status, response.statusText);
-
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.error || 'Upload failed');
             }
 
             const result = await response.json();
-            console.log('Upload successful:', result);
             showToast("success", "Success", "Test upload successful!");
             setSelectedFile(null);
         } catch (error) {

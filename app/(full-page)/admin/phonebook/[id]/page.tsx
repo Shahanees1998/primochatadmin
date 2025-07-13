@@ -7,6 +7,7 @@ import { Button } from "primereact/button";
 import { Tag } from "primereact/tag";
 import { Skeleton } from "primereact/skeleton";
 import { Toast } from "primereact/toast";
+import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { useRef } from "react";
 
 interface PhoneBookEntry {
@@ -61,13 +62,21 @@ export default function PhoneBookDetailPage() {
     };
 
     const handleEdit = () => {
-        router.push(`/admin/phonebook?edit=${entry?.id}`);
+        // Store the entry data in sessionStorage so the main page can access it
+        if (entry) {
+            sessionStorage.setItem('editPhoneBookEntry', JSON.stringify(entry));
+            router.push('/admin/phonebook');
+        }
     };
 
     const handleDelete = () => {
-        if (confirm(`Are you sure you want to delete "${entry?.user?.firstName} ${entry?.user?.lastName}"?`)) {
-            deleteEntry();
-        }
+        confirmDialog({
+            message: `Are you sure you want to delete "${entry?.user?.firstName} ${entry?.user?.lastName}"?`,
+            header: "Delete Confirmation",
+            icon: "pi pi-exclamation-triangle",
+            acceptClassName: "p-button-danger",
+            accept: () => deleteEntry(),
+        });
     };
 
     const deleteEntry = async () => {
@@ -237,6 +246,7 @@ export default function PhoneBookDetailPage() {
                 </Card>
             </div>
             <Toast ref={toast} />
+            <ConfirmDialog />
         </div>
     );
 } 

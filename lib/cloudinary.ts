@@ -6,13 +6,6 @@ const apiKey = '555776591533351';
 const apiSecret = 'sRofrQD3SmHowqDI5Ghp7n1u0aM';
 const uploadPreset = 'ml_default';
 
-console.log('Cloudinary config:', {
-  cloudName: cloudName ? 'Set' : 'Missing',
-  apiKey: apiKey ? 'Set' : 'Missing',
-  apiSecret: apiSecret ? 'Set' : 'Missing',
-  uploadPreset: uploadPreset ? 'Set' : 'Missing'
-});
-
 cloudinary.config({
   cloud_name: cloudName,
   api_key: apiKey,
@@ -44,12 +37,6 @@ export async function uploadToCloudinary(
   options: CloudinaryUploadOptions = {}
 ): Promise<CloudinaryUploadResult> {
   try {
-    console.log('Starting Cloudinary upload:', {
-      fileType: file instanceof File ? file.type : 'Buffer',
-      fileSize: file instanceof File ? file.size : 'Buffer',
-      options
-    });
-    
     const {
       folder = 'primochat',
       transformation = [],
@@ -82,16 +69,7 @@ export async function uploadToCloudinary(
     if (max_bytes) {
       uploadOptions.max_bytes = max_bytes;
     }
-
-    console.log('Uploading to Cloudinary with options:', uploadOptions);
     const result = await cloudinary.uploader.upload(fileData, uploadOptions);
-    
-    console.log('Cloudinary upload successful:', {
-      public_id: result.public_id,
-      secure_url: result.secure_url,
-      bytes: result.bytes
-    });
-    
     return {
       public_id: result.public_id,
       secure_url: result.secure_url,

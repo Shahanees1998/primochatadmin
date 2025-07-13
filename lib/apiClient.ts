@@ -48,7 +48,6 @@ class ApiClient {
                     url += `?${queryString}`;
                 }
             }
-
             // Prepare request configuration
             const config: RequestInit = {
                 method,
@@ -692,15 +691,16 @@ class ApiClient {
         sortField?: string;
         sortOrder?: number;
     }) {
-        const searchParams = new URLSearchParams();
-        if (params?.page) searchParams.append('page', params.page.toString());
-        if (params?.limit) searchParams.append('limit', params.limit.toString());
-        if (params?.search) searchParams.append('search', params.search);
-        if (params?.type) searchParams.append('type', params.type);
-        if (params?.status) searchParams.append('status', params.status);
-        if (params?.sortField) searchParams.append('sortField', params.sortField);
-        if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder.toString());
+        // Filter out empty strings, null values, and undefined values
+        const filteredParams: Record<string, string | number> = {};
         
+        if (params?.page) filteredParams.page = params.page;
+        if (params?.limit) filteredParams.limit = params.limit;
+        if (params?.search && params.search.trim()) filteredParams.search = params.search.trim();
+        if (params?.type && params.type.trim()) filteredParams.type = params.type.trim();
+        if (params?.status && params.status.trim()) filteredParams.status = params.status.trim();
+        if (params?.sortField && params.sortField.trim()) filteredParams.sortField = params.sortField.trim();
+        if (params?.sortOrder !== undefined) filteredParams.sortOrder = params.sortOrder;
         return this.get<{
             announcements: any[];
             pagination: {
@@ -709,7 +709,7 @@ class ApiClient {
                 total: number;
                 totalPages: number;
             };
-        }>(`/admin/announcements?${searchParams.toString()}`);
+        }>('/admin/announcements', filteredParams);
     }
 
     async createAnnouncement(data: {

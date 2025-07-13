@@ -24,6 +24,21 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
         if (session?.user?.id) {
             loadProfile();
         }
+    }, [session?.user?.id, session?.user?.profileImage]);
+
+    // Listen for custom profile update events
+    useEffect(() => {
+        const handleProfileUpdate = () => {
+            if (session?.user?.id) {
+                loadProfile();
+            }
+        };
+
+        window.addEventListener('profile-updated', handleProfileUpdate);
+        
+        return () => {
+            window.removeEventListener('profile-updated', handleProfileUpdate);
+        };
     }, [session?.user?.id]);
 
 

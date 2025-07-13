@@ -26,9 +26,7 @@ const LoginContent = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     // Redirect if already logged in
-    console.log('************************************************* session', session)
     if (session != null) {
-        console.log('::::::::::::::::::::::::::::::::::::::::::::; seesion', session)
         const callbackUrl = searchParams.get('callbackUrl') || '/admin';
         router.push(callbackUrl);
         return null;

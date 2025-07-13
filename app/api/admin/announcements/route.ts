@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
+import { authOptions } from '../../auth/authOptions';
 
 export async function GET(request: NextRequest) {
     try {
+        const session = await getServerSession(authOptions);
+        
+        if (!session || session.user.role !== 'ADMIN') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { searchParams } = new URL(request.url);
+        
+        // Debug: Log all search parameters        
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '10');
         const search = searchParams.get('search') || '';
@@ -23,39 +33,41 @@ export async function GET(request: NextRequest) {
                 { content: { contains: search, mode: 'insensitive' } },
             ];
         }
-
-        if (type) {
+               if (type && type.trim()) {
             where.type = type;
         }
 
-        if (status) {
+        if (status && status.trim()) {
             where.status = status;
         }
-
         // Build orderBy clause
         const orderBy: any = {};
-        orderBy[sortField] = sortOrder === 1 ? 'asc' : 'desc';
-
-        // Get announcements with pagination
-        const [announcements, total] = await Promise.all([
-            prisma.announcement.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy,
-                include: {
-                    createdBy: {
-                        select: {
-                            id: true,
-                            firstName: true,
-                            lastName: true,
-                            email: true,
+        orderBy[sortField] = sortOrder === 1 ? 'asc' : 'desc';        
+        let announcements, total;
+        try {
+            [announcements, total] = await Promise.all([
+                prisma.announcement.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy,
+                    include: {
+                        createdBy: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                            },
                         },
                     },
-                },
-            }),
-            prisma.announcement.count({ where }),
-        ]);
+                }),
+                prisma.announcement.count({ where }),
+            ]);
+        } catch (prismaError) {
+            console.error('Announcements API - Prisma query failed:', prismaError);
+            throw prismaError;
+        }
 
         return NextResponse.json({
             announcements: announcements.map(announcement => ({
@@ -83,6 +95,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        const session = await getServerSession(authOptions);
+        
+        if (!session || session.user.role !== 'ADMIN') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const body = await request.json();
         const { title, content, type, status, targetAudience, expiresAt } = body;
 
@@ -103,7 +121,7 @@ export async function POST(request: NextRequest) {
                 status,
                 targetAudience,
                 expiresAt: expiresAt ? new Date(expiresAt) : null,
-                createdById: 'admin', // TODO: Get from session
+                createdById: session.user.id,
             },
             include: {
                 createdBy: {

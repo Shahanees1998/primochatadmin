@@ -92,6 +92,11 @@ const AppMenu = () => {
             icon: "pi pi-comments",
             items: [
                 {
+                    label: "Announcements",
+                    icon: "pi pi-fw pi-megaphone",
+                    to: "/admin/communications/announcements",
+                },
+                {
                     label: "Send Announcement",
                     icon: "pi pi-fw pi-send",
                     to: "/admin/communications/announcement",

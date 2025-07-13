@@ -30,7 +30,6 @@ export const useSocket = (options: UseSocketOptions = {}) => {
 
             // Connection events
             socket.on('connect', () => {
-                console.log('Socket connected:', socket.id);
                 setIsConnected(true);
                 setIsConnecting(false);
                 options.onConnect?.();
@@ -42,7 +41,6 @@ export const useSocket = (options: UseSocketOptions = {}) => {
             });
 
             socket.on('disconnect', () => {
-                console.log('Socket disconnected');
                 setIsConnected(false);
                 options.onDisconnect?.();
             });

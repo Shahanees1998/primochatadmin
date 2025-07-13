@@ -15,7 +15,6 @@ export default function TestProfileUpload() {
     };
 
     const handleImageUploaded = (imageUrl: string, publicId?: string) => {
-        console.log('Profile image uploaded:', { imageUrl, publicId });
         setCurrentImageUrl(imageUrl);
         setCurrentImagePublicId(publicId);
         showToast("success", "Success", `Image uploaded! URL: ${imageUrl}, Public ID: ${publicId || 'N/A'}`);

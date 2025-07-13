@@ -6,9 +6,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { InputTextarea } from "primereact/inputtextarea";
 import { Dropdown } from "primereact/dropdown";
-import { Dialog } from "primereact/dialog";
 import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Tag } from "primereact/tag";
@@ -23,7 +21,7 @@ interface Announcement {
     content: string;
     type: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'EVENT' | 'UPDATE';
     status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-    targetAudience: 'ALL' | 'MEMBERS' | 'ADMINS' | 'NEW_MEMBERS';
+    targetAudience: 'ALL' | 'MEMBERS' | 'ADMINS' | 'NEW_MEMBERS' | 'CUSTOM';
     publishedAt?: string;
     expiresAt?: string;
     createdAt: string;
@@ -36,13 +34,24 @@ interface Announcement {
     };
 }
 
+interface User {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    status: string;
+}
+
 interface AnnouncementFormData {
     title: string;
     content: string;
     type: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'EVENT' | 'UPDATE';
     status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-    targetAudience: 'ALL' | 'MEMBERS' | 'ADMINS' | 'NEW_MEMBERS';
+    targetAudience: 'ALL' | 'MEMBERS' | 'ADMINS' | 'NEW_MEMBERS' | 'CUSTOM';
     expiresAt?: string;
+    selectedUsers: User[];
+    createChatRoom: boolean;
 }
 
 export default function AnnouncementsPage() {
@@ -57,17 +66,6 @@ export default function AnnouncementsPage() {
     const [selectedStatus, setSelectedStatus] = useState<string>("");
     const [sortField, setSortField] = useState<string | undefined>(undefined);
     const [sortOrder, setSortOrder] = useState<number | undefined>(undefined);
-    const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
-    const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
-    const [announcementForm, setAnnouncementForm] = useState<AnnouncementFormData>({
-        title: "",
-        content: "",
-        type: "GENERAL",
-        status: "DRAFT",
-        targetAudience: "ALL",
-        expiresAt: undefined,
-    });
-    const [saveLoading, setSaveLoading] = useState(false);
     const toast = useRef<Toast>(null);
 
     const typeOptions = [
@@ -91,6 +89,7 @@ export default function AnnouncementsPage() {
         { label: "Members Only", value: "MEMBERS" },
         { label: "Admins Only", value: "ADMINS" },
         { label: "New Members", value: "NEW_MEMBERS" },
+        { label: "Custom Selection", value: "CUSTOM" },
     ];
 
     useEffect(() => {
@@ -100,7 +99,7 @@ export default function AnnouncementsPage() {
     const loadAnnouncements = async () => {
         setLoading(true);
         try {
-            const response = await apiClient.getAnnouncements({
+            const params = {
                 page: currentPage,
                 limit: rowsPerPage,
                 search: globalFilterValue,
@@ -108,7 +107,10 @@ export default function AnnouncementsPage() {
                 status: selectedStatus,
                 sortField,
                 sortOrder,
-            });
+            };
+
+            // Debug: Log the parameters being sent
+            const response = await apiClient.getAnnouncements(params);
 
             if (response.error) {
                 throw new Error(response.error);
@@ -117,11 +119,14 @@ export default function AnnouncementsPage() {
             setAnnouncements(response.data?.announcements || []);
             setTotalRecords(response.data?.pagination?.total || 0);
         } catch (error) {
+            console.error('Error loading announcements:', error);
             showToast("error", "Error", "Failed to load announcements");
         } finally {
             setLoading(false);
         }
     };
+
+
 
     const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -130,82 +135,26 @@ export default function AnnouncementsPage() {
     };
 
     const onTypeFilterChange = (e: any) => {
-        setSelectedType(e.value);
+        setSelectedType(e.value.value ?? e.value);
         setCurrentPage(1);
     };
 
     const onStatusFilterChange = (e: any) => {
-        setSelectedStatus(e.value);
+        setSelectedStatus(e.value.value ?? e.value);
         setCurrentPage(1);
     };
 
     const openNewAnnouncementDialog = () => {
-        setEditingAnnouncement(null);
-        setAnnouncementForm({
-            title: "",
-            content: "",
-            type: "GENERAL",
-            status: "DRAFT",
-            targetAudience: "ALL",
-            expiresAt: undefined,
-        });
-        setShowAnnouncementDialog(true);
+        router.push('/admin/communications/announcement');
     };
 
     const openEditAnnouncementDialog = (announcement: Announcement) => {
-        setEditingAnnouncement(announcement);
-        setAnnouncementForm({
-            title: announcement.title,
-            content: announcement.content,
-            type: announcement.type,
-            status: announcement.status,
-            targetAudience: announcement.targetAudience,
-            expiresAt: announcement.expiresAt,
-        });
-        setShowAnnouncementDialog(true);
+        // Store the announcement data in sessionStorage for the edit page
+        sessionStorage.setItem('editAnnouncement', JSON.stringify(announcement));
+        router.push('/admin/communications/announcement');
     };
 
-    const saveAnnouncement = async () => {
-        if (!announcementForm.title.trim() || !announcementForm.content.trim()) {
-            showToast("error", "Error", "Please fill in all required fields");
-            return;
-        }
 
-        setSaveLoading(true);
-        try {
-            if (editingAnnouncement) {
-                const response = await apiClient.updateAnnouncement(editingAnnouncement.id, announcementForm);
-                if (response.error) {
-                    throw new Error(response.error);
-                }
-
-                setAnnouncements(prev => 
-                    prev.map(announcement => 
-                        announcement.id === editingAnnouncement.id 
-                            ? { ...announcement, ...announcementForm }
-                            : announcement
-                    )
-                );
-                showToast("success", "Success", "Announcement updated successfully");
-            } else {
-                const response = await apiClient.createAnnouncement(announcementForm);
-                if (response.error) {
-                    throw new Error(response.error);
-                }
-
-                const newAnnouncement = response.data;
-                setAnnouncements(prev => [newAnnouncement, ...prev]);
-                setTotalRecords(prev => prev + 1);
-                showToast("success", "Success", "Announcement created successfully");
-            }
-
-            setShowAnnouncementDialog(false);
-        } catch (error) {
-            showToast("error", "Error", "Failed to save announcement");
-        } finally {
-            setSaveLoading(false);
-        }
-    };
 
     const deleteAnnouncement = async (announcementId: string) => {
         try {
@@ -277,7 +226,7 @@ export default function AnnouncementsPage() {
                     text
                     severity="warning"
                     onClick={() => openEditAnnouncementDialog(rowData)}
-                    tooltip="Edit"
+                    tooltip="Edit Announcement"
                 />
                 <Button
                     icon="pi pi-trash"
@@ -351,7 +300,7 @@ export default function AnnouncementsPage() {
                         </div>
                         <div className="flex gap-2">
                             <Button
-                                label="New Announcement"
+                                label="Create Announcement"
                                 icon="pi pi-plus"
                                 onClick={openNewAnnouncementDialog}
                                 severity="success"
@@ -398,197 +347,141 @@ export default function AnnouncementsPage() {
                         </div>
                     </div>
 
-                    {/* Announcements Table */}
-                    <DataTable
-                        value={announcements}
-                        loading={loading}
-                        paginator
-                        rows={rowsPerPage}
-                        totalRecords={totalRecords}
-                        lazy
-                        first={(currentPage - 1) * rowsPerPage}
-                        onPage={(e) => setCurrentPage((e.page || 0) + 1)}
-                        sortField={sortField}
-                        sortOrder={sortOrder as any}
-                        onSort={(e) => {
-                            setSortField(e.sortField);
-                            setSortOrder(e.sortOrder || undefined);
-                        }}
-                        emptyMessage={loading ? "Loading..." : "No announcements found"}
-                        className="p-datatable-sm"
-                    >
-                        <Column
-                            field="content"
-                            header="Announcement"
-                            body={contentBodyTemplate}
-                            sortable={false}
-                        />
-                        <Column
-                            field="type"
-                            header="Type"
-                            body={typeBodyTemplate}
-                            sortable
-                            style={{ width: '120px' }}
-                        />
-                        <Column
-                            field="targetAudience"
-                            header="Audience"
-                            body={audienceBodyTemplate}
-                            sortable
-                            style={{ width: '120px' }}
-                        />
-                        <Column
-                            field="status"
-                            header="Status"
-                            body={statusBodyTemplate}
-                            sortable
-                            style={{ width: '100px' }}
-                        />
-                        <Column
-                            field="createdAt"
-                            header="Created"
-                            body={dateBodyTemplate}
-                            sortable
-                            style={{ width: '150px' }}
-                        />
-                        <Column
-                            header="Actions"
-                            body={actionBodyTemplate}
-                            style={{ width: '120px' }}
-                        />
-                    </DataTable>
+                    {/* Announcements Table Skeleton */}
+                    {loading ? (
+                        <div className="p-3">
+                            {/* Table header skeleton */}
+                            <div className="flex mb-2 gap-2">
+                                <Skeleton width="20%" height="2rem" />
+                                <Skeleton width="10%" height="2rem" />
+                                <Skeleton width="10%" height="2rem" />
+                                <Skeleton width="10%" height="2rem" />
+                                <Skeleton width="10%" height="2rem" />
+                                <Skeleton width="10%" height="2rem" />
+                            </div>
+                            {/* Table rows skeleton */}
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="flex mb-2 gap-2 align-items-center">
+                                    <Skeleton width="20%" height="2rem" />
+                                    <Skeleton width="10%" height="2rem" />
+                                    <Skeleton width="10%" height="2rem" />
+                                    <Skeleton width="10%" height="2rem" />
+                                    <Skeleton width="10%" height="2rem" />
+                                    <Skeleton width="10%" height="2rem" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <DataTable
+                            value={announcements}
+                            loading={loading}
+                            paginator
+                            rows={rowsPerPage}
+                            totalRecords={totalRecords}
+                            lazy
+                            first={(currentPage - 1) * rowsPerPage}
+                            onPage={(e) => setCurrentPage((e.page || 0) + 1)}
+                            sortField={sortField}
+                            sortOrder={sortOrder as any}
+                            onSort={(e) => {
+                                setSortField(e.sortField);
+                                setSortOrder(e.sortOrder || undefined);
+                            }}
+                            emptyMessage={loading ? "Loading..." : "No announcements found"}
+                            className="p-datatable-sm"
+                        >
+                            <Column
+                                field="content"
+                                header="Announcement"
+                                body={contentBodyTemplate}
+                                sortable={false}
+                            />
+                            <Column
+                                field="type"
+                                header="Type"
+                                body={typeBodyTemplate}
+                                sortable
+                                style={{ width: '120px' }}
+                            />
+                            <Column
+                                field="targetAudience"
+                                header="Audience"
+                                body={audienceBodyTemplate}
+                                sortable
+                                style={{ width: '120px' }}
+                            />
+                            <Column
+                                field="status"
+                                header="Status"
+                                body={statusBodyTemplate}
+                                sortable
+                                style={{ width: '100px' }}
+                            />
+                            <Column
+                                field="createdAt"
+                                header="Created"
+                                body={dateBodyTemplate}
+                                sortable
+                                style={{ width: '150px' }}
+                            />
+                            <Column
+                                header="Actions"
+                                body={actionBodyTemplate}
+                                style={{ width: '120px' }}
+                            />
+                        </DataTable>
+                    )}
 
-                    {/* Statistics */}
+                    {/* Statistics Skeleton */}
                     <div className="grid mt-4">
-                        <div className="col-12 md:col-3">
-                            <Card className="text-center">
-                                <div className="text-2xl font-bold text-blue-500">
-                                    {announcements.filter(a => a.status === 'PUBLISHED').length}
+                        {loading ? (
+                            [1, 2, 3, 4].map((i) => (
+                                <div key={i} className="col-12 md:col-3">
+                                    <Card className="text-center">
+                                        <Skeleton width="60%" height="2.5rem" className="mx-auto mb-2" />
+                                        <Skeleton width="40%" height="1.5rem" className="mx-auto" />
+                                    </Card>
                                 </div>
-                                <div className="text-600">Published</div>
-                            </Card>
-                        </div>
-                        <div className="col-12 md:col-3">
-                            <Card className="text-center">
-                                <div className="text-2xl font-bold text-orange-500">
-                                    {announcements.filter(a => a.status === 'DRAFT').length}
+                            ))
+                        ) : (
+                            <>
+                                <div className="col-12 md:col-3">
+                                    <Card className="text-center">
+                                        <div className="text-2xl font-bold text-blue-500">
+                                            {announcements.filter(a => a.status === 'PUBLISHED').length}
+                                        </div>
+                                        <div className="text-600">Published</div>
+                                    </Card>
                                 </div>
-                                <div className="text-600">Drafts</div>
-                            </Card>
-                        </div>
-                        <div className="col-12 md:col-3">
-                            <Card className="text-center">
-                                <div className="text-2xl font-bold text-red-500">
-                                    {announcements.filter(a => a.type === 'URGENT').length}
+                                <div className="col-12 md:col-3">
+                                    <Card className="text-center">
+                                        <div className="text-2xl font-bold text-orange-500">
+                                            {announcements.filter(a => a.status === 'DRAFT').length}
+                                        </div>
+                                        <div className="text-600">Drafts</div>
+                                    </Card>
                                 </div>
-                                <div className="text-600">Urgent</div>
-                            </Card>
-                        </div>
-                        <div className="col-12 md:col-3">
-                            <Card className="text-center">
-                                <div className="text-2xl font-bold text-green-500">
-                                    {announcements.filter(a => a.type === 'EVENT').length}
+                                <div className="col-12 md:col-3">
+                                    <Card className="text-center">
+                                        <div className="text-2xl font-bold text-red-500">
+                                            {announcements.filter(a => a.type === 'URGENT').length}
+                                        </div>
+                                        <div className="text-600">Urgent</div>
+                                    </Card>
                                 </div>
-                                <div className="text-600">Events</div>
-                            </Card>
-                        </div>
+                                <div className="col-12 md:col-3">
+                                    <Card className="text-center">
+                                        <div className="text-2xl font-bold text-green-500">
+                                            {announcements.filter(a => a.type === 'EVENT').length}
+                                        </div>
+                                        <div className="text-600">Events</div>
+                                    </Card>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </Card>
             </div>
-
-            {/* Announcement Dialog */}
-            <Dialog
-                visible={showAnnouncementDialog}
-                onHide={() => setShowAnnouncementDialog(false)}
-                header={editingAnnouncement ? "Edit Announcement" : "New Announcement"}
-                style={{ width: '60vw' }}
-                footer={
-                    <div className="flex justify-content-end gap-2">
-                        <Button 
-                            label="Cancel" 
-                            severity="secondary" 
-                            onClick={() => setShowAnnouncementDialog(false)} 
-                        />
-                        <Button 
-                            label="Save" 
-                            onClick={saveAnnouncement}
-                            loading={saveLoading}
-                        />
-                    </div>
-                }
-            >
-                <div className="grid">
-                    <div className="col-12">
-                        <label htmlFor="title" className="font-bold mb-2 block">Title *</label>
-                        <InputText
-                            id="title"
-                            value={announcementForm.title}
-                            onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
-                            placeholder="Enter announcement title"
-                            className="w-full"
-                        />
-                    </div>
-
-                    <div className="col-12">
-                        <label htmlFor="content" className="font-bold mb-2 block">Content *</label>
-                        <InputTextarea
-                            id="content"
-                            value={announcementForm.content}
-                            onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
-                            rows={6}
-                            placeholder="Enter announcement content..."
-                            className="w-full"
-                        />
-                    </div>
-
-                    <div className="col-12 md:col-4">
-                        <label htmlFor="type" className="font-bold mb-2 block">Type</label>
-                        <Dropdown
-                            id="type"
-                            value={announcementForm.type}
-                            options={typeOptions.filter(option => option.value !== "")}
-                            onChange={(e) => setAnnouncementForm({ ...announcementForm, type: e.value })}
-                            placeholder="Select Type"
-                            className="w-full"
-                        />
-                    </div>
-
-                    <div className="col-12 md:col-4">
-                        <label htmlFor="status" className="font-bold mb-2 block">Status</label>
-                        <Dropdown
-                            id="status"
-                            value={announcementForm.status}
-                            options={statusOptions.filter(option => option.value !== "")}
-                            onChange={(e) => setAnnouncementForm({ ...announcementForm, status: e.value })}
-                            placeholder="Select Status"
-                            className="w-full"
-                        />
-                    </div>
-
-                    <div className="col-12 md:col-4">
-                        <label htmlFor="targetAudience" className="font-bold mb-2 block">Target Audience</label>
-                        <Dropdown
-                            id="targetAudience"
-                            value={announcementForm.targetAudience}
-                            options={audienceOptions}
-                            onChange={(e) => setAnnouncementForm({ ...announcementForm, targetAudience: e.value })}
-                            placeholder="Select Audience"
-                            className="w-full"
-                        />
-                    </div>
-
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="expiresAt" className="font-bold mb-2 block">Expires At (Optional)</label>
-                        <InputText
-                            id="expiresAt"
-                            type="datetime-local"
-                            value={announcementForm.expiresAt || ""}
-                            onChange={(e) => setAnnouncementForm({ ...announcementForm, expiresAt: e.target.value })}
-                            className="w-full"
-                        />
-                    </div>
-                </div>
-            </Dialog>
 
             <Toast ref={toast} />
             <ConfirmDialog />

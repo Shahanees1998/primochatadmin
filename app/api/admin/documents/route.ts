@@ -85,7 +85,6 @@ export async function POST(request: NextRequest) {
         let formData;
         try {
             formData = await request.formData();
-            console.log('FormData created successfully');
         } catch (error) {
             console.error('Error creating FormData:', error);
             return NextResponse.json(

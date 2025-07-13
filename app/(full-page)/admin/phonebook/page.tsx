@@ -66,6 +66,7 @@ export default function PhoneBookPage() {
     });
     const [users, setUsers] = useState<any[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
+    const [saveLoading, setSaveLoading] = useState(false);
     const toast = useRef<Toast>(null);
 
     useEffect(() => {
@@ -74,6 +75,21 @@ export default function PhoneBookPage() {
 
     useEffect(() => {
         loadUsers();
+    }, []);
+
+    useEffect(() => {
+        // Check if there's an entry to edit from sessionStorage
+        const editEntryData = sessionStorage.getItem('editPhoneBookEntry');
+        if (editEntryData) {
+            try {
+                const editEntry = JSON.parse(editEntryData);
+                openEditEntryDialog(editEntry);
+                sessionStorage.removeItem('editPhoneBookEntry'); // Clean up
+            } catch (error) {
+                console.error('Error parsing edit entry data:', error);
+                sessionStorage.removeItem('editPhoneBookEntry');
+            }
+        }
     }, []);
 
     const loadUsers = async () => {
@@ -154,6 +170,7 @@ export default function PhoneBookPage() {
     };
 
     const saveEntry = async () => {
+        setSaveLoading(true);
         try {
             if (editingEntry) {
                 // Update existing entry
@@ -185,14 +202,15 @@ export default function PhoneBookPage() {
                     throw new Error('Failed to create phone book entry');
                 }
 
-                const newEntry = await response.json();
-                setEntries([newEntry, ...entries]);
-                setTotalRecords(prev => prev + 1);
+                // Reload the phone book entries to get the complete data with user information
+                await loadPhoneBookEntries();
                 showToast("success", "Success", "Phone book entry created successfully");
             }
             setShowEntryDialog(false);
         } catch (error) {
             showToast("error", "Error", "Failed to save phone book entry");
+        } finally {
+            setSaveLoading(false);
         }
     };
 
@@ -226,8 +244,36 @@ export default function PhoneBookPage() {
     };
 
     const exportPhoneBook = () => {
-        // Simulate export functionality
-        showToast("success", "Success", "Phone book exported successfully");
+        try {
+            // Create CSV content
+            const headers = ['Name', 'Email', 'Phone', 'Address', 'Public', 'Added Date'];
+            const csvContent = [
+                headers.join(','),
+                ...entries.map(entry => [
+                    `"${entry.user?.firstName || ''} ${entry.user?.lastName || ''}"`,
+                    `"${entry.email}"`,
+                    `"${entry.phone || ''}"`,
+                    `"${entry.address || ''}"`,
+                    entry.isPublic ? 'Yes' : 'No',
+                    new Date(entry.createdAt).toLocaleDateString()
+                ].join(','))
+            ].join('\n');
+
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `phonebook_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast("success", "Success", "Phone book exported successfully");
+        } catch (error) {
+            showToast("error", "Error", "Failed to export phone book");
+        }
     };
 
     const actionBodyTemplate = (rowData: PhoneBookEntry) => {
@@ -388,8 +434,19 @@ export default function PhoneBookPage() {
                 onHide={() => setShowEntryDialog(false)}
                 footer={
                     <div className="flex gap-2 justify-content-end">
-                        <Button label="Cancel" icon="pi pi-times" text onClick={() => setShowEntryDialog(false)} />
-                        <Button label="Save" icon="pi pi-check" onClick={saveEntry} />
+                        <Button 
+                            label="Cancel" 
+                            icon="pi pi-times" 
+                            text 
+                            onClick={() => setShowEntryDialog(false)}
+                            disabled={saveLoading}
+                        />
+                        <Button 
+                            label={saveLoading ? "Saving..." : "Save"} 
+                            icon={saveLoading ? "pi pi-spin pi-spinner" : "pi pi-check"} 
+                            onClick={saveEntry}
+                            disabled={saveLoading}
+                        />
                     </div>
                 }
             >

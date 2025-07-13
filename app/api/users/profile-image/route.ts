@@ -4,20 +4,9 @@ import { uploadToCloudinary, validateFile } from '@/lib/cloudinary';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Profile image upload request received');
-    console.log('Content-Type:', request.headers.get('content-type'));
-    
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const userId = formData.get('userId') as string;
-    
-    console.log('Profile image form data:', {
-      hasFile: !!file,
-      fileName: file?.name,
-      fileSize: file?.size,
-      userId
-    });
-
     if (!file || !userId) {
       return NextResponse.json(
         { error: 'File and user ID are required' },

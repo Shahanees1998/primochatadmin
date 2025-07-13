@@ -345,16 +345,26 @@ export default function ProfilePage() {
                                         profileImagePublicId: publicId || prev.profileImagePublicId
                                     } : null);
                                     
-                                    // Update session
+                                    // Update session with more comprehensive data
                                     if (session) {
                                         update({
                                             ...session,
                                             user: {
                                                 ...session.user,
                                                 profileImage: imageUrl,
+                                                profileImagePublicId: publicId,
                                             }
                                         });
                                     }
+                                    
+                                    // Force a small delay to ensure session update is processed
+                                    setTimeout(() => {
+                                        if (session) {
+                                            update();
+                                        }
+                                        // Dispatch custom event to notify other components
+                                        window.dispatchEvent(new Event('profile-updated'));
+                                    }, 100);
                                 }}
                                 size="medium"
                             />

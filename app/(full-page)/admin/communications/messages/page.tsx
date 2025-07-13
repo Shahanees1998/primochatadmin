@@ -530,7 +530,7 @@ export default function MessagesPage() {
                                 </div>
 
                                 {/* Messages Area */}
-                                <ScrollPanel className="flex-1 p-3 pt-4">
+                                <ScrollPanel className="flex-1 px-3">
                                     {messagesLoading ? (
                                         <div className="flex flex-column gap-3">
                                             {Array.from({ length: 5 }).map((_, i) => (
@@ -540,7 +540,7 @@ export default function MessagesPage() {
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="flex flex-column gap-3">
+                                        <div className="flex flex-column gap-3 pt-6">
                                             {messages.map((message) => (
                                                 <div
                                                     key={message.id}

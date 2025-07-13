@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "primereact/card";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Dropdown } from "primereact/dropdown";
 import { Calendar } from "primereact/calendar";
-import { Checkbox } from "primereact/checkbox";
+
 import { Toast } from "primereact/toast";
 import { useRouter } from "next/navigation";
 import { Tag } from "primereact/tag";
@@ -28,29 +28,81 @@ export default function AnnouncementPage() {
     const [formData, setFormData] = useState<AnnouncementFormData>({
         title: "",
         message: "",
-        priority: "NORMAL",
-        targetAudience: ["ALL_MEMBERS"],
+        priority: "GENERAL",
+        targetAudience: ["ALL"],
         scheduledDate: null,
         sendImmediately: true,
         includeEmail: true,
         includePushNotification: true,
     });
     const [loading, setLoading] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
+    const [showPreview, setShowPreview] = useState(false);
     const toast = useRef<Toast>(null);
 
+    // Check for edit data from sessionStorage
+    useEffect(() => {
+        const editData = sessionStorage.getItem('editAnnouncement');
+        if (editData) {
+            try {
+                const announcement = JSON.parse(editData);
+                // Map old priority values to new announcement types
+                const mapPriorityToType = (priority: string) => {
+                    switch (priority) {
+                        case "LOW": return "GENERAL";
+                        case "NORMAL": return "GENERAL";
+                        case "HIGH": return "IMPORTANT";
+                        case "URGENT": return "URGENT";
+                        default: return priority;
+                    }
+                };
+
+                // Map old audience values to new target audience values
+                const mapAudienceToTarget = (audience: string) => {
+                    switch (audience) {
+                        case "ALL_MEMBERS": return "ALL";
+                        case "ACTIVE_MEMBERS": return "MEMBERS";
+                        case "ADMINS_ONLY": return "ADMINS";
+                        case "MODERATORS_ONLY": return "ADMINS";
+                        case "NEW_MEMBERS": return "NEW_MEMBERS";
+                        default: return audience;
+                    }
+                };
+
+                setFormData({
+                    title: announcement.title || "",
+                    message: announcement.content || "",
+                    priority: mapPriorityToType(announcement.type || "GENERAL"),
+                    targetAudience: [mapAudienceToTarget(announcement.targetAudience || "ALL")],
+                    scheduledDate: announcement.expiresAt ? new Date(announcement.expiresAt) : null,
+                    sendImmediately: !announcement.expiresAt,
+                    includeEmail: true,
+                    includePushNotification: true,
+                });
+                setIsEditing(true);
+                setEditingAnnouncementId(announcement.id);
+                sessionStorage.removeItem('editAnnouncement'); // Clean up
+            } catch (error) {
+                console.error('Error parsing edit announcement data:', error);
+                sessionStorage.removeItem('editAnnouncement');
+            }
+        }
+    }, []);
+
     const priorityOptions = [
-        { label: "Low", value: "LOW" },
-        { label: "Normal", value: "NORMAL" },
-        { label: "High", value: "HIGH" },
+        { label: "General", value: "GENERAL" },
+        { label: "Important", value: "IMPORTANT" },
         { label: "Urgent", value: "URGENT" },
+        { label: "Event", value: "EVENT" },
+        { label: "Update", value: "UPDATE" },
     ];
 
     const audienceOptions = [
-        { label: "All Members", value: "ALL_MEMBERS" },
-        { label: "Active Members Only", value: "ACTIVE_MEMBERS" },
-        { label: "Admins Only", value: "ADMINS_ONLY" },
-        { label: "Moderators Only", value: "MODERATORS_ONLY" },
-        { label: "New Members (Last 30 days)", value: "NEW_MEMBERS" },
+        { label: "All Members", value: "ALL" },
+        { label: "Members Only", value: "MEMBERS" },
+        { label: "Admins Only", value: "ADMINS" },
+        { label: "New Members", value: "NEW_MEMBERS" },
     ];
 
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {
@@ -72,6 +124,76 @@ export default function AnnouncementPage() {
         }
     };
 
+    const sendAnnouncementToChatRooms = async (announcement: any) => {
+        try {
+            // Get all active users based on target audience
+            let userQuery = '';
+            if (formData.targetAudience.includes('ALL')) {
+                userQuery = '?status=ACTIVE';
+            } else if (formData.targetAudience.includes('ADMINS')) {
+                userQuery = '?status=ACTIVE&role=ADMIN';
+            } else if (formData.targetAudience.includes('MEMBERS')) {
+                userQuery = '?status=ACTIVE&role=MEMBER';
+            } else if (formData.targetAudience.includes('NEW_MEMBERS')) {
+                // For new members, we'll get all active members and filter by creation date in the frontend
+                userQuery = '?status=ACTIVE';
+            }
+            const usersResponse = await fetch(`/api/admin/users${userQuery}`);
+            if (!usersResponse.ok) {
+                throw new Error('Failed to fetch users');
+            }
+            const usersData = await usersResponse.json();
+            let filteredUsers = usersData.users;
+            
+            // Filter for new members if needed
+            if (formData.targetAudience.includes('NEW_MEMBERS')) {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                filteredUsers = usersData.users.filter((user: any) => {
+                    const userCreatedAt = new Date(user.createdAt);
+                    return userCreatedAt >= thirtyDaysAgo;
+                });
+            }
+            
+            const userIds = filteredUsers.map((user: any) => user.id);
+            if (userIds.length === 0) {
+                showToast("warn", "Warning", "No users found for target audience");
+                return;
+            }
+            // Create a group chat room with all target users
+            const chatRoomResponse = await fetch('/api/admin/chat/rooms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    participantIds: userIds,
+                    isGroup: true,
+                    name: `Announcement: ${announcement.title}`
+                }),
+            });
+            if (!chatRoomResponse.ok) {
+                throw new Error('Failed to create chat room');
+            }
+            const chatRoom = await chatRoomResponse.json();
+            // Send announcement message to the chat room
+            const messageResponse = await fetch('/api/admin/chat/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chatRoomId: chatRoom.id,
+                    content: `📢 **${announcement.title}**\n\n${announcement.content}\n\n*Sent by Admin*`,
+                    type: 'TEXT'
+                }),
+            });
+            if (!messageResponse.ok) {
+                throw new Error('Failed to send message');
+            }
+            showToast("success", "Success", "Announcement also sent to users in chat rooms!");
+        } catch (error) {
+            console.error('Error sending announcement to chat rooms:', error);
+            showToast("warn", "Warning", "Announcement saved but failed to send to chat rooms");
+        }
+    };
+
     const sendAnnouncement = async () => {
         if (!formData.title.trim() || !formData.message.trim()) {
             showToast("error", "Error", "Please fill in all required fields");
@@ -85,32 +207,53 @@ export default function AnnouncementPage() {
 
         setLoading(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
             const announcementData = {
-                ...formData,
-                scheduledDate: formData.scheduledDate?.toISOString(),
-                targetAudience: formData.targetAudience,
+                title: formData.title,
+                content: formData.message,
+                type: formData.priority,
+                status: "PUBLISHED",
+                targetAudience: formData.targetAudience[0],
+                expiresAt: formData.scheduledDate?.toISOString(),
             };
 
-            console.log("Sending announcement:", announcementData);
+            let newAnnouncement = null;
+            if (isEditing && editingAnnouncementId) {
+                // Update existing announcement
+                const response = await fetch(`/api/admin/announcements/${editingAnnouncementId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(announcementData),
+                });
 
-            showToast("success", "Success", "Announcement sent successfully!");
+                if (!response.ok) {
+                    throw new Error('Failed to update announcement');
+                }
+
+                showToast("success", "Success", "Announcement updated successfully!");
+            } else {
+                // Create new announcement
+                const response = await fetch('/api/admin/announcements', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(announcementData),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create announcement');
+                }
+
+                newAnnouncement = await response.json();
+                showToast("success", "Success", "Announcement created and saved to database!");
+                // Send announcement to chat rooms if at least one delivery option is checked
+                if (formData.includeEmail || formData.includePushNotification) {
+                    await sendAnnouncementToChatRooms(newAnnouncement);
+                }
+            }
             
-            // Reset form
-            setFormData({
-                title: "",
-                message: "",
-                priority: "NORMAL",
-                targetAudience: ["ALL_MEMBERS"],
-                scheduledDate: null,
-                sendImmediately: true,
-                includeEmail: true,
-                includePushNotification: true,
-            });
+            // Navigate back to the announcements list
+            router.push('/admin/communications/announcements');
         } catch (error) {
-            showToast("error", "Error", "Failed to send announcement");
+            showToast("error", "Error", isEditing ? "Failed to update announcement" : "Failed to send announcement");
         } finally {
             setLoading(false);
         }
@@ -118,10 +261,11 @@ export default function AnnouncementPage() {
 
     const getPrioritySeverity = (priority: string) => {
         switch (priority) {
-            case "LOW": return "info";
-            case "NORMAL": return "success";
-            case "HIGH": return "warning";
+            case "GENERAL": return "info";
+            case "IMPORTANT": return "warning";
             case "URGENT": return "danger";
+            case "EVENT": return "success";
+            case "UPDATE": return "info";
             default: return "info";
         }
     };
@@ -137,15 +281,21 @@ export default function AnnouncementPage() {
                 <Card>
                     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3 mb-4">
                         <div className="flex flex-column">
-                            <h2 className="text-2xl font-bold m-0">Send Announcement</h2>
-                            <span className="text-600">Broadcast messages to all members</span>
+                            <h2 className="text-2xl font-bold m-0">
+                                {isEditing ? "Edit Announcement" : "Send Announcement"}
+                            </h2>
+                            <span className="text-600">
+                                {isEditing ? "Update announcement details" : "Broadcast messages to all members"}
+                            </span>
                         </div>
-                        <Button
-                            label="View Sent Announcements"
-                            icon="pi pi-list"
-                            onClick={() => router.push('/admin/communications/messages')}
-                            severity="secondary"
-                        />
+                        <div className="flex gap-2">
+                            <Button
+                                label="Back to List"
+                                icon="pi pi-list"
+                                onClick={() => router.push('/admin/communications/announcements')}
+                                severity="secondary"
+                            />
+                        </div>
                     </div>
 
                     <div className="grid">
@@ -189,7 +339,14 @@ export default function AnnouncementPage() {
                             <Calendar
                                 id="scheduledDate"
                                 value={formData.scheduledDate}
-                                onChange={(e) => setFormData({ ...formData, scheduledDate: e.value as Date })}
+                                onChange={(e) => {
+                                    const selectedDate = e.value as Date;
+                                    setFormData({ 
+                                        ...formData, 
+                                        scheduledDate: selectedDate,
+                                        sendImmediately: !selectedDate // Auto-uncheck "Send Immediately" when date is selected
+                                    });
+                                }}
                                 showIcon
                                 showTime
                                 dateFormat="dd/mm/yy"
@@ -197,6 +354,11 @@ export default function AnnouncementPage() {
                                 disabled={formData.sendImmediately}
                                 className="w-full"
                             />
+                            {formData.sendImmediately && (
+                                <small className="text-500 block mt-1">
+                                    Uncheck "Send Immediately" to enable date scheduling
+                                </small>
+                            )}
                         </div>
 
                         <div className="col-12">
@@ -205,10 +367,12 @@ export default function AnnouncementPage() {
                                 {audienceOptions.map((option) => (
                                     <div key={option.value} className="col-12 md:col-6 lg:col-4">
                                         <div className="flex align-items-center">
-                                            <Checkbox
-                                                inputId={option.value}
+                                            <input
+                                                type="checkbox"
+                                                id={option.value}
                                                 checked={formData.targetAudience.includes(option.value)}
                                                 onChange={() => handleAudienceChange(option.value)}
+                                                className="mr-2"
                                             />
                                             <label htmlFor={option.value} className="ml-2">
                                                 {option.label}
@@ -224,10 +388,16 @@ export default function AnnouncementPage() {
                             <div className="grid">
                                 <div className="col-12 md:col-4">
                                     <div className="flex align-items-center">
-                                        <Checkbox
-                                            inputId="sendImmediately"
+                                        <input
+                                            type="checkbox"
+                                            id="sendImmediately"
                                             checked={formData.sendImmediately}
-                                            onChange={(e) => setFormData({ ...formData, sendImmediately: e.checked || false })}
+                                            onChange={e => setFormData({ 
+                                                ...formData, 
+                                                sendImmediately: e.target.checked,
+                                                scheduledDate: e.target.checked ? null : formData.scheduledDate // Clear date when "Send Immediately" is checked
+                                            })}
+                                            className="mr-2"
                                         />
                                         <label htmlFor="sendImmediately" className="ml-2">
                                             Send Immediately
@@ -236,10 +406,12 @@ export default function AnnouncementPage() {
                                 </div>
                                 <div className="col-12 md:col-4">
                                     <div className="flex align-items-center">
-                                        <Checkbox
-                                            inputId="includeEmail"
+                                        <input
+                                            type="checkbox"
+                                            id="includeEmail"
                                             checked={formData.includeEmail}
-                                            onChange={(e) => setFormData({ ...formData, includeEmail: e.checked || false })}
+                                            onChange={e => setFormData({ ...formData, includeEmail: e.target.checked })}
+                                            className="mr-2"
                                         />
                                         <label htmlFor="includeEmail" className="ml-2">
                                             Send Email
@@ -248,10 +420,12 @@ export default function AnnouncementPage() {
                                 </div>
                                 <div className="col-12 md:col-4">
                                     <div className="flex align-items-center">
-                                        <Checkbox
-                                            inputId="includePushNotification"
+                                        <input
+                                            type="checkbox"
+                                            id="includePushNotification"
                                             checked={formData.includePushNotification}
-                                            onChange={(e) => setFormData({ ...formData, includePushNotification: e.checked || false })}
+                                            onChange={e => setFormData({ ...formData, includePushNotification: e.target.checked })}
+                                            className="mr-2"
                                         />
                                         <label htmlFor="includePushNotification" className="ml-2">
                                             Push Notification
@@ -264,17 +438,15 @@ export default function AnnouncementPage() {
                         <div className="col-12">
                             <div className="flex gap-2 justify-content-end">
                                 <Button
-                                    label="Preview"
-                                    icon="pi pi-eye"
+                                    label={showPreview ? "Hide Preview" : "Preview"}
+                                    icon={showPreview ? "pi pi-eye-slash" : "pi pi-eye"}
                                     severity="secondary"
-                                    onClick={() => {
-                                        // Preview functionality
-                                        showToast("info", "Preview", "Preview functionality would show here");
-                                    }}
+                                    onClick={() => setShowPreview(!showPreview)}
+                                    disabled={!formData.title.trim() || !formData.message.trim()}
                                 />
                                 <Button
-                                    label="Send Announcement"
-                                    icon="pi pi-send"
+                                    label={isEditing ? "Update Announcement" : "Send Announcement"}
+                                    icon={isEditing ? "pi pi-check" : "pi pi-send"}
                                     onClick={sendAnnouncement}
                                     loading={loading}
                                     severity="success"
@@ -286,7 +458,7 @@ export default function AnnouncementPage() {
             </div>
 
             {/* Preview Card */}
-            {formData.title && formData.message && (
+            {showPreview && formData.title && formData.message && (
                 <div className="col-12">
                     <Card title="Preview" className="mt-3">
                         <div className="flex flex-column gap-3">
