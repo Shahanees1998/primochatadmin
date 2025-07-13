@@ -3,6 +3,12 @@
   "installCommand": "yarn install",
   "framework": "nextjs",
   "env": {
-    "DATABASE_URL": "mongodb+srv://AbdulBasit:WLK0OiPod2agOdNf@cluster0.jcpue.mongodb.net/primochatadmin?retryWrites=true&w=majority"
+    "DATABASE_URL": "mongodb+srv://AbdulBasit:WLK0OiPod2agOdNf@cluster0.jcpue.mongodb.net/primochatadmin?retryWrites=true&w=majority",
+    "NEXTAUTH_SECRET": "6ac1ce8466e02c6383fb70103b51cdffd9cb3394970606ef0b2e2835afe77a7e",
+    "NEXTAUTH_URL": "https://primoochat.vercel.app/",
+    "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "denwqkach",
+    "NEXT_PUBLIC_CLOUDINARY_API_KEY": "555776591533351",
+    "CLOUDINARY_API_SECRET": "sRofrQD3SmHowqDI5Ghp7n1u0aM",
+    "NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "ml_default"
   }
-} 
+}

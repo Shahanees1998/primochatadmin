@@ -1,10 +1,10 @@
 import { v2 as cloudinary } from 'cloudinary';
 
 // Configure Cloudinary
-const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-const apiSecret = process.env.CLOUDINARY_API_SECRET;
-const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+const cloudName = 'denwqkach';
+const apiKey = '555776591533351';
+const apiSecret = 'sRofrQD3SmHowqDI5Ghp7n1u0aM';
+const uploadPreset = 'ml_default';
 
 console.log('Cloudinary config:', {
   cloudName: cloudName ? 'Set' : 'Missing',
