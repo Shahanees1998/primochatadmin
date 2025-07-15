@@ -6,7 +6,7 @@ import { Checkbox } from "primereact/checkbox";
 import { InputText } from "primereact/inputtext";
 import { useContext, useState, Suspense } from "react";
 import { LayoutContext } from "../../../../layout/context/layoutcontext";
-import { signIn, useSession } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
 import { Toast } from "primereact/toast";
 import { useRef } from "react";
 
@@ -20,13 +20,13 @@ const LoginContent = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { layoutConfig } = useContext(LayoutContext);
-    const { data: session } = useSession();
+    const { user, login, loading: authLoading } = useAuth();
     const toast = useRef<Toast>(null);
     const dark = layoutConfig.colorScheme !== "light";
     const [showPassword, setShowPassword] = useState(false);
 
     // Redirect if already logged in
-    if (session != null) {
+    if (user) {
         const callbackUrl = searchParams.get('callbackUrl') || '/admin';
         router.push(callbackUrl);
         return null;
@@ -58,41 +58,30 @@ const LoginContent = () => {
 
         setLoading(true);
         try {
-            const result = await signIn('credentials', {
-                email,
-                password,
-                redirect: false,
-            });
-            if (result?.error) {
-                // Handle specific error messages
-                let errorMessage = result.error;
-                if (result.error === 'CredentialsSignin') {
-                    errorMessage = 'Invalid email or password';
-                } else if (result.error === 'No account found with this email address') {
-                    setEmailError('No account found with this email address');
-                    errorMessage = 'No account found with this email address';
-                } else if (result.error === 'Incorrect password') {
-                    setPasswordError('Incorrect password');
-                    errorMessage = 'Incorrect password';
-                } else if (result.error === 'Account is not active. Please contact admin.') {
-                    errorMessage = 'Account is not active. Please contact admin.';
-                }
-                toast.current?.show({
-                    severity: 'error',
-                    summary: 'Login Failed',
-                    detail: errorMessage,
-                    life: 4000
-                });
-            } else if (result?.ok) {
-                const callbackUrl = searchParams.get('callbackUrl') || '/admin';
-                router.push(callbackUrl);
-            }
+            await login(email, password);
+            const callbackUrl = searchParams.get('callbackUrl') || '/admin';
+            router.push(callbackUrl);
         } catch (error) {
             console.error('Login error:', error);
+            let errorMessage = 'An unexpected error occurred. Please try again.';
+            
+            if (error instanceof Error) {
+                errorMessage = error.message;
+                if (error.message === 'Invalid email or password') {
+                    setEmailError('Invalid email or password');
+                } else if (error.message === 'No account found with this email address') {
+                    setEmailError('No account found with this email address');
+                } else if (error.message === 'Incorrect password') {
+                    setPasswordError('Incorrect password');
+                } else if (error.message === 'Account is not active. Please contact admin.') {
+                    errorMessage = 'Account is not active. Please contact admin.';
+                }
+            }
+            
             toast.current?.show({
                 severity: 'error',
-                summary: 'Error',
-                detail: 'An unexpected error occurred. Please try again.',
+                summary: 'Login Failed',
+                detail: errorMessage,
                 life: 4000
             });
         } finally {
@@ -224,11 +213,11 @@ const LoginContent = () => {
                             </a>
                         </div>
                         <Button
-                            label={loading ? "Logging In..." : "Log In"}
+                            label={loading || authLoading ? "Logging In..." : "Log In"}
                             className="w-full"
                             onClick={handleLogin}
-                            loading={loading}
-                            disabled={loading}
+                            loading={loading || authLoading}
+                            disabled={loading || authLoading}
                         ></Button>
                     </div>
                 </div>

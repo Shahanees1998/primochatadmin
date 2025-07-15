@@ -6,7 +6,7 @@ import { InputText } from "primereact/inputtext";
 import { forwardRef, useContext, useEffect, useImperativeHandle, useRef, useState } from "react";
 import AppBreadcrumb from "./AppBreadCrumb";
 import { LayoutContext } from "./context/layoutcontext";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
 import { Toast } from "primereact/toast";
 import { apiClient } from "@/lib/apiClient";
 import { getProfileImageUrl } from "@/lib/cloudinary-client";
@@ -16,20 +16,20 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
     const { onMenuToggle, showProfileSidebar, showConfigSidebar } =
         useContext(LayoutContext);
     const menubuttonRef = useRef(null);
-    const { data: session } = useSession();
+    const { user } = useAuth();
     const [profile, setProfile] = useState<any | null>(null);
     const toast = useRef<Toast>(null);
 
     useEffect(() => {
-        if (session?.user?.id) {
+        if (user?.id) {
             loadProfile();
         }
-    }, [session?.user?.id, session?.user?.profileImage]);
+    }, [user?.id, user?.profileImage]);
 
     // Listen for custom profile update events
     useEffect(() => {
         const handleProfileUpdate = () => {
-            if (session?.user?.id) {
+            if (user?.id) {
                 loadProfile();
             }
         };
@@ -39,7 +39,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
         return () => {
             window.removeEventListener('profile-updated', handleProfileUpdate);
         };
-    }, [session?.user?.id]);
+    }, [user?.id]);
 
 
     const getUserInitials = () => {
@@ -51,9 +51,9 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
 
 
     const loadProfile = async () => {
-        if (!session?.user?.id) return;
+        if (!user?.id) return;
         try {
-            const response = await apiClient.getUser(session.user.id);
+            const response = await apiClient.getUser(user.id);
 
             if (response.error) {
                 throw new Error(response.error);

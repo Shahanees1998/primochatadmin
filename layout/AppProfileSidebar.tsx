@@ -2,7 +2,7 @@ import { Badge } from "primereact/badge";
 import { Sidebar } from "primereact/sidebar";
 import { useContext, useState, useEffect } from "react";
 import { LayoutContext } from "./context/layoutcontext";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { Avatar } from "primereact/avatar";
 import { Skeleton } from "primereact/skeleton";
@@ -31,7 +31,7 @@ interface Message {
 
 const AppProfileSidebar = () => {
     const { layoutState, setLayoutState } = useContext(LayoutContext);
-    const { data: session } = useSession();
+    const { user, logout } = useAuth();
     const router = useRouter();
     
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -46,10 +46,10 @@ const AppProfileSidebar = () => {
     };
 
     useEffect(() => {
-        if (layoutState.profileSidebarVisible && session?.user?.id) {
+        if (layoutState.profileSidebarVisible && user?.id) {
             loadSidebarData();
         }
-    }, [layoutState.profileSidebarVisible, session?.user?.id]);
+    }, [layoutState.profileSidebarVisible, user?.id]);
 
     const loadSidebarData = async () => {
         setLoading(true);
@@ -87,10 +87,8 @@ const AppProfileSidebar = () => {
     };
 
     const handleSignOut = async () => {
-        await signOut({ 
-            callbackUrl: '/auth/login',
-            redirect: true 
-        });
+        await logout();
+        router.push('/auth/login');
     };
 
     const handleProfileClick = () => {
@@ -148,7 +146,7 @@ const AppProfileSidebar = () => {
             <div className="flex flex-column mx-auto md:mx-0">
                 <span className="mb-2 font-semibold">Welcome</span>
                 <span className="text-color-secondary font-medium mb-5">
-                    {session?.user?.name || 'Admin User'}
+                    {user ? `${user.firstName} ${user.lastName}` : 'Admin User'}
                 </span>
 
                 <ul className="list-none m-0 p-0">

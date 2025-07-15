@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
 export async function GET(request: NextRequest) {
+  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
         // Get all statistics in parallel for better performance
         const [
@@ -210,4 +212,5 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     }
+  });
 } 

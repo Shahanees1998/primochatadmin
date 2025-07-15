@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
+import { AuthService } from '@/lib/auth';
 
 const ignorePaths: string[] = [
   '/api/auth',
@@ -27,26 +27,55 @@ export async function middleware(req: NextRequest) {
   }
 
   // Check if user is authenticated
-  const token = await getToken({ 
-    req,
-    secret: process.env.NEXTAUTH_SECRET || '6ac1ce8466e02c6383fb70103b51cdffd9cb3394970606ef0b2e2835afe77a7e'
-  });
-  // If accessing admin routes, check for admin role
-  // if(token == null){
-  //   return NextResponse.redirect(new URL('/auth/login', req.url));
-  // }
-  if (pathname.startsWith('/admin')) {
-    if (token == null) {
-      // Redirect to login if not authenticated
+  const token = AuthService.getTokenFromRequest(req);
+  
+  // Protect admin routes (both frontend and API)
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    if (!token) {
+      // For API routes, return 401 instead of redirecting
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      
+      // For frontend routes, redirect to login
       const loginUrl = new URL('/auth/login', req.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    // Check if user has admin role
-    if (token.role !== 'ADMIN') {
-      // Redirect to access denied page
-      return NextResponse.redirect(new URL('/auth/access', req.url));
+    try {
+      // Verify the token
+      const payload = await AuthService.verifyToken(token);
+      
+      // Check if user has admin role
+      if (payload.role !== 'ADMIN') {
+        // For API routes, return 403 instead of redirecting
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.json(
+            { error: 'Admin access required' },
+            { status: 403 }
+          );
+        }
+        
+        // For frontend routes, redirect to access denied
+        return NextResponse.redirect(new URL('/auth/access', req.url));
+      }
+    } catch (error) {
+      // Token is invalid
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Invalid token' },
+          { status: 401 }
+        );
+      }
+      
+      // For frontend routes, redirect to login
+      const loginUrl = new URL('/auth/login', req.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

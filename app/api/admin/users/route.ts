@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
 export async function GET(request: NextRequest) {
+  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get('page') || '1');
@@ -84,9 +86,11 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     }
+  });
 }
 
 export async function POST(request: NextRequest) {
+  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
         const body = await request.json();
         const { firstName, lastName, email, phone, role, status, membershipNumber, joinDate, password } = body;
@@ -173,4 +177,5 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
+  });
 } 

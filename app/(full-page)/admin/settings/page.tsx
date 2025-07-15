@@ -7,7 +7,7 @@ import { InputTextarea } from "primereact/inputtextarea";
 import { Button } from "primereact/button";
 import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
-import { useSession } from "next-auth/react";
+import { useRequireAdmin } from "@/hooks/useAuth";
 import { Skeleton } from "primereact/skeleton";
 
 interface SettingsForm {
@@ -106,7 +106,7 @@ const SettingsSkeleton = () => (
 );
 
 export default function SettingsPage() {
-    const { data: session, status } = useSession();
+    const { user, loading: authLoading } = useRequireAdmin();
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [settings, setSettings] = useState<SettingsForm>(defaultSettings);
@@ -168,10 +168,10 @@ export default function SettingsPage() {
         toast.current?.show({ severity, summary, detail, life: 3000 });
     };
 
-    if (status === "loading" || fetching) {
+    if (authLoading || fetching) {
         return <SettingsSkeleton />;
     }
-    if (!session || session.user.role !== "ADMIN") {
+    if (!user || user.role !== "ADMIN") {
         return <div className="flex justify-content-center align-items-center min-h-screen text-red-600">Access denied. Admins only.</div>;
     }
 

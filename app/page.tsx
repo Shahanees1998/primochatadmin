@@ -1,14 +1,7 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "./api/auth/authOptions";
 
 export default async function Home() {
-  const session = await getServerSession(authOptions);
-
-  if (session?.user) {
-    redirect("/admin/users");
-  } else {
-    redirect("/auth/login");
-  }
-  return null;
+  // For now, redirect to login page
+  // In a real implementation, you might want to check JWT tokens on the server side
+  redirect("/auth/login");
 } 
