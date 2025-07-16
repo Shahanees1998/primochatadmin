@@ -542,6 +542,10 @@ class ApiClient {
         return this.patch(`/admin/chat/messages/${messageId}/read`, {});
     }
 
+    async markMessagesAsRead(messageIds: string[], chatRoomId: string) {
+        return this.patch(`/admin/chat/messages/mark-read`, { messageIds, chatRoomId });
+    }
+
     async deleteMessage(messageId: string) {
         return this.delete(`/admin/chat/messages/${messageId}`);
     }

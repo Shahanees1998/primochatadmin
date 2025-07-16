@@ -9,8 +9,9 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:socket": "cross-env NODE_ENV=development node server.js",
     "build": "prisma generate && next build",
-    "start": "NODE_ENV=production node server.js",
+    "start": "cross-env NODE_ENV=production node server.js",
     "prettier": "prettier --write .",
     "prisma:generate": "yarn prisma generate",
     "prepare": "husky install",
@@ -93,6 +94,7 @@
     "@types/react-image-gallery": "^1.2.4",
     "@types/shortid": "^0.0.29",
     "@types/uuid": "^9.0.8",
+    "cross-env": "^7.0.3",
     "dotenv-cli": "^6.0.0",
     "file-loader": "^6.2.0",
     "husky": "^8.0.1",

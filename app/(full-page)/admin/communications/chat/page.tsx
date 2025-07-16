@@ -17,6 +17,8 @@ import { apiClient } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 import { useSocket } from "@/hooks/useSocket";
 import { ChatMessage } from "@/types/socket";
+import { useUsers } from "@/lib/hooks/useApi";
+import { useAuth } from "@/hooks/useAuth";
 
 interface User {
     id: string;
@@ -48,6 +50,8 @@ interface ChatRoom {
 
 export default function ChatPage() {
     const router = useRouter();
+    const { user } = useAuth();
+
     const [users, setUsers] = useState<User[]>([]);
     const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
     const [selectedChat, setSelectedChat] = useState<ChatRoom | null>(null);
@@ -63,7 +67,7 @@ export default function ChatPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const toast = useRef<Toast>(null);
 
-    const currentUserId = "admin"; // Replace with real user ID from auth context in production
+    const currentUserId = user?.id; // Replace with real user ID from auth context in production
     const socket = useSocket({ userId: currentUserId });
     const [typingUsers, setTypingUsers] = useState<{ [chatId: string]: string[] }>({});
 
@@ -93,9 +97,8 @@ export default function ChatPage() {
     // Real-time: receive new messages
     useEffect(() => {
         socket.onNewMessage(({ chatRoomId, message }) => {
-            if (selectedChat && chatRoomId === selectedChat.id) {
+            console.log('Received new message:', { chatRoomId, message });
                 setMessages((prev) => [...prev, message]);
-            }
         });
         return () => socket.offNewMessage();
     }, [selectedChat, socket]);
@@ -182,7 +185,7 @@ export default function ChatPage() {
         const msg: ChatMessage = {
             id: Math.random().toString(36).substr(2, 9),
             chatRoomId: selectedChat.id,
-            senderId: currentUserId,
+            senderId: currentUserId ?? '',
             content: newMessage,
             type: 'TEXT',
             isRead: false,
@@ -206,8 +209,8 @@ export default function ChatPage() {
     // Typing indicator
     const handleTyping = useCallback(() => {
         if (selectedChat) {
-            socket.startTyping(selectedChat.id, currentUserId);
-            setTimeout(() => socket.stopTyping(selectedChat.id, currentUserId), 2000);
+            socket.startTyping(selectedChat.id, currentUserId ?? '');
+            setTimeout(() => socket.stopTyping(selectedChat.id, currentUserId ?? ''), 2000);
         }
     }, [selectedChat, currentUserId, socket]);
 
@@ -216,7 +219,7 @@ export default function ChatPage() {
         if (selectedChat) {
             messages.forEach((msg) => {
                 if (!msg.isRead && msg.senderId !== currentUserId) {
-                    socket.markMessageAsRead(selectedChat.id, msg.id, currentUserId);
+                    socket.markMessageAsRead(selectedChat.id, msg.id, currentUserId ?? '');
                 }
             });
         }
@@ -225,25 +228,38 @@ export default function ChatPage() {
     const createNewChat = async () => {
         if (selectedUsers.length === 0) return;
         console.log('LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL', selectedUsers)
-        // try {
-        //     const response = await apiClient.createChatRoom({
-        //         participantIds: selectedUsers.map(u => u.id),
-        //         name: selectedUsers.length > 1 ? `Group Chat (${selectedUsers.length} members)` : undefined
-        //     });
+        try {
+            const response = await apiClient.createChatRoom({
+                participantIds: selectedUsers.map(u => u.id),
+                name: selectedUsers.length > 1 ? `Group Chat (${selectedUsers.length} members)` : undefined
+            });
 
-        //     if (response.error) {
-        //         throw new Error(response.error);
-        //     }
+            if (response.error) {
+                throw new Error(response.error);
+            }
 
-        //     const newChatRoom = response.data;
-        //     setChatRooms(prev => [newChatRoom, ...prev]);
-        //     setSelectedChat(newChatRoom);
-        //     setShowNewChatDialog(false);
-        //     setSelectedUsers([]);
-        //     showToast("success", "Success", "Chat room created successfully");
-        // } catch (error) {
-        //     showToast("error", "Error", "Failed to create chat room");
-        // }
+            const chatRoom = response.data;
+            
+            // Check if this chat room already exists in our list
+            const existingChatIndex = chatRooms.findIndex(chat => chat.id === chatRoom.id);
+            
+            if (existingChatIndex !== -1) {
+                // Chat already exists, just select it
+                setSelectedChat(chatRooms[existingChatIndex]);
+                showToast("info", "Info", "Chat room already exists with these members");
+            } else {
+                // Chat room might be new or might exist but not in our current list
+                // Add it to the list and select it
+                setChatRooms(prev => [chatRoom, ...prev]);
+                setSelectedChat(chatRoom);
+                showToast("success", "Success", "Chat room created successfully");
+            }
+            
+            setShowNewChatDialog(false);
+            setSelectedUsers([]);
+        } catch (error) {
+            showToast("error", "Error", "Failed to create chat room");
+        }
     };
 
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {

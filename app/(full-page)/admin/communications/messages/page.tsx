@@ -71,12 +71,58 @@ export default function MessagesPage() {
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [chatSearchTerm, setChatSearchTerm] = useState("");
-    
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const toast = useRef<Toast>(null);
+    const selectedChatRef = useRef<ChatRoom | null>(null);
+    const messageListenerRef = useRef<((data: any) => void) | null>(null);
     const currentUserId = user?.id || "";
     const socket = useSocket({ userId: currentUserId });
     const [typingUsers, setTypingUsers] = useState<{ [chatId: string]: string[] }>({});
+
+    const playNotificationSound = () => {
+        try {
+            // Create a simple notification sound using Web Audio API
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        } catch (error) {
+            console.log('Could not play notification sound:', error);
+        }
+    };
+
+    const showBrowserNotification = (title: string, body: string) => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, { body });
+        } else if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    new Notification(title, { body });
+                }
+            });
+        }
+    };
+
+    const getChatNameById = (chatId: string) => {
+        const chat = chatRooms.find(room => room.id === chatId);
+        if (chat) {
+            return getChatName(chat);
+        }
+        console.warn('Chat room not found for ID:', chatId);
+        return 'Unknown Chat';
+    };
 
     useEffect(() => {
         if (user?.id) {
@@ -85,7 +131,15 @@ export default function MessagesPage() {
         }
     }, [user?.id]);
 
+    // Ensure socket listener is set up when user and socket are ready
+    // useEffect(() => {
+    //     if (user?.id && socket.isConnected) {
+    //         console.log('User and socket ready, ensuring message listener is active');
+    //     }
+    // }, [user?.id, socket.isConnected]);
+
     useEffect(() => {
+        selectedChatRef.current = selectedChat;
         if (selectedChat) {
             loadMessages(selectedChat.id);
         }
@@ -99,32 +153,102 @@ export default function MessagesPage() {
     useEffect(() => {
         if (selectedChat && socket.isConnected) {
             socket.joinChat(selectedChat.id);
-            return () => socket.leaveChat(selectedChat.id);
+            return () => {
+                socket.leaveChat(selectedChat.id);
+            };
         }
     }, [selectedChat, socket.isConnected]);
 
-    // Real-time: receive new messages
+    // Real-time: receive new messages - Set up once when socket connects
     useEffect(() => {
-        socket.onNewMessage(({ chatRoomId, message }) => {
-            if (selectedChat && chatRoomId === selectedChat.id) {
+        if (!socket.isConnected) {
+            return;
+        }
+
+        if (!currentUserId) {
+            return;
+        }
+
+        // Remove any existing listener
+        if (messageListenerRef.current) {
+            socket.offNewMessage();
+        }
+
+        const handleNewMessage = ({ chatRoomId, message }: { chatRoomId: string; message: any }) => {
+            const currentSelectedChat = selectedChatRef.current;
+            setChatRooms((prev) => {
+                const existingRoom = prev.find(room => room.id === chatRoomId);
+
+                if (!existingRoom) {
+                    return prev;
+                }
+                const updatedRooms = prev.map(room =>
+                    room.id === chatRoomId
+                        ? {
+                            ...room,
+                            lastMessage: message,
+                            updatedAt: new Date().toISOString(),
+                            // Only increment unread count if the message is from someone else AND chat is not currently open
+                            unreadCount: message.senderId === currentUserId
+                                ? room.unreadCount
+                                : (currentSelectedChat?.id === chatRoomId ? room.unreadCount : room.unreadCount + 1)
+                        }
+                        : room
+                );
+
+                // Sort chat rooms by last message time (most recent first)
+                const sortedRooms = updatedRooms.sort((a, b) => {
+                    const aTime = a.lastMessage?.createdAt || a.updatedAt;
+                    const bTime = b.lastMessage?.createdAt || b.updatedAt;
+                    return new Date(bTime).getTime() - new Date(aTime).getTime();
+                });
+                return sortedRooms;
+            });
+
+            // If the message is for the currently selected chat, add it to messages
+            if (currentSelectedChat && chatRoomId === currentSelectedChat.id) {
                 setMessages((prev) => [...prev, message]);
-            }
-            // Update chat room's last message
-            setChatRooms((prev) => prev.map(room => 
-                room.id === chatRoomId 
-                    ? { 
-                        ...room, 
-                        lastMessage: message, 
-                        // Only increment unread count if the message is from someone else
-                        unreadCount: message.senderId === currentUserId 
-                            ? room.unreadCount 
-                            : room.unreadCount + 1 
+
+                // If this is a message from someone else, mark it as read immediately
+                if (message.senderId !== currentUserId) {
+                    // Mark as read via API
+                    apiClient.markMessageAsRead(message.id).catch(error => {
+                        console.error('Error marking new message as read:', error);
+                    });
+
+                    // Emit socket event for real-time updates
+                    socket.markMessageAsRead(chatRoomId, message.id, currentUserId);
+                }
+            } else {
+                // Message is for a different chat - show notification and play sound
+                if (message.senderId !== currentUserId) {
+                    // Play notification sound
+                    playNotificationSound();
+
+                    // Show toast notification
+                    const senderName = message.sender ? `${message.sender.firstName} ${message.sender.lastName}` : 'Someone';
+                    const chatName = getChatNameById(chatRoomId);
+                    showToast("info", "New Message", `${senderName} sent a message in ${chatName}`);
+
+                    // Show browser notification if app is not in focus
+                    if (!document.hasFocus()) {
+                        showBrowserNotification("New Message", `${senderName} sent a message in ${chatName}`);
                     }
-                    : room
-            ));
-        });
-        return () => socket.offNewMessage();
-    }, [selectedChat, socket, currentUserId]);
+                }
+            }
+        };
+
+        // Store the listener reference
+        messageListenerRef.current = handleNewMessage;
+
+        // Set up the listener
+        socket.onNewMessage(handleNewMessage);
+
+        return () => {
+            socket.offNewMessage();
+            messageListenerRef.current = null;
+        };
+    }, [socket.isConnected, currentUserId]); // Only depend on socket connection status and currentUserId
 
     // Real-time: typing indicator
     useEffect(() => {
@@ -145,8 +269,8 @@ export default function MessagesPage() {
                 setMessages((prev) => prev.map(m => m.id === messageId ? { ...m, isRead: true } : m));
             }
             // Update unread count when messages are marked as read
-            setChatRooms((prev) => prev.map(room => 
-                room.id === chatRoomId 
+            setChatRooms((prev) => prev.map(room =>
+                room.id === chatRoomId
                     ? { ...room, unreadCount: Math.max(0, room.unreadCount - 1) }
                     : room
             ));
@@ -187,7 +311,7 @@ export default function MessagesPage() {
                 throw new Error(response.error);
             }
             const chatRooms = response.data?.chatRooms || [];
-            
+
             // Recalculate unread counts for all chat rooms
             const updatedChatRooms = await Promise.all(
                 chatRooms.map(async (room) => {
@@ -195,7 +319,7 @@ export default function MessagesPage() {
                         const messagesResponse = await apiClient.getChatMessages(room.id);
                         if (!messagesResponse.error && messagesResponse.data?.messages) {
                             const messages = messagesResponse.data.messages;
-                            const actualUnreadCount = messages.filter(msg => 
+                            const actualUnreadCount = messages.filter(msg =>
                                 !msg.isRead && msg.senderId !== currentUserId
                             ).length;
                             return { ...room, unreadCount: actualUnreadCount };
@@ -207,7 +331,7 @@ export default function MessagesPage() {
                     }
                 })
             );
-            
+
             setChatRooms(updatedChatRooms);
         } catch (error) {
             showToast("error", "Error", "Failed to load chat rooms");
@@ -223,15 +347,15 @@ export default function MessagesPage() {
             }
             const messages = response.data?.messages || [];
             setMessages(messages);
-            
+
             // Recalculate unread count based on actual messages
-            const actualUnreadCount = messages.filter(msg => 
+            const actualUnreadCount = messages.filter(msg =>
                 !msg.isRead && msg.senderId !== currentUserId
             ).length;
-            
+
             // Update chat room with correct unread count
-            setChatRooms((prev) => prev.map(room => 
-                room.id === chatRoomId 
+            setChatRooms((prev) => prev.map(room =>
+                room.id === chatRoomId
                     ? { ...room, unreadCount: actualUnreadCount }
                     : room
             ));
@@ -245,7 +369,7 @@ export default function MessagesPage() {
     // Send message (real-time)
     const sendMessage = async () => {
         if (!newMessage.trim() || !selectedChat) return;
-        
+
         const messageContent = newMessage.trim();
         setNewMessage("");
 
@@ -275,10 +399,10 @@ export default function MessagesPage() {
             setMessages((prev) => [...prev, optimisticMessage]);
 
             // Update chat room's last message optimistically
-            setChatRooms((prev) => prev.map(room => 
-                room.id === selectedChat.id 
-                    ? { 
-                        ...room, 
+            setChatRooms((prev) => prev.map(room =>
+                room.id === selectedChat.id
+                    ? {
+                        ...room,
                         lastMessage: optimisticMessage,
                         updatedAt: new Date().toISOString()
                     }
@@ -298,7 +422,7 @@ export default function MessagesPage() {
 
             // Update with real message data
             const realMessage = response.data;
-            setMessages((prev) => prev.map(m => 
+            setMessages((prev) => prev.map(m =>
                 m.id === optimisticMessage.id ? { ...realMessage, createdAt: realMessage.createdAt } : m
             ));
 
@@ -306,10 +430,10 @@ export default function MessagesPage() {
             socket.sendMessage(selectedChat.id, realMessage);
 
             // Update the chat room's last message immediately
-            setChatRooms((prev) => prev.map(room => 
-                room.id === selectedChat.id 
-                    ? { 
-                        ...room, 
+            setChatRooms((prev) => prev.map(room =>
+                room.id === selectedChat.id
+                    ? {
+                        ...room,
                         lastMessage: realMessage,
                         updatedAt: new Date().toISOString()
                     }
@@ -333,38 +457,56 @@ export default function MessagesPage() {
 
     // Mark all messages as read when opening chat
     useEffect(() => {
-        if (selectedChat && messages.length > 0) {
-            const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== currentUserId);
-            if (unreadMessages.length > 0) {
-                // Mark messages as read
-                unreadMessages.forEach((msg) => {
-                    socket.markMessageAsRead(selectedChat.id, msg.id, currentUserId);
-                });
-                
-                // Update unread count in chat rooms - set to 0 since we're reading all messages
-                setChatRooms((prev) => prev.map(room => 
-                    room.id === selectedChat.id 
-                        ? { ...room, unreadCount: 0 }
-                        : room
-                ));
-                
-            } else {
-                // If no unread messages, still set unread count to 0
-                setChatRooms((prev) => prev.map(room => 
-                    room.id === selectedChat.id 
-                        ? { ...room, unreadCount: 0 }
-                        : room
-                ));
+        const markMessagesAsRead = async () => {
+            if (selectedChat && messages.length > 0) {
+                const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== currentUserId);
+                if (unreadMessages.length > 0) {
+                    // Mark messages as read via bulk API
+                    try {
+                        const messageIds = unreadMessages.map(msg => msg.id);
+                        await apiClient.markMessagesAsRead(messageIds, selectedChat.id);
+
+                        // Emit socket events for real-time updates
+                        unreadMessages.forEach((msg) => {
+                            socket.markMessageAsRead(selectedChat.id, msg.id, currentUserId);
+                        });
+
+                        // Update messages state to reflect read status
+                        setMessages((prev) => prev.map(msg =>
+                            unreadMessages.some(unread => unread.id === msg.id)
+                                ? { ...msg, isRead: true }
+                                : msg
+                        ));
+                    } catch (error) {
+                        console.error('Error marking messages as read:', error);
+                    }
+
+                    // Update unread count in chat rooms - set to 0 since we're reading all messages
+                    setChatRooms((prev) => prev.map(room =>
+                        room.id === selectedChat.id
+                            ? { ...room, unreadCount: 0 }
+                            : room
+                    ));
+
+                } else {
+                    // If no unread messages, still set unread count to 0
+                    setChatRooms((prev) => prev.map(room =>
+                        room.id === selectedChat.id
+                            ? { ...room, unreadCount: 0 }
+                            : room
+                    ));
+                }
             }
-        }
+        };
+
+        markMessagesAsRead();
     }, [selectedChat, messages, currentUserId, socket]);
 
     const createNewChat = async () => {
-        console.log('================================>>>>>>>>>>>>', selectedUsers)
         if (selectedUsers.length === 0) return;
 
         try {
-            
+
             const response = await apiClient.createChatRoom({
                 participantIds: selectedUsers.map(u => u.id),
                 name: selectedUsers.length > 1 ? `Group Chat (${selectedUsers.length} members)` : undefined
@@ -374,13 +516,25 @@ export default function MessagesPage() {
                 throw new Error(response.error);
             }
 
-            const newChatRoom = response.data;
-            
-            setChatRooms(prev => [newChatRoom, ...prev]);
-            setSelectedChat(newChatRoom);
+            const chatRoom = response.data;
+
+            // Check if this chat room already exists in our list
+            const existingChatIndex = chatRooms.findIndex(chat => chat.id === chatRoom.id);
+
+            if (existingChatIndex !== -1) {
+                // Chat already exists, just select it
+                setSelectedChat(chatRooms[existingChatIndex]);
+                showToast("info", "Info", "Chat room already exists with these members");
+            } else {
+                // Chat room might be new or might exist but not in our current list
+                // Add it to the list and select it
+                setChatRooms(prev => [chatRoom, ...prev]);
+                setSelectedChat(chatRoom);
+                showToast("success", "Success", "Chat room created successfully");
+            }
+
             setShowNewChatDialog(false);
             setSelectedUsers([]);
-            showToast("success", "Success", "Chat room created successfully");
         } catch (error) {
             showToast("error", "Error", "Failed to create chat room");
         }
@@ -394,14 +548,14 @@ export default function MessagesPage() {
         if (chat.isGroup) {
             return chat.name || `Group (${chat.participants.length} members)`;
         }
-        
+
         const otherParticipant = chat.participants.find(p => p.id !== currentUserId);
-        
+
         if (!otherParticipant) {
             console.warn('No other participant found for chat:', chat.id);
             return 'Unknown User';
         }
-        
+
         const chatName = `${otherParticipant.firstName} ${otherParticipant.lastName}`;
         return chatName;
     };
@@ -414,11 +568,11 @@ export default function MessagesPage() {
         return otherParticipant?.profileImage || undefined;
     };
 
-    const filteredChatRooms = chatRooms.filter(chat => 
+    const filteredChatRooms = chatRooms.filter(chat =>
         getChatName(chat).toLowerCase().includes(chatSearchTerm.toLowerCase())
     );
 
-    const filteredUsers = users.filter(user => 
+    const filteredUsers = users.filter(user =>
         `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -426,7 +580,7 @@ export default function MessagesPage() {
         const date = new Date(dateString);
         const now = new Date();
         const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-        
+
         if (diffInHours < 24) {
             return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } else if (diffInHours < 48) {
@@ -496,43 +650,44 @@ export default function MessagesPage() {
         <div className="grid">
             <div className="col-12">
                 <div className="flex h-screen bg-white border-round shadow-1">
-                                         {/* Chat Sidebar */}
-                     <div className="w-4 border-right-1 surface-border flex flex-column min-h-0">
-                         {/* Header */}
-                         <div className="p-3 border-bottom-1 surface-border flex-shrink-0">
-                             <div className="flex align-items-center justify-content-between mb-3">
-                                 <h2 className="text-xl font-bold m-0">Messages</h2>
-                                 <Button
-                                     icon="pi pi-plus"
-                                     size="small"
-                                     rounded
-                                     onClick={() => setShowNewChatDialog(true)}
-                                     tooltip="New Chat"
-                                 />
-                             </div>
-                             <span className="p-input-icon-left w-full">
-                                 <i className="pi pi-search" />
-                                 <InputText
-                                     value={chatSearchTerm}
-                                     onChange={(e) => setChatSearchTerm(e.target.value)}
-                                     placeholder="Search chats..."
-                                     className="w-full"
-                                 />
-                             </span>
-                         </div>
+                    {/* Chat Sidebar */}
+                    <div className="w-4 border-right-1 surface-border flex flex-column min-h-0">
+                        {/* Header */}
+                        <div className="p-3 border-bottom-1 surface-border flex-shrink-0">
+                            <div className="flex align-items-center justify-content-between mb-3">
+                                <h2 className="text-xl font-bold m-0">Messages</h2>
+                                <Button
+                                    icon="pi pi-plus"
+                                    size="small"
+                                    rounded
+                                    onClick={() => setShowNewChatDialog(true)}
+                                    tooltip="New Chat"
+                                />
+                            </div>
+                            <span className="p-input-icon-left w-full">
+                                <i className="pi pi-search" />
+                                <InputText
+                                    value={chatSearchTerm}
+                                    onChange={(e) => setChatSearchTerm(e.target.value)}
+                                    placeholder="Search chats..."
+                                    className="w-full"
+                                />
+                            </span>
+                        </div>
 
-                         {/* Chat List */}
-                         <ScrollPanel className="flex-1 overflow-hidden" style={{ height: 'calc(100vh - 120px)' }}>
-                             <div className="p-2">
+                        {/* Chat List */}
+                        <ScrollPanel className="flex-1 overflow-hidden" style={{ height: 'calc(100vh - 120px)' }}>
+                            <div className="p-2">
                                 {filteredChatRooms.length > 0 ? (
                                     filteredChatRooms.map((chat) => (
                                         <div
                                             key={chat.id}
-                                            className={`p-3 border-round cursor-pointer transition-colors transition-duration-150 mb-2 ${
-                                                selectedChat?.id === chat.id
+                                            className={`p-3 border-round cursor-pointer transition-colors transition-duration-150 mb-2 ${selectedChat?.id === chat.id
                                                     ? 'bg-primary text-white'
-                                                    : 'hover:bg-gray-100'
-                                            }`}
+                                                    : chat.unreadCount > 0
+                                                        ? 'hover:bg-gray-100 bg-blue-50 border-left-3 border-blue-500'
+                                                        : 'hover:bg-gray-100'
+                                                }`}
                                             onClick={() => setSelectedChat(chat)}
                                         >
                                             <div className="flex align-items-center gap-3">
@@ -561,9 +716,9 @@ export default function MessagesPage() {
                                                         </span>
                                                     </div>
                                                     {chat.lastMessage && (
-                                                        <p className="m-0 text-xs opacity-70 truncate" style={{ 
-                                                            whiteSpace: 'nowrap', 
-                                                            overflow: 'hidden', 
+                                                        <p className="m-0 text-xs opacity-70 truncate" style={{
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
                                                             maxWidth: '100%'
                                                         }}>
@@ -595,8 +750,8 @@ export default function MessagesPage() {
                         </ScrollPanel>
                     </div>
 
-                                         {/* Main Chat Area */}
-                     <div className="flex-1 flex flex-column min-h-0">
+                    {/* Main Chat Area */}
+                    <div className="flex-1 flex flex-column min-h-0">
                         {selectedChat ? (
                             <>
                                 {/* Chat Header */}
@@ -611,7 +766,7 @@ export default function MessagesPage() {
                                         <div className="flex-1">
                                             <h3 className="m-0 font-semibold">{getChatName(selectedChat)}</h3>
                                             <p className="m-0 text-sm opacity-70">
-                                                {selectedChat.isGroup 
+                                                {selectedChat.isGroup
                                                     ? `${selectedChat.participants.length} participants`
                                                     : selectedChat.participants.find(p => p.id !== currentUserId)?.email
                                                 }
@@ -634,8 +789,8 @@ export default function MessagesPage() {
                                     </div>
                                 </div>
 
-                                                                 {/* Messages Area */}
-                                 <ScrollPanel className="flex-1 overflow-hidden px-3" style={{ height: 'calc(100vh - 200px)' }}>
+                                {/* Messages Area */}
+                                <ScrollPanel className="flex-1 overflow-hidden px-3" style={{ height: 'calc(100vh - 200px)' }}>
                                     {messagesLoading ? (
                                         <div className="flex flex-column gap-3">
                                             {Array.from({ length: 5 }).map((_, i) => (
@@ -654,28 +809,26 @@ export default function MessagesPage() {
                                                     <div className={`max-w-xs lg:max-w-md ${message.senderId === currentUserId ? 'order-2' : 'order-1'}`}>
                                                         {message.senderId !== currentUserId && (
                                                             <div className="flex align-items-center gap-2 mb-1">
-                                                                                                                <Avatar
-                                                    image={message.sender?.profileImage}
-                                                    label={message.sender?.firstName?.charAt(0)}
-                                                    size="normal"
-                                                    shape="circle"
-                                                />
+                                                                <Avatar
+                                                                    image={message.sender?.profileImage}
+                                                                    label={message.sender?.firstName?.charAt(0)}
+                                                                    size="normal"
+                                                                    shape="circle"
+                                                                />
                                                                 <span className="text-xs opacity-70">
                                                                     {message.sender?.firstName} {message.sender?.lastName}
                                                                 </span>
                                                             </div>
                                                         )}
                                                         <div
-                                                            className={`p-3 border-round ${
-                                                                message.senderId === currentUserId
+                                                            className={`p-3 border-round ${message.senderId === currentUserId
                                                                     ? 'bg-primary text-white'
                                                                     : 'bg-gray-100'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <p className="m-0 text-sm">{message.content}</p>
-                                                            <div className={`flex align-items-center gap-2 mt-2 text-xs ${
-                                                                message.senderId === currentUserId ? 'opacity-70' : 'opacity-50'
-                                                            }`}>
+                                                            <div className={`flex align-items-center gap-2 mt-2 text-xs ${message.senderId === currentUserId ? 'opacity-70' : 'opacity-50'
+                                                                }`}>
                                                                 <span>{formatTime(message.createdAt)}</span>
                                                                 {message.senderId === currentUserId && (
                                                                     <i className={`pi ${message.isRead ? 'pi-check-double' : 'pi-check'}`} />
@@ -743,12 +896,12 @@ export default function MessagesPage() {
                                     <i className="pi pi-comments text-6xl text-gray-400 mb-4"></i>
                                     <h2 className="text-2xl font-bold text-gray-600 mb-2">Welcome to Messages</h2>
                                     <p className="text-gray-500 mb-4">Select a chat to start messaging</p>
-                                                                    <Button
-                                    label="Start New Chat"
-                                    icon="pi pi-plus"
-                                    onClick={() => setShowNewChatDialog(true)}
-                                    severity="success"
-                                />
+                                    <Button
+                                        label="Start New Chat"
+                                        icon="pi pi-plus"
+                                        onClick={() => setShowNewChatDialog(true)}
+                                        severity="success"
+                                    />
                                 </div>
                             </div>
                         )}
@@ -797,13 +950,12 @@ export default function MessagesPage() {
                                 {filteredUsers.map((user) => (
                                     <div
                                         key={user.id}
-                                        className={`p-2 border-round cursor-pointer transition-colors ${
-                                            selectedUsers.some(u => u.id === user.id)
+                                        className={`p-2 border-round cursor-pointer transition-colors ${selectedUsers.some(u => u.id === user.id)
                                                 ? 'bg-primary text-white'
                                                 : 'hover:bg-gray-100'
-                                        }`}
+                                            }`}
                                         onClick={() => {
-                                            setSelectedUsers(prev => 
+                                            setSelectedUsers(prev =>
                                                 prev.some(u => u.id === user.id)
                                                     ? prev.filter(u => u.id !== user.id)
                                                     : [...prev, user]

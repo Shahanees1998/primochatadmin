@@ -9,7 +9,6 @@ const { Server } = require('socket.io');
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = process.env.PORT || 3000;
-
 // Prepare the Next.js app
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -29,46 +28,57 @@ app.prepare().then(() => {
   // Initialize Socket.io
   const io = new Server(server, {
     cors: {
-      origin: process.env.NODE_ENV === 'production' 
-        ? ['https://yourdomain.com'] 
-        : ['http://localhost:3000'],
+      origin: process.env.NODE_ENV === 'production'
+        ? ['https://yourdomain.com']
+        : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
       methods: ['GET', 'POST'],
+      credentials: true,
     },
+    transports: ['polling', 'websocket'],
   });
+
 
   // Store connected users
   const connectedUsers = new Map();
 
   io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-
     // Join user to their personal room
     socket.on('join-user', (userId) => {
       socket.join(`user-${userId}`);
       connectedUsers.set(socket.id, userId);
-      console.log(`User ${userId} joined their room`);
     });
 
     // Join chat room
     socket.on('join-chat', (chatRoomId) => {
       socket.join(`chat-${chatRoomId}`);
-      console.log(`User joined chat room: ${chatRoomId}`);
     });
 
     // Leave chat room
     socket.on('leave-chat', (chatRoomId) => {
       socket.leave(`chat-${chatRoomId}`);
-      console.log(`User left chat room: ${chatRoomId}`);
     });
 
     // Handle new message
     socket.on('send-message', async (data) => {
       const { chatRoomId, message } = data;
-      
-      // Broadcast to all users in the chat room
+      // Get the sender's user ID
+      const senderId = connectedUsers.get(socket.id);
+
+      // Broadcast to all users in the chat room (except sender)
       socket.to(`chat-${chatRoomId}`).emit('new-message', {
         chatRoomId,
         message,
+      });
+
+      // Broadcast to all connected users' personal rooms for real-time updates
+      // This ensures users receive messages even when not in the specific chat room
+      connectedUsers.forEach((userId, socketId) => {
+        if (socketId !== socket.id) { // Don't send to sender
+          io.to(`user-${userId}`).emit('new-message', {
+            chatRoomId,
+            message,
+          });
+        }
       });
 
       // Also emit to sender for confirmation
@@ -112,13 +122,11 @@ app.prepare().then(() => {
       const userId = connectedUsers.get(socket.id);
       if (userId) {
         connectedUsers.delete(socket.id);
-        console.log(`User ${userId} disconnected`);
       }
     });
   });
 
   server.listen(port, (err) => {
     if (err) throw err;
-    console.log(`> Ready on http://${hostname}:${port}`);
   });
 }); 

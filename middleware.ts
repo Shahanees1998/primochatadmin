@@ -46,18 +46,18 @@ export async function middleware(req: NextRequest) {
       const payload = await AuthService.verifyToken(token);
       console.log('Payload>>>>>>>>>>>>>>>>>>>>>>>>>>>>>:', payload);
       // Check if user has admin role
-      if (payload.role !== 'ADMIN') {
-        // For API routes, return 403 instead of redirecting
-        if (pathname.startsWith('/api/')) {
-          return NextResponse.json(
-            { error: 'Admin access required' },
-            { status: 403 }
-          );
-        }
+      // if (payload.role !== 'ADMIN') {
+      //   // For API routes, return 403 instead of redirecting
+      //   if (pathname.startsWith('/api/')) {
+      //     return NextResponse.json(
+      //       { error: 'Admin access required' },
+      //       { status: 403 }
+      //     );
+      //   }
         
-        // For frontend routes, redirect to access denied
-        return NextResponse.redirect(new URL('/auth/access', req.url));
-      }
+      //   // For frontend routes, redirect to access denied
+      //   return NextResponse.redirect(new URL('/auth/access', req.url));
+      // }
     } catch (error) {
       // Token is invalid
       if (pathname.startsWith('/api/')) {

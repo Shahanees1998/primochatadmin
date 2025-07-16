@@ -1,28 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
 export async function POST(request: NextRequest) {
+    return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
         const body = await request.json();
         const { chatRoomId, content, type } = body;
-        // Get or create admin user
-        const adminUser = await prisma.user.findFirst({
-            where: {
-                status: 'ACTIVE'
+            
+            // Use the authenticated user's ID as sender
+            const senderId = authenticatedReq.user?.userId;
+            
+            if (!senderId) {
+                return NextResponse.json(
+                    { error: 'Authentication required' },
+                    { status: 401 }
+                );
             }
-        }) || await prisma.user.create({
-            data: {
-                firstName: 'Admin',
-                lastName: 'User',
-                email: 'admin@primochat.com',
-                password: 'adminPassword123',
-                role: 'MEMBER',
-                status: 'ACTIVE',
-                membershipNumber: 'ADMIN001'
-            }
-        });
-        
-        const senderId = adminUser.id;
 
         if (!chatRoomId || !content) {
             return NextResponse.json(
@@ -69,4 +63,5 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
+    });
 } 

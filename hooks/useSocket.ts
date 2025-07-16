@@ -19,28 +19,36 @@ export const useSocket = (options: UseSocketOptions = {}) => {
             setIsConnecting(true);
             
             // Initialize socket connection
-            socketRef.current = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000', {
+            const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000';
+            console.log('Connecting to socket server:', socketUrl);
+            
+            socketRef.current = io(socketUrl, {
                 autoConnect: true,
                 reconnection: true,
                 reconnectionDelay: 1000,
                 reconnectionAttempts: 5,
+                transports: ['polling', 'websocket'],
+                timeout: 20000,
             });
 
             const socket = socketRef.current;
 
             // Connection events
             socket.on('connect', () => {
+                console.log('Socket connected successfully');
                 setIsConnected(true);
                 setIsConnecting(false);
                 options.onConnect?.();
 
                 // Join user room if userId is provided
                 if (options.userId) {
+                    console.log('Joining user room:', options.userId);
                     socket.emit('join-user', options.userId);
                 }
             });
 
             socket.on('disconnect', () => {
+                console.log('Socket disconnected');
                 setIsConnected(false);
                 options.onDisconnect?.();
             });
