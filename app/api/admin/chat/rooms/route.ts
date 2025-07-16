@@ -1,42 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
-// Helper function to get or create admin user
-async function getOrCreateAdminUser() {
-    // First try to find an existing admin user
-    let adminUser = await prisma.user.findFirst({
-        where: {
-            role: 'MEMBER',
-            status: 'ACTIVE'
-        }
-    });
-
-    // If no admin user exists, create one
-    if (!adminUser) {
-        adminUser = await prisma.user.create({
-            data: {
-                firstName: 'Admin',
-                lastName: 'User',
-                email: 'admin@primochat.com',
-                password: 'adminPassword123', // This should be changed in production
-                role: 'MEMBER',
-                status: 'ACTIVE',
-                membershipNumber: 'ADMIN001'
-            }
-        });
-    }
-
-    return adminUser;
-}
+import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
 export async function GET(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
+    return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+        try {
+            const { searchParams } = new URL(request.url);
+            const userId = searchParams.get('userId');
 
-        // Get or create admin user
-        const adminUser = await getOrCreateAdminUser();
-        const currentUserId = userId || adminUser.id;
+            // Use authenticated user or provided userId
+            const currentUserId = userId || authenticatedReq.user?.userId;
+            
+            if (!currentUserId) {
+                return NextResponse.json(
+                    { error: 'User ID is required' },
+                    { status: 400 }
+                );
+            }
 
         // Get all chat rooms where the user is a participant
         const chatRooms = await prisma.chatRoom.findMany({
@@ -114,26 +94,35 @@ export async function GET(request: NextRequest) {
             updatedAt: room.updatedAt.toISOString(),
         }));
 
-        return NextResponse.json({
-            chatRooms: transformedChatRooms,
-        });
-    } catch (error) {
-        console.error('Error fetching chat rooms:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch chat rooms' },
-            { status: 500 }
-        );
-    }
+            return NextResponse.json({
+                chatRooms: transformedChatRooms,
+            });
+        } catch (error) {
+            console.error('Error fetching chat rooms:', error);
+            return NextResponse.json(
+                { error: 'Failed to fetch chat rooms' },
+                { status: 500 }
+            );
+        }
+    });
 }
 
 export async function POST(request: NextRequest) {
-    try {
-        const body = await request.json();
-        const { participantIds, isGroup, name } = body;
+    return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+        try {
+            const body = await request.json();
+            const { participantIds, isGroup, name } = body;
 
-        // Get or create admin user
-        const adminUser = await getOrCreateAdminUser();
-        const currentUserId = adminUser.id;
+            // Use authenticated user
+            const currentUserId = authenticatedReq.user?.userId;
+            console.log(body,'LLllllllllllllllllllll');
+            console.log(authenticatedReq,'LLllllllllllllllllllll current');
+            if (!currentUserId) {
+                return NextResponse.json(
+                    { error: 'Authentication required' },
+                    { status: 401 }
+                );
+            }
 
         // Validate required fields
         if (!participantIds || participantIds.length === 0) {
@@ -235,12 +224,13 @@ export async function POST(request: NextRequest) {
             updatedAt: chatRoom.updatedAt.toISOString(),
         };
 
-        return NextResponse.json(transformedChatRoom, { status: 201 });
-    } catch (error) {
-        console.error('Error creating chat room:', error);
-        return NextResponse.json(
-            { error: 'Failed to create chat room' },
-            { status: 500 }
-        );
-    }
-} 
+            return NextResponse.json(transformedChatRoom, { status: 201 });
+        } catch (error) {
+            console.error('Error creating chat room:', error);
+            return NextResponse.json(
+                { error: 'Failed to create chat room' },
+                { status: 500 }
+            );
+        }
+    });
+}

@@ -70,7 +70,6 @@ export async function POST(request: NextRequest) {
                     allowedFileTypes: body.allowedFileTypes,
                     enableNotifications: body.enableNotifications,
                     enableChat: body.enableChat,
-                    enableEvents: body.enableEvents,
                     enableDocuments: body.enableDocuments,
                     updatedAt: new Date(),
                 },
@@ -85,7 +84,6 @@ export async function POST(request: NextRequest) {
                     allowedFileTypes: body.allowedFileTypes,
                     enableNotifications: body.enableNotifications,
                     enableChat: body.enableChat,
-                    enableEvents: body.enableEvents,
                     enableDocuments: body.enableDocuments,
                 },
             });

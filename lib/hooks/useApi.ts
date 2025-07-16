@@ -98,10 +98,6 @@ export function useGenerateMembershipCard() {
     return useApi(apiClient.generateMembershipCard.bind(apiClient));
 }
 
-export function useEvents() {
-    return useApi(apiClient.getEvents.bind(apiClient));
-}
-
 export function useDocuments() {
     return useApi(apiClient.getDocuments.bind(apiClient));
 }

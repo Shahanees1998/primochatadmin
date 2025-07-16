@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -59,7 +60,6 @@ export default function ChatPage() {
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [chatSearchTerm, setChatSearchTerm] = useState("");
-    console.log(selectedUsers, 'LLLLLLLLLLLLLL??????????????????????????????')
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const toast = useRef<Toast>(null);
 

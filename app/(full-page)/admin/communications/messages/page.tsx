@@ -524,56 +524,73 @@ export default function MessagesPage() {
                          {/* Chat List */}
                          <ScrollPanel className="flex-1 overflow-hidden" style={{ height: 'calc(100vh - 120px)' }}>
                              <div className="p-2">
-                                {filteredChatRooms.map((chat) => (
-                                    <div
-                                        key={chat.id}
-                                        className={`p-3 border-round cursor-pointer transition-colors transition-duration-150 mb-2 ${
-                                            selectedChat?.id === chat.id
-                                                ? 'bg-primary text-white'
-                                                : 'hover:bg-gray-100'
-                                        }`}
-                                        onClick={() => setSelectedChat(chat)}
-                                    >
-                                        <div className="flex align-items-center gap-3">
-                                            <div className="relative">
-                                                <Avatar
-                                                    image={getChatAvatar(chat)}
-                                                    label={getChatName(chat).charAt(0)}
-                                                    size="large"
-                                                    shape="circle"
-                                                />
-                                                {chat.unreadCount > 0 && (
-                                                    <Badge
-                                                        value={chat.unreadCount}
-                                                        severity="danger"
-                                                        className="absolute top-0 right-0 transform translate-x-1 -translate-y-1"
+                                {filteredChatRooms.length > 0 ? (
+                                    filteredChatRooms.map((chat) => (
+                                        <div
+                                            key={chat.id}
+                                            className={`p-3 border-round cursor-pointer transition-colors transition-duration-150 mb-2 ${
+                                                selectedChat?.id === chat.id
+                                                    ? 'bg-primary text-white'
+                                                    : 'hover:bg-gray-100'
+                                            }`}
+                                            onClick={() => setSelectedChat(chat)}
+                                        >
+                                            <div className="flex align-items-center gap-3">
+                                                <div className="relative">
+                                                    <Avatar
+                                                        image={getChatAvatar(chat)}
+                                                        label={getChatName(chat).charAt(0)}
+                                                        size="large"
+                                                        shape="circle"
                                                     />
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex align-items-center justify-content-between">
-                                                    <h4 className="m-0 text-sm font-semibold truncate">
-                                                        {getChatName(chat)}
-                                                    </h4>
-                                                    <span className="text-xs opacity-70">
-                                                        {chat.lastMessage && formatTime(chat.lastMessage.createdAt)}
-                                                    </span>
+                                                    {chat.unreadCount > 0 && (
+                                                        <Badge
+                                                            value={chat.unreadCount}
+                                                            severity="danger"
+                                                            className="absolute top-0 right-0 transform translate-x-1 -translate-y-1"
+                                                        />
+                                                    )}
                                                 </div>
-                                                {chat.lastMessage && (
-                                                    <p className="m-0 text-xs opacity-70 truncate" style={{ 
-                                                        whiteSpace: 'nowrap', 
-                                                        overflow: 'hidden', 
-                                                        textOverflow: 'ellipsis',
-                                                        maxWidth: '100%'
-                                                    }}>
-                                                        {chat.lastMessage.senderId === currentUserId ? 'You: ' : ''}
-                                                        {chat.lastMessage.content}
-                                                    </p>
-                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex align-items-center justify-content-between">
+                                                        <h4 className="m-0 text-sm font-semibold truncate">
+                                                            {getChatName(chat)}
+                                                        </h4>
+                                                        <span className="text-xs opacity-70">
+                                                            {chat.lastMessage && formatTime(chat.lastMessage.createdAt)}
+                                                        </span>
+                                                    </div>
+                                                    {chat.lastMessage && (
+                                                        <p className="m-0 text-xs opacity-70 truncate" style={{ 
+                                                            whiteSpace: 'nowrap', 
+                                                            overflow: 'hidden', 
+                                                            textOverflow: 'ellipsis',
+                                                            maxWidth: '100%'
+                                                        }}>
+                                                            {chat.lastMessage.senderId === currentUserId ? 'You: ' : ''}
+                                                            {chat.lastMessage.content}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
+                                    ))
+                                ) : (
+                                    <div className="flex flex-column align-items-center justify-content-center p-4 text-center" style={{ minHeight: '200px' }}>
+                                        <i className="pi pi-comments text-4xl text-gray-400 mb-3"></i>
+                                        <h4 className="text-lg font-semibold text-gray-600 mb-2">No Chats Found</h4>
+                                        <p className="text-sm text-gray-500 mb-3">
+                                            {chatSearchTerm ? 'No chats match your search.' : 'You don\'t have any conversations yet.'}
+                                        </p>
+                                        <Button
+                                            label="Start New Chat"
+                                            icon="pi pi-plus"
+                                            size="small"
+                                            onClick={() => setShowNewChatDialog(true)}
+                                            severity="success"
+                                        />
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </ScrollPanel>
                     </div>
