@@ -26,6 +26,7 @@ model User {
   profileImagePublicId String? // Cloudinary public_id for profile image
   membershipNumber  String?  @unique
   joinDate          DateTime?
+  paidDate          DateTime? // Date when user paid membership
   lastLogin         DateTime?
   resetToken        String?
   resetTokenExpiry  DateTime?
@@ -44,6 +45,8 @@ model User {
   phoneBookEntry    PhoneBookEntry?
   announcements     Announcement[]
   moderator         Moderator?
+  trestleBoards     TrestleBoard[]
+  userMealSelections UserMealSelection[]
 
   @@map("users")
 }
@@ -179,6 +182,7 @@ model ChatRoom {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String?
   isGroup     Boolean  @default(false)
+  isGroupChat Boolean  @default(false) // Type: group chat or individual chat
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -261,10 +265,7 @@ model Announcement {
   title          String
   content        String
   type           AnnouncementType
-  status         AnnouncementStatus @default(DRAFT)
-  targetAudience TargetAudience
-  publishedAt    DateTime?
-  expiresAt      DateTime?
+  status         AnnouncementStatus @default(PUBLISHED)
   createdById    String           @db.ObjectId
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -292,8 +293,8 @@ model Moderator {
 
 // Enums
 enum UserRole {
-  ADMIN
   MEMBER
+  ADMIN
 }
 
 enum UserStatus {
@@ -301,6 +302,7 @@ enum UserStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+  DEACTIVATED
 }
 
 enum EventCategory {
@@ -396,7 +398,6 @@ model SystemSettings {
   contactEmail        String
   maxFileSize         Int      @default(10)
   allowedFileTypes    String   @default("pdf,doc,docx,jpg,jpeg,png")
-  defaultUserRole     UserRole @default(MEMBER)
   enableNotifications Boolean  @default(true)
   enableChat          Boolean  @default(true)
   enableEvents        Boolean  @default(true)
@@ -405,4 +406,87 @@ model SystemSettings {
   updatedAt           DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+model MealCategory {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  meals       Meal[]
+
+  @@map("meal_categories")
+}
+
+model Meal {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  description   String?
+  imageUrl      String?
+  imagePublicId String?
+  categoryId    String       @db.ObjectId
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  category      MealCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  trestleBoardMeals TrestleBoardMeal[]
+
+  @@map("meals")
+}
+
+model TrestleBoard {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  month       Int      // 1-12 for January to December
+  year        Int
+  title       String
+  description String?
+  createdById String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  meals       TrestleBoardMeal[]
+  userSelections UserMealSelection[]
+
+  @@unique([month, year], name: "month_year")
+  @@map("trestle_boards")
+}
+
+model TrestleBoardMeal {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  trestleBoardId String       @db.ObjectId
+  mealId         String       @db.ObjectId
+  createdAt      DateTime     @default(now())
+
+  // Relations
+  trestleBoard   TrestleBoard @relation(fields: [trestleBoardId], references: [id], onDelete: Cascade)
+  meal           Meal         @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  userSelections UserMealSelection[]
+
+  @@unique([trestleBoardId, mealId])
+  @@map("trestle_board_meals")
+}
+
+model UserMealSelection {
+  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String           @db.ObjectId
+  trestleBoardId     String           @db.ObjectId
+  trestleBoardMealId String           @db.ObjectId
+  isCompleted        Boolean          @default(false)
+  completedAt        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  // Relations
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trestleBoard       TrestleBoard     @relation(fields: [trestleBoardId], references: [id], onDelete: Cascade)
+  trestleBoardMeal   TrestleBoardMeal @relation(fields: [trestleBoardMealId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trestleBoardMealId])
+  @@map("user_meal_selections")
 }

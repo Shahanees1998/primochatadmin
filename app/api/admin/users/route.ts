@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { AuthService } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
@@ -10,7 +11,6 @@ export async function GET(request: NextRequest) {
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '10');
         const search = searchParams.get('search') || '';
-        const role = searchParams.get('role') || '';
         const status = searchParams.get('status') || '';
         const sortField = searchParams.get('sortField');
         const sortOrder = searchParams.get('sortOrder');
@@ -27,10 +27,6 @@ export async function GET(request: NextRequest) {
                 { email: { contains: search, mode: 'insensitive' } },
                 { membershipNumber: { contains: search, mode: 'insensitive' } },
             ];
-        }
-
-        if (role) {
-            where.role = role;
         }
 
         if (status) {
@@ -63,13 +59,15 @@ export async function GET(request: NextRequest) {
                     profileImage: true,
                     membershipNumber: true,
                     joinDate: true,
+                    paidDate: true,
                     lastLogin: true,
                     createdAt: true,
                 },
             }),
             prisma.user.count({ where }),
         ]);
-
+console.log('users?????????????????????????????????????????', users);
+console.log('total?????????????????????????????????????????', total);
         return NextResponse.json({
             users,
             pagination: {
@@ -93,7 +91,7 @@ export async function POST(request: NextRequest) {
   return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
         const body = await request.json();
-        const { firstName, lastName, email, phone, role, status, membershipNumber, joinDate, password } = body;
+        const { firstName, lastName, email, phone, joinDate, password, paidDate } = body;
 
         // Validate required fields
         if (!firstName || !lastName || !email) {
@@ -115,19 +113,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check if membership number already exists (if provided)
-        if (membershipNumber) {
-            const existingUserByMembership = await prisma.user.findUnique({
-                where: { membershipNumber },
-            });
-
-            if (existingUserByMembership) {
-                return NextResponse.json(
-                    { error: 'Membership number already exists' },
-                    { status: 400 }
-                );
-            }
-        }
+        // Generate membership number automatically
+        const membershipNumber = await AuthService.generateMembershipNumber();
 
         // Hash the password (admin can set, or use default)
         const plainPassword = password || 'defaultPassword123';
@@ -141,10 +128,11 @@ export async function POST(request: NextRequest) {
                 email,
                 password: hashedPassword,
                 phone,
-                role: role || 'MEMBER',
-                status: status || 'PENDING',
+                role: 'MEMBER',
+                status: 'PENDING',
                 membershipNumber,
                 joinDate: joinDate ? new Date(joinDate) : null,
+                paidDate: paidDate ? new Date(paidDate) : null,
                 phoneBookEntry: {
                     create: {
                         email,
@@ -153,20 +141,21 @@ export async function POST(request: NextRequest) {
                     },
                 },
             },
-            select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                phone: true,
-                role: true,
-                status: true,
-                profileImage: true,
-                membershipNumber: true,
-                joinDate: true,
-                lastLogin: true,
-                createdAt: true,
-            },
+                            select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                    role: true,
+                    status: true,
+                    profileImage: true,
+                    membershipNumber: true,
+                    joinDate: true,
+                    paidDate: true,
+                    lastLogin: true,
+                    createdAt: true,
+                },
         });
 
         return NextResponse.json(user, { status: 201 });

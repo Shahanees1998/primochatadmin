@@ -349,28 +349,61 @@ export default function AnnouncementsPage() {
 
                     {/* Announcements Table Skeleton */}
                     {loading ? (
-                        <div className="p-3">
-                            {/* Table header skeleton */}
-                            <div className="flex mb-2 gap-2">
-                                <Skeleton width="20%" height="2rem" />
-                                <Skeleton width="10%" height="2rem" />
-                                <Skeleton width="10%" height="2rem" />
-                                <Skeleton width="10%" height="2rem" />
-                                <Skeleton width="10%" height="2rem" />
-                                <Skeleton width="10%" height="2rem" />
-                            </div>
-                            {/* Table rows skeleton */}
-                            {[...Array(5)].map((_, i) => (
-                                <div key={i} className="flex mb-2 gap-2 align-items-center">
-                                    <Skeleton width="20%" height="2rem" />
-                                    <Skeleton width="10%" height="2rem" />
-                                    <Skeleton width="10%" height="2rem" />
-                                    <Skeleton width="10%" height="2rem" />
-                                    <Skeleton width="10%" height="2rem" />
-                                    <Skeleton width="10%" height="2rem" />
-                                </div>
-                            ))}
-                        </div>
+                        <DataTable
+                            value={Array.from({ length: 5 }, (_, i) => ({ id: i }))}
+                            className="p-datatable-sm"
+                        >
+                            <Column
+                                field="content"
+                                header="Announcement"
+                                body={() => (
+                                    <div className="flex flex-column gap-1">
+                                        <Skeleton width="200px" height="16px" />
+                                        <Skeleton width="150px" height="14px" />
+                                    </div>
+                                )}
+                                sortable={false}
+                            />
+                            <Column
+                                field="type"
+                                header="Type"
+                                body={() => <Skeleton width="80px" height="24px" />}
+                                sortable
+                                style={{ width: '120px' }}
+                            />
+                            <Column
+                                field="targetAudience"
+                                header="Audience"
+                                body={() => <Skeleton width="80px" height="24px" />}
+                                sortable
+                                style={{ width: '120px' }}
+                            />
+                            <Column
+                                field="status"
+                                header="Status"
+                                body={() => <Skeleton width="80px" height="24px" />}
+                                sortable
+                                style={{ width: '100px' }}
+                            />
+                            <Column
+                                field="createdAt"
+                                header="Created"
+                                body={() => <Skeleton width="100px" height="16px" />}
+                                sortable
+                                style={{ width: '150px' }}
+                            />
+                            <Column
+                                header="Actions"
+                                body={() => (
+                                    <div className="flex gap-2">
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                    </div>
+                                )}
+                                style={{ width: '120px' }}
+                            />
+                        </DataTable>
                     ) : (
                         <DataTable
                             value={announcements}

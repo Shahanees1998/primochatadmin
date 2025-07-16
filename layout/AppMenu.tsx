@@ -4,11 +4,11 @@ import AppSubMenu from "./AppSubMenu";
 const AppMenu = () => {
     const model: MenuModel[] = [
         {
-            label: "User Management",
+            label: "Member Management",
             icon: "pi pi-users",
             items: [
                 {
-                    label: "All Users",
+                    label: "All Members",
                     icon: "pi pi-fw pi-users",
                     to: "/admin/users",
                 },
@@ -21,6 +21,38 @@ const AppMenu = () => {
                     label: "Membership Cards",
                     icon: "pi pi-fw pi-id-card",
                     to: "/admin/users/cards",
+                },
+            ],
+        },
+        {
+            label: "Meal Management",
+            icon: "pi pi-apple",
+            items: [
+                {
+                    label: "All Meals",
+                    icon: "pi pi-fw pi-list",
+                    to: "/admin/meal/meals",
+                },
+                {
+                    label: "Meal Categories",
+                    icon: "pi pi-fw pi-tags",
+                    to: "/admin/meal/categories",
+                },
+            ],
+        },
+        {
+            label: "Trestle Board",
+            icon: "pi pi-calendar-plus",
+            items: [
+                {
+                    label: "All Boards",
+                    icon: "pi pi-fw pi-list",
+                    to: "/admin/trestle-board",
+                },
+                {
+                    label: "Create Board",
+                    icon: "pi pi-fw pi-plus",
+                    to: "/admin/trestle-board/create",
                 },
             ],
         },
@@ -45,27 +77,27 @@ const AppMenu = () => {
                 },
             ],
         },
-        {
-            label: "Festive Board",
-            icon: "pi pi-utensils",
-            items: [
-                {
-                    label: "All Boards",
-                    icon: "pi pi-fw pi-list",
-                    to: "/admin/festive-board",
-                },
-                // {
-                //     label: "Create Board",
-                //     icon: "pi pi-fw pi-plus",
-                //     to: "/admin/festive-board/create",
-                // },
-                // {
-                //     label: "Manage Items",
-                //     icon: "pi pi-fw pi-pencil",
-                //     to: "/admin/festive-board/items",
-                // },
-            ],
-        },
+        // {
+        //     label: "Festive Board",
+        //     icon: "pi pi-utensils",
+        //     items: [
+        //         {
+        //             label: "All Boards",
+        //             icon: "pi pi-fw pi-list",
+        //             to: "/admin/festive-board",
+        //         },
+        //         // {
+        //         //     label: "Create Board",
+        //         //     icon: "pi pi-fw pi-plus",
+        //         //     to: "/admin/festive-board/create",
+        //         // },
+        //         // {
+        //         //     label: "Manage Items",
+        //         //     icon: "pi pi-fw pi-pencil",
+        //         //     to: "/admin/festive-board/items",
+        //         // },
+        //     ],
+        // },
         {
             label: "Documents",
             icon: "pi pi-file",

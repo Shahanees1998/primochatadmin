@@ -10,7 +10,7 @@ import { Divider } from "primereact/divider";
 import { Skeleton } from "primereact/skeleton";
 import { apiClient } from "@/lib/apiClient";
 import { Dialog } from "primereact/dialog";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
 import { Tag } from "primereact/tag";
 import ProfileImageUpload from "@/components/ProfileImageUpload";
 import { getProfileImageUrl } from "@/lib/cloudinary-client";
@@ -33,7 +33,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
-    const { data: session, update } = useSession();
+    const { user, refreshUser } = useAuth();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -61,17 +61,17 @@ export default function ProfilePage() {
     const toast = useRef<Toast>(null);
 
     useEffect(() => {
-        if (session?.user?.id) {
+        if (user?.id) {
             loadProfile();
         }
-    }, [session?.user?.id]);
+    }, [user?.id]);
 
     const loadProfile = async () => {
-        if (!session?.user?.id) return;
+        if (!user?.id) return;
         
         setLoading(true);
         try {
-            const response = await apiClient.getUser(session.user.id);
+            const response = await apiClient.getUser(user.id);
 
             if (response.error) {
                 throw new Error(response.error);
@@ -100,7 +100,7 @@ export default function ProfilePage() {
     };
 
     const saveProfile = async () => {
-        if (!profile || !session?.user?.id) return;
+        if (!profile || !user?.id) return;
 
         setSaving(true);
         try {
@@ -119,19 +119,8 @@ export default function ProfilePage() {
             // Update local state
             setProfile(prev => prev ? { ...prev, ...profileForm } as UserProfile : null);
             
-            // Update session with new user data
-            if (session) {
-                await update({
-                    ...session,
-                    user: {
-                        ...session.user,
-                        name: `${profileForm.firstName} ${profileForm.lastName}`,
-                        firstName: profileForm.firstName,
-                        lastName: profileForm.lastName,
-                        email: profileForm.email,
-                    }
-                });
-            }
+            // Refresh user data
+            await refreshUser();
 
             showToast("success", "Success", "Profile updated successfully");
         } catch (error) {
@@ -154,11 +143,11 @@ export default function ProfilePage() {
 
         setChangingPassword(true);
         try {
-            if (!session?.user?.id) {
-                throw new Error('User session not found');
+            if (!user?.id) {
+                throw new Error('User not found');
             }
             const response = await apiClient.changePassword(
-                session.user.id,
+                user.id,
                 passwordForm.currentPassword,
                 passwordForm.newPassword
             );
@@ -337,7 +326,7 @@ export default function ProfilePage() {
                                 currentImageUrl={profile?.profileImage}
                                 currentImagePublicId={profile?.profileImagePublicId}
                                 userId={profile?.id || ''}
-                                onImageUploaded={(imageUrl, publicId) => {
+                                onImageUploaded={async (imageUrl, publicId) => {
                                     // Update local state
                                     setProfile(prev => prev ? { 
                                         ...prev, 
@@ -345,26 +334,11 @@ export default function ProfilePage() {
                                         profileImagePublicId: publicId || prev.profileImagePublicId
                                     } : null);
                                     
-                                    // Update session with more comprehensive data
-                                    if (session) {
-                                        update({
-                                            ...session,
-                                            user: {
-                                                ...session.user,
-                                                profileImage: imageUrl,
-                                                profileImagePublicId: publicId,
-                                            }
-                                        });
-                                    }
+                                    // Refresh user data
+                                    await refreshUser();
                                     
-                                    // Force a small delay to ensure session update is processed
-                                    setTimeout(() => {
-                                        if (session) {
-                                            update();
-                                        }
-                                        // Dispatch custom event to notify other components
-                                        window.dispatchEvent(new Event('profile-updated'));
-                                    }, 100);
+                                    // Dispatch custom event to notify other components
+                                    window.dispatchEvent(new Event('profile-updated'));
                                 }}
                                 size="medium"
                             />

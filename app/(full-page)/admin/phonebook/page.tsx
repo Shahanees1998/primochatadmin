@@ -368,20 +368,61 @@ export default function PhoneBookPage() {
             <div className="grid">
                 <div className="col-12">
                     <Card>
-                        <div className="flex flex-column gap-3">
-                            <Skeleton height="2rem" width="200px" />
-                            <Skeleton height="1rem" width="300px" />
-                            <div className="flex gap-2">
-                                <Skeleton height="2.5rem" width="200px" />
-                                <Skeleton height="2.5rem" width="120px" />
-                                <Skeleton height="2.5rem" width="100px" />
-                            </div>
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
-                        </div>
+                        <DataTable
+                            value={Array.from({ length: 5 }, (_, i) => ({ id: i }))}
+                            className="p-datatable-sm"
+                            header={header}
+                        >
+                            <Column 
+                                field="firstName" 
+                                header="Name" 
+                                body={() => (
+                                    <div className="flex align-items-center gap-2">
+                                        <Skeleton shape="circle" size="2rem" />
+                                        <div className="flex flex-column gap-1">
+                                            <Skeleton width="120px" height="16px" />
+                                            <Skeleton width="100px" height="14px" />
+                                        </div>
+                                    </div>
+                                )}
+                                style={{ minWidth: "200px" }}
+                            />
+                            <Column 
+                                field="email" 
+                                header="Email" 
+                                body={() => <Skeleton width="200px" height="16px" />}
+                                style={{ minWidth: "200px" }}
+                            />
+                            <Column 
+                                field="phone" 
+                                header="Phone" 
+                                body={() => <Skeleton width="120px" height="16px" />}
+                                style={{ minWidth: "150px" }}
+                            />
+                            <Column 
+                                field="membershipNumber" 
+                                header="Membership #" 
+                                body={() => <Skeleton width="100px" height="16px" />}
+                                style={{ minWidth: "120px" }}
+                            />
+                            <Column 
+                                field="role" 
+                                header="Role" 
+                                body={() => <Skeleton width="80px" height="24px" />}
+                                style={{ minWidth: "100px" }}
+                            />
+                            <Column 
+                                header="Actions" 
+                                body={() => (
+                                    <div className="flex gap-2">
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                    </div>
+                                )}
+                                style={{ width: "120px" }}
+                            />
+                        </DataTable>
                     </Card>
                 </div>
             </div>

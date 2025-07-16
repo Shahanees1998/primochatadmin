@@ -16,11 +16,6 @@ export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const host = req.headers.get('host');
 
-  // Redirect app.siing.io to siing.io
-  if (host === 'app.siing.io') {
-    return NextResponse.redirect('https://siing.io');
-  }
-
   // Allow access to public paths
   if (ignorePaths.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
@@ -28,7 +23,7 @@ export async function middleware(req: NextRequest) {
 
   // Check if user is authenticated
   const token = AuthService.getTokenFromRequest(req);
-  
+  console.log('Token>>>>>>>>>>>>>>>>>>>>>>>>>>>>>:', token);
   // Protect admin routes (both frontend and API)
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     if (!token) {
@@ -49,7 +44,7 @@ export async function middleware(req: NextRequest) {
     try {
       // Verify the token
       const payload = await AuthService.verifyToken(token);
-      
+      console.log('Payload>>>>>>>>>>>>>>>>>>>>>>>>>>>>>:', payload);
       // Check if user has admin role
       if (payload.role !== 'ADMIN') {
         // For API routes, return 403 instead of redirecting

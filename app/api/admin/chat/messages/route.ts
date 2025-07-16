@@ -8,7 +8,6 @@ export async function POST(request: NextRequest) {
         // Get or create admin user
         const adminUser = await prisma.user.findFirst({
             where: {
-                role: 'ADMIN',
                 status: 'ACTIVE'
             }
         }) || await prisma.user.create({
@@ -17,7 +16,7 @@ export async function POST(request: NextRequest) {
                 lastName: 'User',
                 email: 'admin@primochat.com',
                 password: 'adminPassword123',
-                role: 'ADMIN',
+                role: 'MEMBER',
                 status: 'ACTIVE',
                 membershipNumber: 'ADMIN001'
             }

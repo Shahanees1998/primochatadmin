@@ -164,7 +164,7 @@ export default function AdminDashboard() {
 
     const quickActions = [
         {
-            title: "Manage Users",
+            title: "Manage Members",
             description: "Approve, edit, or manage member accounts",
             icon: "pi pi-users",
             route: "/admin/users",
@@ -257,7 +257,7 @@ export default function AdminDashboard() {
                     <div className="col-12 md:col-6 lg:col-2">
                         <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/users')}>
                             <div className="text-3xl font-bold text-blue-500">{stats.totalUsers}</div>
-                            <div className="text-600">Total Users</div>
+                            <div className="text-600">Total Members</div>
                         </Card>
                     </div>
                     <div className="col-12 md:col-6 lg:col-2">

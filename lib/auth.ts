@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify, decodeJwt } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { prisma } from './prisma';
+import { prisma } from '@/lib/prisma';
 
 // JWT Configuration
 const JWT_SECRET = new TextEncoder().encode(
@@ -107,6 +107,10 @@ export class AuthService {
       throw new Error('Invalid email or password');
     }
 
+    if (user.status === 'DEACTIVATED') {
+      throw new Error('Account has been deactivated. Please contact admin.');
+    }
+    
     if (user.status !== 'ACTIVE') {
       throw new Error('Account is not active. Please contact admin.');
     }
@@ -239,5 +243,13 @@ export class AuthService {
    */
   static async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
     return await bcrypt.compare(password, hashedPassword);
+  }
+
+  /**
+   * Generate membership number
+   */
+  static async generateMembershipNumber(): Promise<string> {
+    const userCount = await prisma.user.count();
+    return `5000${userCount + 1}`;
   }
 } 

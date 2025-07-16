@@ -15,7 +15,7 @@ interface RequestOptions {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
     body?: any;
     headers?: Record<string, string>;
-    params?: Record<string, string | number | boolean>;
+    params?: Record<string, string | number | boolean | null>;
 }
 
 class ApiClient {
@@ -90,7 +90,7 @@ class ApiClient {
     }
 
     // Generic methods
-    async get<T>(endpoint: string, params?: Record<string, string | number | boolean>): Promise<ApiResponse<T>> {
+    async get<T>(endpoint: string, params?: Record<string, string | number | boolean | null>): Promise<ApiResponse<T>> {
         return this.request<T>(endpoint, { method: 'GET', params });
     }
 
@@ -115,7 +115,6 @@ class ApiClient {
         page?: number;
         limit?: number;
         search?: string;
-        role?: string;
         status?: string;
         sortField?: string;
         sortOrder?: number;
@@ -140,10 +139,11 @@ class ApiClient {
         lastName: string;
         email: string;
         phone?: string;
-        role?: string;
         status?: string;
         membershipNumber?: string;
         joinDate?: string;
+        paidDate?: string;
+        password?: string;
     }) {
         return this.post<any>('/admin/users', userData);
     }
@@ -153,10 +153,10 @@ class ApiClient {
         lastName: string;
         email: string;
         phone?: string;
-        role?: string;
         status?: string;
         membershipNumber?: string;
         joinDate?: string;
+        paidDate?: string;
     }) {
         return this.put<any>(`/admin/users/${id}`, userData);
     }
@@ -617,7 +617,6 @@ class ApiClient {
 
     async createChatRoom(data: {
         participantIds: string[];
-        isGroup: boolean;
         name?: string;
     }) {
         return this.post<any>('/admin/chat/rooms', data);
@@ -716,9 +715,6 @@ class ApiClient {
         title: string;
         content: string;
         type: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'EVENT' | 'UPDATE';
-        status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-        targetAudience: 'ALL' | 'MEMBERS' | 'ADMINS' | 'NEW_MEMBERS';
-        expiresAt?: string;
     }) {
         return this.post<any>('/admin/announcements', data);
     }
@@ -727,9 +723,6 @@ class ApiClient {
         title?: string;
         content?: string;
         type?: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'EVENT' | 'UPDATE';
-        status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-        targetAudience?: 'ALL' | 'MEMBERS' | 'ADMINS' | 'NEW_MEMBERS';
-        expiresAt?: string;
     }) {
         return this.put<any>(`/admin/announcements/${id}`, data);
     }
@@ -764,6 +757,156 @@ class ApiClient {
                 events: number[];
             };
         }>('/admin/dashboard');
+    }
+
+    // Meal Category methods
+    async getMealCategories(params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+    }) {
+        return this.get<{
+            categories: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        }>('/admin/meal/categories', params);
+    }
+
+    async getMealCategory(id: string) {
+        return this.get(`/admin/meal/categories/${id}`);
+    }
+
+    async createMealCategory(categoryData: {
+        name: string;
+        description?: string;
+    }) {
+        return this.post<any>('/admin/meal/categories', categoryData);
+    }
+
+    async updateMealCategory(id: string, categoryData: {
+        name: string;
+        description?: string;
+    }) {
+        return this.put<any>(`/admin/meal/categories/${id}`, categoryData);
+    }
+
+    async deleteMealCategory(id: string) {
+        return this.delete(`/admin/meal/categories/${id}`);
+    }
+
+    // Meal methods
+    async getMeals(params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        categoryId?: string;
+    }) {
+        return this.get<{
+            meals: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        }>('/admin/meals', params);
+    }
+
+    async getMeal(id: string) {
+        return this.get(`/admin/meals/${id}`);
+    }
+
+    async createMeal(mealData: {
+        title: string;
+        description?: string;
+        categoryId: string;
+    }) {
+        return this.post<any>('/admin/meals', mealData);
+    }
+
+    async updateMeal(id: string, mealData: {
+        title: string;
+        description?: string;
+        categoryId: string;
+    }) {
+        return this.put<any>(`/admin/meals/${id}`, mealData);
+    }
+
+    async deleteMeal(id: string) {
+        return this.delete(`/admin/meals/${id}`);
+    }
+
+    // Trestle Board methods
+    async getTrestleBoards(params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        year?: number;
+    }) {
+        return this.get<{
+            data: {
+                boards: any[];
+                pagination: {
+                    page: number;
+                    limit: number;
+                    total: number;
+                    totalPages: number;
+                };
+            };
+        }>('/admin/trestle-board', params);
+    }
+
+    async getTrestleBoard(id: string) {
+        return this.get(`/admin/trestle-board/${id}`);
+    }
+
+    async createTrestleBoard(boardData: {
+        month: number;
+        year: number;
+        title: string;
+        description?: string;
+        mealIds: string[];
+    }) {
+        return this.post<any>('/admin/trestle-board', boardData);
+    }
+
+    async updateTrestleBoard(id: string, boardData: {
+        title: string;
+        description?: string;
+        mealIds: string[];
+    }) {
+        return this.put<any>(`/admin/trestle-board/${id}`, boardData);
+    }
+
+    async deleteTrestleBoard(id: string) {
+        return this.delete(`/admin/trestle-board/${id}`);
+    }
+
+    async searchMeals(params?: {
+        search?: string;
+        categoryId?: string;
+        limit?: number;
+    }) {
+        return this.get<{ data: any[] }>('/admin/trestle-board/meals/search', params);
+    }
+
+    // User-side Trestle Board methods
+    async getUserTrestleBoards(params?: {
+        year?: number;
+        month?: number;
+    }) {
+        return this.get<{ boards: any[] }>('/trestle-board', params);
+    }
+
+    async markMealCompleted(data: {
+        trestleBoardMealId: string;
+        isCompleted: boolean;
+    }) {
+        return this.post<any>('/trestle-board', data);
     }
 }
 

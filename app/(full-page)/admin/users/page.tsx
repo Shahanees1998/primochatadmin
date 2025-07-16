@@ -31,6 +31,7 @@ interface User {
     profileImagePublicId?: string;
     membershipNumber?: string;
     joinDate?: string | null;
+    paidDate?: string | null;
     lastLogin?: string;
     createdAt: string;
 }
@@ -40,14 +41,14 @@ interface UserFormData {
     lastName: string;
     email: string;
     phone: string;
-    role: string;
     status: string;
     membershipNumber: string;
     joinDate: Date | null;
+    paidDate: Date | null;
     password?: string;
 }
 
-export default function UsersPage() {
+export default function MembersPage() {
     const router = useRouter();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -60,7 +61,6 @@ export default function UsersPage() {
         firstName: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
         lastName: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
         email: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        role: { value: null, matchMode: FilterMatchMode.EQUALS },
         status: { value: null, matchMode: FilterMatchMode.EQUALS },
     });
     const [showUserDialog, setShowUserDialog] = useState(false);
@@ -70,10 +70,10 @@ export default function UsersPage() {
         lastName: "",
         email: "",
         phone: "",
-        role: "MEMBER",
         status: "PENDING",
         membershipNumber: "",
         joinDate: null,
+        paidDate: null,
         password: "",
     });
     const toast = useRef<Toast>(null);
@@ -82,23 +82,20 @@ export default function UsersPage() {
     const [sortField, setSortField] = useState<string | undefined>(undefined);
     const [sortOrder, setSortOrder] = useState<number | undefined>(undefined);
 
-    const roleOptions = [
-        { label: "Admin", value: "ADMIN" },
-        { label: "Moderator", value: "MODERATOR" },
-        { label: "Member", value: "MEMBER" },
-    ];
+
 
     const statusOptions = [
         { label: "Active", value: "ACTIVE" },
         { label: "Pending", value: "PENDING" },
         { label: "Inactive", value: "INACTIVE" },
+        { label: "Deactivated", value: "DEACTIVATED" },
     ];
 
     useEffect(() => {
-        loadUsers();
+        loadMembers();
     }, [currentPage, rowsPerPage, globalFilterValue]);
 
-    const loadUsers = async () => {
+    const loadMembers = async () => {
         setLoading(true);
         setError(null);
         try {
@@ -117,8 +114,8 @@ export default function UsersPage() {
             setUsers(response.data?.users || []);
             setTotalRecords(response.data?.pagination?.total || 0);
         } catch (error) {
-            setError("Failed to load users. Please check your connection or try again later.");
-            showToast("error", "Error", "Failed to load users");
+            setError("Failed to load members. Please check your connection or try again later.");
+            showToast("error", "Error", "Failed to load members");
         } finally {
             setLoading(false);
         }
@@ -137,17 +134,17 @@ export default function UsersPage() {
         toast.current?.show({ severity, summary, detail, life: 3000 });
     };
 
-    const openNewUserDialog = () => {
+    const openNewMemberDialog = () => {
         setEditingUser(null);
         setUserForm({
             firstName: "",
             lastName: "",
             email: "",
             phone: "",
-            role: "MEMBER",
             status: "PENDING",
             membershipNumber: "",
             joinDate: null,
+            paidDate: null,
             password: "",
         });
         setShowUserDialog(true);
@@ -160,10 +157,10 @@ export default function UsersPage() {
             lastName: user.lastName,
             email: user.email,
             phone: user.phone || "",
-            role: user.role,
             status: user.status,
             membershipNumber: user.membershipNumber || "",
             joinDate: user.joinDate ? new Date(user.joinDate) : null,
+            paidDate: user.paidDate ? new Date(user.paidDate) : null,
         });
         setShowUserDialog(true);
     };
@@ -174,6 +171,7 @@ export default function UsersPage() {
             const userData = {
                 ...userForm,
                 joinDate: userForm.joinDate?.toISOString(),
+                paidDate: userForm.paidDate?.toISOString(),
             };
             if (!editingUser && !userForm.password) {
                 delete userData.password;
@@ -196,15 +194,15 @@ export default function UsersPage() {
                     user.id === editingUser.id ? response.data : user
                 );
                 setUsers(updatedUsers);
-                showToast("success", "Success", "User updated successfully");
+                showToast("success", "Success", "Member updated successfully");
             } else {
                 setUsers([response.data, ...users]);
-                showToast("success", "Success", "User created successfully");
+                showToast("success", "Success", "Member created successfully");
             }
 
             setShowUserDialog(false);
         } catch (error) {
-            showToast("error", "Error", error instanceof Error ? error.message : "Failed to save user");
+            showToast("error", "Error", error instanceof Error ? error.message : "Failed to save member");
         } finally {
             setSaveLoading(false);
         }
@@ -229,9 +227,9 @@ export default function UsersPage() {
             }
 
             setUsers(users.filter(user => user.id !== userId));
-            showToast("success", "Success", "User deleted successfully");
+            showToast("success", "Success", "Member deleted successfully");
         } catch (error) {
-            showToast("error", "Error", "Failed to delete user");
+            showToast("error", "Error", "Failed to delete member");
         }
     };
 
@@ -240,18 +238,12 @@ export default function UsersPage() {
             case "ACTIVE": return "success";
             case "PENDING": return "warning";
             case "INACTIVE": return "danger";
+            case "DEACTIVATED": return "danger";
             default: return "info";
         }
     };
 
-    const getRoleSeverity = (role: string) => {
-        switch (role) {
-            case "ADMIN": return "danger";
-            case "MODERATOR": return "warning";
-            case "MEMBER": return "info";
-            default: return "info";
-        }
-    };
+
 
     const nameBodyTemplate = (rowData: User) => {
         return (
@@ -288,7 +280,7 @@ export default function UsersPage() {
                     size="small"
                     text
                     severity="secondary"
-                    tooltip="Edit User"
+                                            tooltip="Edit Member"
                     onClick={() => openEditUserDialog(rowData)}
                 />
                 <Button
@@ -296,7 +288,7 @@ export default function UsersPage() {
                     size="small"
                     text
                     severity="danger"
-                    tooltip="Delete User"
+                                            tooltip="Delete Member"
                     onClick={() => confirmDeleteUser(rowData)}
                 />
             </div>
@@ -306,8 +298,8 @@ export default function UsersPage() {
     const header = useMemo(() => (
         <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
             <div className="flex flex-column">
-                <h2 className="text-2xl font-bold m-0">User Management</h2>
-                <span className="text-600">Manage all registered users</span>
+                <h2 className="text-2xl font-bold m-0">Member Management</h2>
+                <span className="text-600">Manage all registered members</span>
             </div>
             <div className="flex gap-2">
                 <span className="p-input-icon-left">
@@ -315,14 +307,14 @@ export default function UsersPage() {
                     <InputText
                         value={globalFilterValue}
                         onChange={onGlobalFilterChange}
-                        placeholder="Search users..."
+                        placeholder="Search members..."
                         className="w-full"
                     />
                 </span>
                 <Button
-                    label="Add User"
+                    label="Add Member"
                     icon="pi pi-plus"
-                    onClick={openNewUserDialog}
+                                            onClick={openNewMemberDialog}
                     severity="success"
                 />
             </div>
@@ -338,22 +330,61 @@ export default function UsersPage() {
                     )}
                     <>
                     {loading ? (
-                        <div className="p-4">
-                            <div className="grid">
-                                {[...Array(5)].map((_, i) => (
-                                    <div className="col-12" key={i}>
-                                        <div className="flex align-items-center gap-3">
-                                            <Skeleton shape="circle" size="2.5rem" />
-                                            <div className="flex flex-column gap-2" style={{ flex: 1 }}>
-                                                <Skeleton width="40%" height="1.5rem" />
-                                                <Skeleton width="30%" height="1rem" />
-                                            </div>
-                                            <Skeleton width="6rem" height="2rem" />
+                        <DataTable
+                            value={Array.from({ length: 5 }, (_, i) => ({ id: i }))}
+                            className="p-datatable-sm"
+                            header={header}
+                        >
+                            <Column 
+                                field="firstName" 
+                                header="Name" 
+                                body={() => (
+                                    <div className="flex align-items-center gap-2">
+                                        <Skeleton shape="circle" size="2rem" />
+                                        <div className="flex flex-column gap-1">
+                                            <Skeleton width="120px" height="16px" />
+                                            <Skeleton width="100px" height="14px" />
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                )}
+                                style={{ minWidth: "200px" }}
+                            />
+                            <Column 
+                                field="email" 
+                                header="Email" 
+                                body={() => <Skeleton width="200px" height="16px" />}
+                                style={{ minWidth: "200px" }}
+                            />
+                            <Column 
+                                field="phone" 
+                                header="Phone" 
+                                body={() => <Skeleton width="120px" height="16px" />}
+                                style={{ minWidth: "150px" }}
+                            />
+                            <Column 
+                                field="paidDate" 
+                                header="Paid Date" 
+                                body={() => <Skeleton width="100px" height="16px" />}
+                                style={{ minWidth: "120px" }}
+                            />
+                            <Column 
+                                field="role" 
+                                header="Role" 
+                                body={() => <Skeleton width="80px" height="24px" />}
+                                style={{ minWidth: "100px" }}
+                            />
+                            <Column 
+                                header="Actions" 
+                                body={() => (
+                                    <div className="flex gap-2">
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                    </div>
+                                )}
+                                style={{ width: "120px" }}
+                            />
+                        </DataTable>
                     ) : (
                         <DataTable
                             value={users}
@@ -371,7 +402,7 @@ export default function UsersPage() {
                             filterDisplay="menu"
                             globalFilterFields={["firstName", "lastName", "email", "membershipNumber"]}
                             header={header}
-                            emptyMessage={error ? "Unable to load users. Please check your connection or try again later." : "No users found."}
+                            emptyMessage={error ? "Unable to load members. Please check your connection or try again later." : "No members found."}
                             responsiveLayout="scroll"
                             onSort={(e) => {
                                 setSortField(e.sortField);
@@ -383,8 +414,8 @@ export default function UsersPage() {
                             <Column field="firstName" header="Name" body={nameBodyTemplate} sortable style={{ minWidth: "200px" }} />
                             <Column field="email" header="Email" sortable style={{ minWidth: "200px" }} />
                             <Column field="phone" header="Phone" style={{ minWidth: "150px" }} />
-                            <Column field="role" header="Role" body={(rowData) => (
-                                <Tag value={rowData.role} severity={getRoleSeverity(rowData.role)} />
+                            <Column field="paidDate" header="Paid Date" body={(rowData) => (
+                                rowData.paidDate ? new Date(rowData.paidDate).toLocaleDateString() : "Not paid"
                             )} sortable style={{ minWidth: "120px" }} />
                             <Column field="status" header="Status" body={(rowData) => (
                                 <Tag value={rowData.status} severity={getStatusSeverity(rowData.status)} />
@@ -403,7 +434,7 @@ export default function UsersPage() {
             <Dialog
                 visible={showUserDialog}
                 style={{ width: "820px", maxWidth: "95vw", zIndex: 2000, borderRadius: 12 }}
-                header={editingUser ? "Edit User" : "Add New User"}
+                header={editingUser ? "Edit Member" : "Add New Member"}
                 modal
                 className=""
                 onHide={() => setShowUserDialog(false)}
@@ -460,18 +491,7 @@ export default function UsersPage() {
                             className="w-full"
                         />
                     </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="role" className="block font-bold mb-2">Role *</label>
-                        <Dropdown
-                            id="role"
-                            value={userForm.role}
-                            options={roleOptions}
-                            onChange={(e) => setUserForm({ ...userForm, role: e.value })}
-                            placeholder="Select Role"
-                            className="w-full"
-                            style={{ minWidth: 0 }}
-                        />
-                    </div>
+
                     <div className="col-12 md:col-6">
                         <label htmlFor="status" className="block font-bold mb-2">Status *</label>
                         <Dropdown
@@ -499,6 +519,18 @@ export default function UsersPage() {
                             id="joinDate"
                             value={userForm.joinDate}
                             onChange={(e) => setUserForm({ ...userForm, joinDate: e.value as Date })}
+                            showIcon
+                            dateFormat="dd/mm/yy"
+                            className="w-full"
+                            style={{ minWidth: 0 }}
+                        />
+                    </div>
+                    <div className="col-12 md:col-6">
+                        <label htmlFor="paidDate" className="block font-bold mb-2">Paid Date</label>
+                        <Calendar
+                            id="paidDate"
+                            value={userForm.paidDate}
+                            onChange={(e) => setUserForm({ ...userForm, paidDate: e.value as Date })}
                             showIcon
                             dateFormat="dd/mm/yy"
                             className="w-full"

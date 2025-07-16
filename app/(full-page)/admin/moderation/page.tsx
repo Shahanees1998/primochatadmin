@@ -291,19 +291,60 @@ export default function ModerationPage() {
             <div className="grid">
                 <div className="col-12">
                     <Card>
-                        <div className="flex flex-column gap-3">
-                            <Skeleton height="2rem" width="200px" />
-                            <Skeleton height="1rem" width="300px" />
-                            <div className="flex gap-2">
-                                <Skeleton height="2.5rem" width="200px" />
-                                <Skeleton height="2.5rem" width="120px" />
-                            </div>
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
-                            <Skeleton height="4rem" />
-                        </div>
+                        <DataTable
+                            value={Array.from({ length: 5 }, (_, i) => ({ id: i }))}
+                            className="p-datatable-sm"
+                            header={header}
+                        >
+                            <Column 
+                                field="user" 
+                                header="User" 
+                                body={() => (
+                                    <div className="flex align-items-center gap-2">
+                                        <Skeleton shape="circle" size="2rem" />
+                                        <div className="flex flex-column gap-1">
+                                            <Skeleton width="120px" height="16px" />
+                                            <Skeleton width="100px" height="14px" />
+                                        </div>
+                                    </div>
+                                )}
+                                style={{ minWidth: "200px" }}
+                            />
+                            <Column 
+                                field="type" 
+                                header="Type" 
+                                body={() => <Skeleton width="100px" height="24px" />}
+                                style={{ minWidth: "120px" }}
+                            />
+                            <Column 
+                                field="reason" 
+                                header="Reason" 
+                                body={() => <Skeleton width="200px" height="16px" />}
+                                style={{ minWidth: "200px" }}
+                            />
+                            <Column 
+                                field="status" 
+                                header="Status" 
+                                body={() => <Skeleton width="80px" height="24px" />}
+                                style={{ minWidth: "100px" }}
+                            />
+                            <Column 
+                                field="createdAt" 
+                                header="Created At" 
+                                body={() => <Skeleton width="100px" height="16px" />}
+                                style={{ minWidth: "120px" }}
+                            />
+                            <Column 
+                                header="Actions" 
+                                body={() => (
+                                    <div className="flex gap-2">
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                    </div>
+                                )}
+                                style={{ width: "100px" }}
+                            />
+                        </DataTable>
                     </Card>
                 </div>
             </div>

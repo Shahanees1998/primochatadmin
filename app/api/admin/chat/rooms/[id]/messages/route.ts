@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             if (!defaultRoom) {
                 // Create a default general chat room
                 const adminUser = await prisma.user.findFirst({
-                    where: { role: 'ADMIN' }
+                    where: { role: 'MEMBER' }
                 });
 
                 if (adminUser) {

@@ -89,7 +89,6 @@ export default function MessagesPage() {
             const response = await apiClient.getUsers({
                 page: 1,
                 limit: 1,
-                role: 'ADMIN',
                 status: 'ACTIVE'
             });
             if (response.data?.users?.[0]) {
@@ -293,7 +292,7 @@ export default function MessagesPage() {
         try {
             const response = await apiClient.createChatRoom({
                 participantIds: selectedUsers.map(u => u.id),
-                isGroup: selectedUsers.length > 1
+                name: selectedUsers.length > 1 ? `Group Chat (${selectedUsers.length} members)` : undefined
             });
 
             if (response.error) {

@@ -8,7 +8,6 @@ import { PrimeReactProvider } from "primereact/api";
 import "primereact/resources/primereact.css";
 import "../styles/demo/Demos.scss";
 import "../styles/layout/layout.scss";
-
 interface RootLayoutProps {
     children: React.ReactNode;
 }

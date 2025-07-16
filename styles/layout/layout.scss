@@ -21,3 +21,8 @@ $scale: 14px !default;
 @import './_content';
 @import './_typography';
 @import './_utils';
+
+
+.p-checkbox-box {
+    display: none !important;
+  }

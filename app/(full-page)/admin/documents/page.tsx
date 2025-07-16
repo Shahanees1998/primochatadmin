@@ -372,29 +372,68 @@ export default function DocumentsPage() {
                         <div className="p-error p-3 mb-3">{error}</div>
                     )}
                     {loading ? (
-                        <div className="p-4">
-                            <div className="grid">
-                                {[...Array(5)].map((_, i) => (
-                                    <div className="col-12" key={i}>
-                                        <div className="flex align-items-center gap-3">
-                                            <Skeleton width="20%" height="1.5rem" />
-                                            <Skeleton width="15%" height="1.5rem" />
-                                            <Skeleton width="8%" height="1.5rem" />
-                                            <Skeleton width="10%" height="1.5rem" />
-                                            <Skeleton width="10%" height="1.5rem" />
-                                            <Skeleton width="15%" height="1.5rem" />
-                                            <Skeleton width="10%" height="1.5rem" />
-                                            <div className="flex gap-2">
-                                                <Skeleton width="2rem" height="2rem" />
-                                                <Skeleton width="2rem" height="2rem" />
-                                                <Skeleton width="2rem" height="2rem" />
-                                                <Skeleton width="2rem" height="2rem" />
-                                            </div>
+                        <DataTable
+                            value={Array.from({ length: 5 }, (_, i) => ({ id: i }))}
+                            className="p-datatable-sm"
+                            header={header}
+                        >
+                            <Column 
+                                field="title" 
+                                header="Title" 
+                                body={() => <Skeleton width="200px" height="16px" />}
+                                style={{ minWidth: "200px" }}
+                            />
+                            <Column 
+                                field="fileName" 
+                                header="File Name" 
+                                body={() => <Skeleton width="150px" height="16px" />}
+                                style={{ minWidth: "150px" }}
+                            />
+                            <Column 
+                                field="fileSize" 
+                                header="Size" 
+                                body={() => <Skeleton width="80px" height="16px" />}
+                                style={{ minWidth: "100px" }}
+                            />
+                            <Column 
+                                field="category" 
+                                header="Category" 
+                                body={() => <Skeleton width="80px" height="24px" />}
+                                style={{ minWidth: "120px" }}
+                            />
+                            <Column 
+                                field="uploadedBy" 
+                                header="Uploaded By" 
+                                body={() => (
+                                    <div className="flex align-items-center gap-2">
+                                        <Skeleton shape="circle" size="2rem" />
+                                        <div className="flex flex-column gap-1">
+                                            <Skeleton width="120px" height="16px" />
+                                            <Skeleton width="100px" height="14px" />
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                )}
+                                style={{ minWidth: "200px" }}
+                            />
+                            <Column 
+                                field="createdAt" 
+                                header="Created At" 
+                                body={() => <Skeleton width="100px" height="16px" />}
+                                style={{ minWidth: "120px" }}
+                            />
+                            <Column 
+                                header="Actions" 
+                                body={() => (
+                                    <div className="flex gap-2">
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                    </div>
+                                )}
+                                style={{ width: "150px" }}
+                            />
+                        </DataTable>
                     ) : (
                         <DataTable
                             value={documents}

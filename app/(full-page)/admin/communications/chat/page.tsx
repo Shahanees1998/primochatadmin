@@ -228,7 +228,7 @@ export default function ChatPage() {
         try {
             const response = await apiClient.createChatRoom({
                 participantIds: selectedUsers.map(u => u.id),
-                isGroup: selectedUsers.length > 1
+                name: selectedUsers.length > 1 ? `Group Chat (${selectedUsers.length} members)` : undefined
             });
 
             if (response.error) {

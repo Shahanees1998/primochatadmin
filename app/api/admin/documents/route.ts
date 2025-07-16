@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
 
         // Get or create default admin user
         let adminUser = await prisma.user.findFirst({
-            where: { role: 'ADMIN' },
+            where: { role: 'MEMBER' },
         });
 
         if (!adminUser) {
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
                     password: 'defaultPassword123', // This should be changed
                     firstName: 'Admin',
                     lastName: 'User',
-                    role: 'ADMIN',
+                    role: 'MEMBER',
                     status: 'ACTIVE',
                 },
             });

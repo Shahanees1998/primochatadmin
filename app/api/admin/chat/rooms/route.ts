@@ -6,7 +6,7 @@ async function getOrCreateAdminUser() {
     // First try to find an existing admin user
     let adminUser = await prisma.user.findFirst({
         where: {
-            role: 'ADMIN',
+            role: 'MEMBER',
             status: 'ACTIVE'
         }
     });
@@ -19,7 +19,7 @@ async function getOrCreateAdminUser() {
                 lastName: 'User',
                 email: 'admin@primochat.com',
                 password: 'adminPassword123', // This should be changed in production
-                role: 'ADMIN',
+                role: 'MEMBER',
                 status: 'ACTIVE',
                 membershipNumber: 'ADMIN001'
             }
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
         // Transform the data to match the frontend expectations
         const transformedChatRooms = chatRooms.map(room => ({
             id: room.id,
-            isGroup: room.isGroup,
+            isGroup: room.isGroupChat,
             name: room.name,
             participants: room.participants.map(p => p.user),
             lastMessage: room.messages[0] ? {
@@ -148,11 +148,14 @@ export async function POST(request: NextRequest) {
             ? participantIds 
             : [currentUserId, ...participantIds];
 
+        // Determine if this should be a group chat based on number of participants
+        const isGroupChat = allParticipantIds.length > 2;
+
         // Check if a direct chat already exists between two users
-        if (!isGroup && allParticipantIds.length === 2) {
+        if (!isGroupChat && allParticipantIds.length === 2) {
             const existingChat = await prisma.chatRoom.findFirst({
                 where: {
-                    isGroup: false,
+                    isGroupChat: false,
                     participants: {
                         every: {
                             userId: {
@@ -182,7 +185,7 @@ export async function POST(request: NextRequest) {
             if (existingChat) {
                 const transformedExistingChat = {
                     id: existingChat.id,
-                    isGroup: existingChat.isGroup,
+                    isGroup: existingChat.isGroupChat,
                     name: existingChat.name,
                     participants: existingChat.participants.map(p => p.user),
                     lastMessage: undefined,
@@ -196,8 +199,8 @@ export async function POST(request: NextRequest) {
         // Create new chat room
         const chatRoom = await prisma.chatRoom.create({
             data: {
-                isGroup,
-                name: isGroup ? name : undefined,
+                isGroupChat,
+                name: isGroupChat ? name : undefined,
                 participants: {
                     create: allParticipantIds.map((userId: string) => ({
                         userId,

@@ -68,7 +68,7 @@ const LoginContent = () => {
             if (error instanceof Error) {
                 errorMessage = error.message;
                 if (error.message === 'Invalid email or password') {
-                    setEmailError('Invalid email or password');
+                    setPasswordError('Invalid email or password');
                 } else if (error.message === 'No account found with this email address') {
                     setEmailError('No account found with this email address');
                 } else if (error.message === 'Incorrect password') {

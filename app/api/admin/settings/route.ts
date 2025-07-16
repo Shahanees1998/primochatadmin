@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
-import { authOptions } from '../../auth/authOptions';
+import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
-export async function GET() {
-    try {
-        const session = await getServerSession(authOptions);
-        
-        if (!session || session.user.role !== 'ADMIN') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+export async function GET(request: NextRequest) {
+    return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+        try {
 
         // Get settings from database
         const settings = await prisma.systemSettings.findFirst();
@@ -35,15 +30,12 @@ export async function GET() {
         console.error('Error fetching settings:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+    });
 }
 
 export async function POST(request: NextRequest) {
-    try {
-        const session = await getServerSession(authOptions);
-        
-        if (!session || session.user.role !== 'ADMIN') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+        try {
 
         const body = await request.json();
         
@@ -76,7 +68,6 @@ export async function POST(request: NextRequest) {
                     contactEmail: body.contactEmail,
                     maxFileSize: body.maxFileSize,
                     allowedFileTypes: body.allowedFileTypes,
-                    defaultUserRole: body.defaultUserRole,
                     enableNotifications: body.enableNotifications,
                     enableChat: body.enableChat,
                     enableEvents: body.enableEvents,
@@ -92,7 +83,6 @@ export async function POST(request: NextRequest) {
                     contactEmail: body.contactEmail,
                     maxFileSize: body.maxFileSize,
                     allowedFileTypes: body.allowedFileTypes,
-                    defaultUserRole: body.defaultUserRole,
                     enableNotifications: body.enableNotifications,
                     enableChat: body.enableChat,
                     enableEvents: body.enableEvents,
@@ -109,4 +99,5 @@ export async function POST(request: NextRequest) {
         console.error('Error saving settings:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+    });
 } 

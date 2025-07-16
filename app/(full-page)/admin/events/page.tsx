@@ -343,29 +343,58 @@ export default function EventsPage() {
                         <div className="p-error p-3 mb-3">{error}</div>
                     )}
                     {loading ? (
-                        <div className="p-4">
-                            <div className="grid">
-                                {[...Array(5)].map((_, i) => (
-                                    <div className="col-12" key={i}>
-                                        <div className="flex align-items-center gap-3">
-                                            <div className="flex flex-column gap-2" style={{ flex: 1 }}>
-                                                <Skeleton width="40%" height="1.5rem" />
-                                                <Skeleton width="30%" height="1rem" />
-                                            </div>
-                                            <Skeleton width="6rem" height="2rem" />
-                                            <Skeleton width="6rem" height="2rem" />
-                                            <Skeleton width="6rem" height="2rem" />
-                                            <Skeleton width="6rem" height="2rem" />
-                                            <div className="flex gap-2">
-                                                <Skeleton width="2rem" height="2rem" />
-                                                <Skeleton width="2rem" height="2rem" />
-                                                <Skeleton width="2rem" height="2rem" />
-                                            </div>
-                                        </div>
+                        <DataTable
+                            value={Array.from({ length: 5 }, (_, i) => ({ id: i }))}
+                            className="p-datatable-sm"
+                            header={header}
+                        >
+                            <Column 
+                                field="title" 
+                                header="Title" 
+                                body={() => (
+                                    <div className="flex flex-column gap-1">
+                                        <Skeleton width="200px" height="16px" />
+                                        <Skeleton width="150px" height="14px" />
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                )}
+                                style={{ minWidth: "200px" }}
+                            />
+                            <Column 
+                                field="startDate" 
+                                header="Start Date" 
+                                body={() => <Skeleton width="100px" height="16px" />}
+                                style={{ minWidth: "120px" }}
+                            />
+                            <Column 
+                                field="location" 
+                                header="Location" 
+                                body={() => <Skeleton width="150px" height="16px" />}
+                                style={{ minWidth: "150px" }}
+                            />
+                            <Column 
+                                field="category" 
+                                header="Category" 
+                                body={() => <Skeleton width="80px" height="24px" />}
+                                style={{ minWidth: "120px" }}
+                            />
+                            <Column 
+                                field="status" 
+                                header="Status" 
+                                body={() => <Skeleton width="80px" height="24px" />}
+                                style={{ minWidth: "100px" }}
+                            />
+                            <Column 
+                                header="Actions" 
+                                body={() => (
+                                    <div className="flex gap-2">
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                        <Skeleton width="32px" height="32px" />
+                                    </div>
+                                )}
+                                style={{ width: "120px" }}
+                            />
+                        </DataTable>
                     ) : (
                         <DataTable
                             value={events}
