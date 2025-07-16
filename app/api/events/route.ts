@@ -35,17 +35,6 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          festiveBoard: {
-            include: {
-              items: {
-                include: {
-                  user: {
-                    select: { id: true, firstName: true, lastName: true },
-                  },
-                },
-              },
-            },
-          },
           _count: {
             select: { members: true },
           },

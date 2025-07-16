@@ -59,7 +59,6 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          festiveBoard: true,
           _count: {
             select: {
               members: true,

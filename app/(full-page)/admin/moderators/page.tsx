@@ -78,7 +78,6 @@ export default function ModeratorsPage() {
         { label: "Event Discussions", value: "EVENT_DISCUSSIONS" },
         { label: "Support Forum", value: "SUPPORT_FORUM" },
         { label: "Document Comments", value: "DOCUMENT_COMMENTS" },
-        { label: "Festive Board", value: "FESTIVE_BOARD" },
     ];
 
     useEffect(() => {

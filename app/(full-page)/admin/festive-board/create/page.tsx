@@ -10,7 +10,7 @@ import { MultiSelect } from 'primereact/multiselect';
 import { Checkbox } from 'primereact/checkbox';
 import { Toast } from 'primereact/toast';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 
 interface Meal {
@@ -50,13 +50,9 @@ const yearOptions = Array.from({ length: 5 }, (_, i) => ({
   value: currentYear - 2 + i,
 }));
 
-export default function EditTrestleBoardPage() {
+export default function CreateFestiveBoardPage() {
   const router = useRouter();
-  const params = useParams();
-  const boardId = params?.id as string;
-  
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categories, setCategories] = useState<MealCategory[]>([]);
   const [availableMonths, setAvailableMonths] = useState<typeof monthOptions>([]);
@@ -73,91 +69,44 @@ export default function EditTrestleBoardPage() {
   const [selectedMeals, setSelectedMeals] = useState<Meal[]>([]);
   const [searchingMeals, setSearchingMeals] = useState(false);
   const [useFallbackSelection, setUseFallbackSelection] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const toast = React.useRef<Toast>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Debounced search function
   const debouncedSearch = useCallback(
     (search: string, category: string) => {
+      // Clear previous timeout
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
       
+      // Set new timeout
       searchTimeoutRef.current = setTimeout(() => {
         if (search || category) {
           searchMeals(search, category);
         }
-      }, 300);
+      }, 300); // 300ms delay
     },
     []
   );
 
   useEffect(() => {
-    if (boardId) {
-      loadBoard();
-      loadCategories();
-      loadAvailableMonths();
-      searchMeals('', '');
-    }
-  }, [boardId]);
+    loadCategories();
+    loadAvailableMonths();
+    // Load initial meals
+    searchMeals('', '');
+  }, []);
 
   useEffect(() => {
     debouncedSearch(searchTerm, selectedCategory);
     
+    // Cleanup timeout on unmount
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
     };
   }, [searchTerm, selectedCategory, debouncedSearch]);
-
-  const loadBoard = async () => {
-    try {
-      setInitialLoading(true);
-      setError(null);
-      
-      const response = await apiClient.getTrestleBoard(boardId);
-      
-      if (response.error) {
-        setError(response.error);
-        return;
-      }
-      
-      // Handle double nesting: response.data.data
-      const boardData = (response.data as any)?.data || response.data;
-      
-      if (boardData) {
-        // Extract meal IDs from the board's meals
-        const mealIds = boardData.meals?.map((mealItem: any) => mealItem.mealId) || [];
-        
-        setFormData({
-          month: boardData.month,
-          year: boardData.year,
-          title: boardData.title || '',
-          description: boardData.description || '',
-          mealIds: mealIds,
-        });
-
-        // Set selected meals for display
-        const selectedMealObjects = boardData.meals?.map((mealItem: any) => ({
-          id: mealItem.mealId,
-          title: mealItem.meal?.title || 'Untitled Meal',
-          description: mealItem.meal?.description,
-          category: mealItem.meal?.category,
-        })) || [];
-        
-        setSelectedMeals(selectedMealObjects);
-      } else {
-        setError('Board not found');
-      }
-    } catch (error) {
-      console.error('Error loading board:', error);
-      setError('Failed to load trestle board');
-    } finally {
-      setInitialLoading(false);
-    }
-  };
 
   const loadCategories = async () => {
     try {
@@ -181,30 +130,38 @@ export default function EditTrestleBoardPage() {
   const loadAvailableMonths = async (year?: number) => {
     try {
       const targetYear = year || currentYear;
+      console.log('Loading available months for year:', targetYear); // Debug log
       
       // Get existing boards to determine available months
-      const response = await apiClient.getTrestleBoards({ year: targetYear });
+      const response = await apiClient.getFestiveBoards({ year: targetYear });
+      console.log('Festive boards response:', response); // Debug log
       
       if (response.data?.data?.boards && Array.isArray(response.data.data.boards)) {
-        const existingMonths = response.data.data.boards
-          .filter((board: any) => board.id !== boardId) // Exclude current board
-          .map((board: any) => board.month);
+        const existingMonths = response.data.data.boards.map((board: any) => board.month);
+        console.log('Existing months:', existingMonths); // Debug log
         
-        // Filter out months that already have boards (except current board)
+        // Filter out months that already have boards
         const available = monthOptions.filter(month => !existingMonths.includes(month.value));
+        console.log('Available months:', available); // Debug log
+        
+        if (available.length === 0) {
+          console.log('No available months - all months are taken for this year'); // Debug log
+        }
         
         setAvailableMonths(available);
       } else {
+        console.log('No existing boards found or invalid response structure, all months available'); // Debug log
         setAvailableMonths(monthOptions);
       }
     } catch (error) {
       console.error('Error loading available months:', error);
+      // On error, show all months as available
       setAvailableMonths(monthOptions);
     }
   };
 
   const handleYearChange = (newYear: number) => {
-    setFormData({ ...formData, year: newYear, month: null });
+    setFormData({ ...formData, year: newYear, month: null }); // Reset month when year changes
     loadAvailableMonths(newYear);
   };
 
@@ -216,10 +173,14 @@ export default function EditTrestleBoardPage() {
         categoryId: category,
         limit: 20,
       });
-      
+      console.log('Search response:', response); // Debug log
       if (response.data) {
+        // The API returns data.data, not data.meals
         const meals = response.data.data || [];
+        console.log('Available meals:', meals); // Debug log
+        console.log('First meal structure:', meals[0]); // Debug first meal structure
         
+        // Validate meal structure and ensure category exists
         const validatedMeals = meals.map((meal: any) => ({
           id: meal.id,
           title: meal.title,
@@ -227,6 +188,7 @@ export default function EditTrestleBoardPage() {
           category: meal.category || { id: '', name: 'No Category' }
         }));
         
+        console.log('Validated meals:', validatedMeals);
         setAvailableMeals(validatedMeals);
       } else {
         setAvailableMeals([]);
@@ -245,6 +207,7 @@ export default function EditTrestleBoardPage() {
   };
 
   const handleSubmit = async () => {
+    // Validate form data
     if (!formData.month || !formData.year || !formData.title) {
       toast.current?.show({
         severity: 'error',
@@ -254,6 +217,7 @@ export default function EditTrestleBoardPage() {
       return;
     }
 
+    // Validate mealIds
     const validMealIds = formData.mealIds.filter(id => id && typeof id === 'string' && id.trim() !== '');
     if (validMealIds.length === 0) {
       toast.current?.show({
@@ -264,9 +228,13 @@ export default function EditTrestleBoardPage() {
       return;
     }
 
+    console.log('Submitting form with mealIds:', validMealIds);
+
     try {
       setLoading(true);
-      const response = await apiClient.updateTrestleBoard(boardId, {
+      const response = await apiClient.createFestiveBoard({
+        month: formData.month,
+        year: formData.year,
         title: formData.title,
         description: formData.description,
         mealIds: validMealIds,
@@ -279,16 +247,16 @@ export default function EditTrestleBoardPage() {
       toast.current?.show({
         severity: 'success',
         summary: 'Success',
-        detail: 'Trestle board updated successfully'
+        detail: 'Festive board created successfully'
       });
 
-      router.push('/admin/trestle-board');
+      router.push('/admin/festive-board');
     } catch (error: any) {
-      console.error('Error updating trestle board:', error);
+      console.error('Error creating Festive board:', error);
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
-        detail: error.message || 'Failed to update trestle board'
+        detail: error.message || 'Failed to create Festive board'
       });
     } finally {
       setLoading(false);
@@ -298,8 +266,15 @@ export default function EditTrestleBoardPage() {
   const handleMealSelection = (selectedItems: string[] | null) => {
     try {
       const selectedMealIds = selectedItems || [];
+      console.log('Selected meal IDs:', selectedMealIds); // Debug log
+      
+      // Filter out any invalid IDs
       const validMealIds = selectedMealIds.filter(id => id && typeof id === 'string');
+      console.log('Valid meal IDs:', validMealIds); // Debug log
+      
+      // Find the full meal objects for the selected IDs
       const validMeals = availableMeals.filter(meal => validMealIds.includes(meal.id));
+      console.log('Valid meals:', validMeals); // Debug log
       
       setSelectedMeals(validMeals);
       setFormData({
@@ -308,6 +283,7 @@ export default function EditTrestleBoardPage() {
       });
     } catch (error) {
       console.error('Error in handleMealSelection:', error);
+      // If MultiSelect fails, switch to fallback
       setUseFallbackSelection(true);
       toast.current?.show({
         severity: 'warn',
@@ -319,6 +295,7 @@ export default function EditTrestleBoardPage() {
 
   const handleCheckboxSelection = (meal: Meal, checked: boolean) => {
     try {
+      // Validate meal has valid ID
       if (!meal || !meal.id || typeof meal.id !== 'string') {
         console.error('Invalid meal data:', meal);
         toast.current?.show({
@@ -336,6 +313,7 @@ export default function EditTrestleBoardPage() {
         newSelectedMeals = selectedMeals.filter(m => m.id !== meal.id);
       }
       
+      // Filter out any meals without valid IDs
       const validMeals = newSelectedMeals.filter(m => m && m.id && typeof m.id === 'string');
       
       setSelectedMeals(validMeals);
@@ -361,42 +339,6 @@ export default function EditTrestleBoardPage() {
     })),
   ];
 
-  if (initialLoading) {
-    return (
-      <div className="p-4">
-        <Toast ref={toast} />
-        <Card>
-          <div className="flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-            <div className="text-center">
-              <ProgressSpinner style={{ width: '50px', height: '50px' }} />
-              <p className="mt-3">Loading trestle board...</p>
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4">
-        <Toast ref={toast} />
-        <Card>
-          <div className="text-center p-4">
-            <i className="pi pi-exclamation-triangle text-4xl text-red-500 mb-3"></i>
-            <h2 className="text-xl font-semibold mb-2">Error Loading Board</h2>
-            <p className="text-600 mb-4">{error}</p>
-            <Button
-              label="Back to Boards"
-              icon="pi pi-arrow-left"
-              onClick={() => router.push('/admin/trestle-board')}
-            />
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="p-4">
       <Toast ref={toast} />
@@ -404,15 +346,15 @@ export default function EditTrestleBoardPage() {
       <Card>
         <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3 mb-4">
           <div className="flex flex-column">
-            <h2 className="text-2xl font-bold m-0">Edit Trestle Board</h2>
-            <span className="text-600">Update the trestle board details</span>
+            <h2 className="text-2xl font-bold m-0">Create Festive Board</h2>
+            <span className="text-600">Create a new monthly meal board</span>
           </div>
           <div className="flex gap-2">
             <Button
               label="Back to Boards"
               icon="pi pi-arrow-left"
               className="p-button-outlined"
-              onClick={() => router.push('/admin/trestle-board')}
+              onClick={() => router.push('/admin/festive-board')}
             />
           </div>
         </div>
@@ -548,35 +490,77 @@ export default function EditTrestleBoardPage() {
                   </div>
                 )}
                 
+                {/* Debug info */}
                 <small className="text-600">
-                  {availableMeals.length} meals loaded, {selectedMeals.length} selected
+                  Debug: {availableMeals.length} meals loaded, {selectedMeals.length} selected
                   {useFallbackSelection && ' (using fallback selection)'}
                 </small>
               </div>
             )}
 
-            {!searchingMeals && availableMeals.length === 0 && (
+            {!searchingMeals && availableMeals.length === 0 && (searchTerm || selectedCategory) && (
+              <div className="text-center p-4 text-600">
+                <i className="pi pi-search text-2xl mb-2"></i>
+                <p>No meals found matching your search criteria</p>
+                <small>Try adjusting your search terms or category filter</small>
+              </div>
+            )}
+
+            {!searchingMeals && availableMeals.length === 0 && !searchTerm && !selectedCategory && (
               <div className="text-center p-4 text-600">
                 <i className="pi pi-info-circle text-2xl mb-2"></i>
-                <p>No meals found. Try adjusting your search criteria.</p>
+                <p>Start typing to search for meals</p>
+                <small>Or select a category to filter meals</small>
+              </div>
+            )}
+
+            {selectedMeals.length > 0 && (
+              <div className="mb-4">
+                <label className="block font-bold mb-2">Selected Meals ({selectedMeals.length})</label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedMeals.map((meal) => {
+                    try {
+                      return (
+                        <div
+                          key={meal.id}
+                          className="p-2 border-round bg-primary-50 border-1 border-primary-200"
+                        >
+                          <div className="font-medium">{meal.title || 'Untitled Meal'}</div>
+                          <div className="text-sm text-600">{meal.category?.name || 'No Category'}</div>
+                        </div>
+                      );
+                    } catch (error) {
+                      console.error('Error rendering meal:', meal, error);
+                      return (
+                        <div
+                          key={meal.id}
+                          className="p-2 border-round bg-red-50 border-1 border-red-200"
+                        >
+                          <div className="font-medium text-red-600">Error displaying meal</div>
+                          <div className="text-sm text-red-500">ID: {meal.id}</div>
+                        </div>
+                      );
+                    }
+                  })}
+                </div>
               </div>
             )}
           </div>
 
-          <div className="col-12">
-            <div className="flex gap-2 justify-content-end">
-              <Button
-                label="Cancel"
-                className="p-button-outlined"
-                onClick={() => router.push('/admin/trestle-board')}
-              />
-              <Button
-                label="Update Board"
-                icon="pi pi-check"
-                onClick={handleSubmit}
-                loading={loading}
-              />
-            </div>
+          <div className="col-12 flex gap-2 justify-content-end">
+            <Button
+              label="Cancel"
+              icon="pi pi-times"
+              className="p-button-outlined"
+              onClick={() => router.push('/admin/festive-board')}
+              disabled={loading}
+            />
+            <Button
+              label={loading ? "Creating..." : "Create Board"}
+              icon={loading ? "pi pi-spin pi-spinner" : "pi pi-check"}
+              onClick={handleSubmit}
+              disabled={loading}
+            />
           </div>
         </div>
       </Card>

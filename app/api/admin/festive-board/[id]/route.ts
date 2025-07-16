@@ -1,72 +1,199 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
-// GET /api/admin/festive-board/[id] - Get specific festive board
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const festiveBoard = await prisma.festiveBoard.findUnique({
+// GET - Get a specific Festive board
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+    try {
+
+    const board = await prisma.festiveBoard.findUnique({
       where: { id: params.id },
       include: {
-        event: true,
-        items: {
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        meals: {
+          include: {
+            meal: {
+              include: {
+                category: true,
+              },
+            },
+          },
+        },
+        userSelections: {
           include: {
             user: {
-              select: { id: true, firstName: true, lastName: true, email: true },
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            festiveBoardMeal: {
+              include: {
+                meal: true,
+              },
             },
           },
         },
       },
     });
-    if (!festiveBoard) {
-      return NextResponse.json({ error: 'Festive board not found' }, { status: 404 });
+
+    if (!board) {
+      return NextResponse.json(
+        { error: 'Festive board not found' },
+        { status: 404 }
+      );
     }
-    return NextResponse.json(festiveBoard);
-  } catch (error) {
-    console.error('Get festive board error:', error);
-    return NextResponse.json({ error: 'Failed to fetch festive board' }, { status: 500 });
-  }
+
+    return NextResponse.json({ data: board });
+      } catch (error) {
+      console.error('Error fetching Festive board:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch Festive board' },
+        { status: 500 }
+      );
+    }
+  });
 }
 
-// PUT /api/admin/festive-board/[id] - Update festive board
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const { title, description, date, location, maxParticipants } = await request.json();
-    const updateData: any = {};
-    if (title) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
-    if (date) updateData.date = new Date(date);
-    if (location !== undefined) updateData.location = location;
-    if (maxParticipants !== undefined) updateData.maxParticipants = maxParticipants ? parseInt(maxParticipants) : null;
-    const festiveBoard = await prisma.festiveBoard.update({
+// PUT - Update a Festive board
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+    try {
+
+    const body = await request.json();
+    const { title, description, mealIds } = body;
+
+    // Validate required fields
+    if (!title || !mealIds || !Array.isArray(mealIds)) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Check if board exists
+    const existingBoard = await prisma.festiveBoard.findUnique({
       where: { id: params.id },
-      data: updateData,
-      include: {
-        event: true,
-        items: true,
+    });
+
+    if (!existingBoard) {
+      return NextResponse.json(
+        { error: 'Festive board not found' },
+        { status: 404 }
+      );
+    }
+
+    // Validate that all meals exist
+    const meals = await prisma.meal.findMany({
+      where: {
+        id: { in: mealIds },
       },
     });
-    return NextResponse.json(festiveBoard);
-  } catch (error) {
-    console.error('Update festive board error:', error);
-    const err = error as any;
-    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
-      return NextResponse.json({ error: 'Festive board not found' }, { status: 404 });
+
+    if (meals.length !== mealIds.length) {
+      return NextResponse.json(
+        { error: 'Some meals not found' },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ error: 'Failed to update festive board' }, { status: 500 });
-  }
+
+    // Update the Festive board
+    const board = await prisma.festiveBoard.update({
+      where: { id: params.id },
+      data: {
+        title,
+        description,
+        meals: {
+          deleteMany: {},
+          create: mealIds.map((mealId: string) => ({
+            mealId,
+          })),
+        },
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        meals: {
+          include: {
+            meal: {
+              include: {
+                category: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      data: board,
+      message: 'Festive board updated successfully',
+    });
+      } catch (error) {
+      console.error('Error updating Festive board:', error);
+      return NextResponse.json(
+        { error: 'Failed to update Festive board' },
+        { status: 500 }
+      );
+    }
+  });
 }
 
-// DELETE /api/admin/festive-board/[id] - Delete festive board
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    await prisma.festiveBoard.delete({ where: { id: params.id } });
-    return NextResponse.json({ message: 'Festive board deleted successfully' });
-  } catch (error) {
-    console.error('Delete festive board error:', error);
-    const err = error as any;
-    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
-      return NextResponse.json({ error: 'Festive board not found' }, { status: 404 });
+// DELETE - Delete a Festive board
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+    try {
+
+    // Check if board exists
+    const existingBoard = await prisma.festiveBoard.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!existingBoard) {
+      return NextResponse.json(
+        { error: 'Festive board not found' },
+        { status: 404 }
+      );
     }
-    return NextResponse.json({ error: 'Failed to delete festive board' }, { status: 500 });
-  }
+
+    // Delete the Festive board (cascade will handle related records)
+    await prisma.festiveBoard.delete({
+      where: { id: params.id },
+    });
+
+    return NextResponse.json({
+      message: 'Festive board deleted successfully',
+    });
+      } catch (error) {
+      console.error('Error deleting Festive board:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete Festive board' },
+        { status: 500 }
+      );
+    }
+  });
 } 

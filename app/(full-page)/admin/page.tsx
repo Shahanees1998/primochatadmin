@@ -18,7 +18,6 @@ interface DashboardStats {
     activeEvents: number;
     supportRequests: number;
     documents: number;
-    festiveBoards: number;
 }
 
 interface RecentActivity {
@@ -45,8 +44,7 @@ export default function AdminDashboard() {
         pendingApprovals: 0,
         activeEvents: 0,
         supportRequests: 0,
-        documents: 0,
-        festiveBoards: 0,
+        documents: 0
     });
     const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
     const [growthData, setGrowthData] = useState<GrowthData>({
@@ -191,13 +189,6 @@ export default function AdminDashboard() {
             route: "/admin/documents",
             color: "purple",
         },
-        {
-            title: "Festive Board",
-            description: "Manage meal plans and contributions",
-            icon: "pi pi-list",
-            route: "/admin/festive-board",
-            color: "teal",
-        },
     ];
 
     return (
@@ -282,12 +273,6 @@ export default function AdminDashboard() {
                         <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/documents')}>
                             <div className="text-3xl font-bold text-purple-500">{stats.documents}</div>
                             <div className="text-600">Documents</div>
-                        </Card>
-                    </div>
-                    <div className="col-12 md:col-6 lg:col-2">
-                        <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/festive-board')}>
-                            <div className="text-3xl font-bold text-teal-500">{stats.festiveBoards}</div>
-                            <div className="text-600">Festive Boards</div>
                         </Card>
                     </div>
                 </>

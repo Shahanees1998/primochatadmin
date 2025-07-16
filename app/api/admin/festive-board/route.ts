@@ -1,146 +1,193 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
+// GET - List all festive boards
 export async function GET(request: NextRequest) {
+  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
-        const { searchParams } = new URL(request.url);
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '10');
-        const search = searchParams.get('search') || '';
-        const sortField = searchParams.get('sortField') || 'createdAt';
-        const sortOrder = searchParams.get('sortOrder') || '-1';
+      const { searchParams } = new URL(request.url);
+      const page = parseInt(searchParams.get('page') || '1');
+      const limit = parseInt(searchParams.get('limit') || '10');
+      const search = searchParams.get('search') || '';
+      const year = searchParams.get('year');
 
-        const skip = (page - 1) * limit;
+      const skip = (page - 1) * limit;
 
-        // Build where clause
-        const where: any = {};
-        
-        if (search) {
-            where.OR = [
-                { title: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-                { location: { contains: search, mode: 'insensitive' } },
-            ];
-        }
+      // Build where clause
+      const where: any = {};
+      if (search) {
+        where.OR = [
+          { title: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+      if (year && year !== 'null') {
+        where.year = parseInt(year);
+      }
 
-        // Build orderBy clause
-        const orderBy: any = {};
-        if (sortField === 'event.title') {
-            orderBy.event = { title: sortOrder === '1' ? 'asc' : 'desc' };
-        } else {
-            orderBy[sortField] = sortOrder === '1' ? 'asc' : 'desc';
-        }
-
-        // Get festive boards with pagination
-        const [festiveBoards, total] = await Promise.all([
-            prisma.festiveBoard.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy,
-                include: {
-                    event: {
-                        select: {
-                            title: true,
-                            startDate: true,
-                        },
-                    },
-                    items: {
-                        include: {
-                            user: {
-                                select: {
-                                    firstName: true,
-                                    lastName: true,
-                                },
-                            },
-                        },
-                    },
-                },
-            }),
-            prisma.festiveBoard.count({ where }),
-        ]);
-
-        return NextResponse.json({
-            festiveBoards,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
+      const [boards, total] = await Promise.all([
+        prisma.festiveBoard.findMany({
+          where,
+          include: {
+            createdBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
             },
-        });
+            meals: {
+              include: {
+                meal: {
+                  include: {
+                    category: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                userSelections: true,
+              },
+            },
+          },
+          orderBy: [
+            { year: 'desc' },
+            { month: 'desc' },
+          ],
+          skip,
+          take: limit,
+        }),
+        prisma.festiveBoard.count({ where }),
+      ]);
+
+      return NextResponse.json({
+        data: {
+          boards,
+          pagination: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+          },
+        },
+      });
     } catch (error) {
-        console.error('Error fetching festive boards:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch festive boards' },
-            { status: 500 }
-        );
+      console.error('Error fetching Festive boards:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch Festive boards' },
+        { status: 500 }
+      );
     }
+  });
 }
 
+// POST - Create a new Festive board
 export async function POST(request: NextRequest) {
+  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
-        const body = await request.json();
-        const { eventId, title, description, date, location, maxParticipants } = body;
+      const body = await request.json();
+      const { month, year, title, description, mealIds } = body;
 
-        // Validate required fields
-        if (!eventId || !title || !date) {
-            return NextResponse.json(
-                { error: 'Event ID, title, and date are required' },
-                { status: 400 }
-            );
-        }
-
-        // Check if event exists
-        const existingEvent = await prisma.event.findUnique({
-            where: { id: eventId },
-        });
-
-        if (!existingEvent) {
-            return NextResponse.json(
-                { error: 'Event not found' },
-                { status: 404 }
-            );
-        }
-
-        // Check if festive board already exists for this event
-        const existingBoard = await prisma.festiveBoard.findUnique({
-            where: { eventId },
-        });
-
-        if (existingBoard) {
-            return NextResponse.json(
-                { error: 'Festive board already exists for this event' },
-                { status: 400 }
-            );
-        }
-
-        // Create new festive board
-        const festiveBoard = await prisma.festiveBoard.create({
-            data: {
-                eventId,
-                title,
-                description,
-                date: new Date(date),
-                location,
-                maxParticipants: maxParticipants || null,
-            },
-            include: {
-                event: {
-                    select: {
-                        title: true,
-                        startDate: true,
-                    },
-                },
-            },
-        });
-
-        return NextResponse.json(festiveBoard, { status: 201 });
-    } catch (error) {
-        console.error('Error creating festive board:', error);
+      // Validate required fields
+      if (!month || !year || !title || !mealIds || !Array.isArray(mealIds)) {
         return NextResponse.json(
-            { error: 'Failed to create festive board' },
-            { status: 500 }
+          { error: 'Missing required fields' },
+          { status: 400 }
         );
+      }
+
+      // Filter out null/undefined values and validate mealIds
+      const validMealIds = mealIds.filter((id: any) => id && typeof id === 'string' && id.trim() !== '');
+
+      if (validMealIds.length === 0) {
+        return NextResponse.json(
+          { error: 'At least one valid meal must be selected' },
+          { status: 400 }
+        );
+      }
+
+      console.log('Original mealIds:', mealIds);
+      console.log('Valid mealIds:', validMealIds);
+
+      // Check if board already exists for this month/year
+      const existingBoard = await prisma.festiveBoard.findUnique({
+        where: {
+          month_year: {
+            month: parseInt(month),
+            year: parseInt(year),
+          },
+        },
+      });
+
+      if (existingBoard) {
+        return NextResponse.json(
+          { error: 'A Festive board already exists for this month and year' },
+          { status: 400 }
+        );
+      }
+
+      // Validate that all meals exist
+      const meals = await prisma.meal.findMany({
+        where: {
+          id: { in: validMealIds },
+        },
+      });
+
+      if (meals.length !== validMealIds.length) {
+        return NextResponse.json(
+          { error: 'Some meals not found' },
+          { status: 400 }
+        );
+      }
+
+      // Create the Festive board with meals
+      const board = await prisma.festiveBoard.create({
+        data: {
+          month: parseInt(month),
+          year: parseInt(year),
+          title,
+          description,
+          createdById: authenticatedReq.user!.userId,
+          meals: {
+            create: validMealIds.map((mealId: string) => ({
+              mealId,
+            })),
+          },
+        },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          meals: {
+            include: {
+              meal: {
+                include: {
+                  category: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return NextResponse.json({
+        data: board,
+        message: 'Festive board created successfully',
+      });
+    } catch (error) {
+      console.error('Error creating Festive board:', error);
+      return NextResponse.json(
+        { error: 'Failed to create Festive board' },
+        { status: 500 }
+      );
     }
+  });
 } 

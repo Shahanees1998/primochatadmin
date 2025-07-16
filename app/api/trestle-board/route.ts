@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
-// GET - List trestle boards for users
+// GET - List Festive boards for users
 export async function GET(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       where.month = parseInt(month);
     }
 
-    const boards = await prisma.trestleBoard.findMany({
+    const boards = await prisma.festiveBoard.findMany({
       where,
       include: {
         meals: {
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
             userId: authenticatedReq.user!.userId,
           },
           include: {
-            trestleBoardMeal: {
+            festiveBoardMeal: {
               include: {
                 meal: true,
               },
@@ -69,9 +69,9 @@ export async function GET(request: NextRequest) {
       data: boards,
     });
       } catch (error) {
-      console.error('Error fetching trestle boards:', error);
+      console.error('Error fetching Festive boards:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch trestle boards' },
+        { error: 'Failed to fetch Festive boards' },
         { status: 500 }
       );
     }
@@ -84,26 +84,26 @@ export async function POST(request: NextRequest) {
     try {
 
     const body = await request.json();
-    const { trestleBoardMealId, isCompleted } = body;
+    const { festiveBoardMealId, isCompleted } = body;
 
-    if (!trestleBoardMealId || typeof isCompleted !== 'boolean') {
+    if (!festiveBoardMealId || typeof isCompleted !== 'boolean') {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Check if the trestle board meal exists
-    const trestleBoardMeal = await prisma.trestleBoardMeal.findUnique({
-      where: { id: trestleBoardMealId },
+    // Check if the Festive board meal exists
+    const festiveBoardMeal = await prisma.festiveBoardMeal.findUnique({
+      where: { id: festiveBoardMealId },
       include: {
-        trestleBoard: true,
+        festiveBoard: true,
       },
     });
 
-    if (!trestleBoardMeal) {
+    if (!festiveBoardMeal) {
       return NextResponse.json(
-        { error: 'Trestle board meal not found' },
+        { error: 'Festive board meal not found' },
         { status: 404 }
       );
     }
@@ -111,9 +111,9 @@ export async function POST(request: NextRequest) {
     // Upsert the user meal selection
     const userSelection = await prisma.userMealSelection.upsert({
       where: {
-        userId_trestleBoardMealId: {
+        userId_festiveBoardMealId: {
           userId: authenticatedReq.user!.userId,
-          trestleBoardMealId,
+          festiveBoardMealId,
         },
       },
       update: {
@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
       },
       create: {
         userId: authenticatedReq.user!.userId,
-        trestleBoardId: trestleBoardMeal.trestleBoardId,
-        trestleBoardMealId,
+        festiveBoardId: festiveBoardMeal.festiveBoardId,
+        festiveBoardMealId,
         isCompleted,
         completedAt: isCompleted ? new Date() : null,
       },
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
             lastName: true,
           },
         },
-        trestleBoardMeal: {
+        festiveBoardMeal: {
           include: {
             meal: true,
           },

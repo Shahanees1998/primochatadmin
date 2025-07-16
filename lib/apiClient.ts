@@ -1,4 +1,3 @@
-import { FestiveBoard } from "@prisma/client";
 
 interface ApiResponse<T = any> {
     data?: T;
@@ -497,98 +496,6 @@ class ApiClient {
         return this.delete(`/admin/phonebook/${id}`);
     }
 
-    // Festive Board methods
-    async getFestiveBoards(params?: {
-        page?: number;
-        limit?: number;
-        search?: string;
-        sortField?: string;
-        sortOrder?: number;
-    }) {
-        return this.get<{
-            festiveBoards: any[];
-            pagination: {
-                page: number;
-                limit: number;
-                total: number;
-                totalPages: number;
-            };
-        }>('/admin/festive-board', params);
-    }
-
-    async getFestiveBoard(id: string) {
-        return this.get<FestiveBoard>(`/admin/festive-board/${id}`);
-    }
-
-    async createFestiveBoard(boardData: {
-        eventId: string;
-        title: string;
-        description?: string;
-        date: string;
-        location?: string;
-        maxParticipants?: number;
-    }) {
-        return this.post<any>('/admin/festive-board', boardData);
-    }
-
-    async updateFestiveBoard(id: string, boardData: {
-        title?: string;
-        description?: string;
-        date?: string;
-        location?: string;
-        maxParticipants?: number;
-    }) {
-        return this.put<any>(`/admin/festive-board/${id}`, boardData);
-    }
-
-    async deleteFestiveBoard(id: string) {
-        return this.delete(`/admin/festive-board/${id}`);
-    }
-
-    // Festive Board Items methods
-    async getFestiveBoardItems(boardId: string, params?: {
-        page?: number;
-        limit?: number;
-        search?: string;
-        category?: string;
-        isAssigned?: boolean;
-        sortField?: string;
-        sortOrder?: number;
-    }) {
-        return this.get<{
-            items: any[];
-            pagination: {
-                page: number;
-                limit: number;
-                total: number;
-                totalPages: number;
-            };
-        }>('/admin/festive-board/items', { boardId, ...params });
-    }
-
-    async createFestiveBoardItem(itemData: {
-        festiveBoardId: string;
-        userId: string;
-        category: 'DESSERT' | 'SIDES' | 'DRINKS' | 'MAIN_COURSE';
-        name: string;
-        description?: string;
-    }) {
-        return this.post<any>('/admin/festive-board/items', itemData);
-    }
-
-    async updateFestiveBoardItem(id: string, itemData: {
-        category?: 'DESSERT' | 'SIDES' | 'DRINKS' | 'MAIN_COURSE';
-        name?: string;
-        description?: string;
-        isAssigned?: boolean;
-    }) {
-        return this.put<any>(`/admin/festive-board/items/${id}`, itemData);
-    }
-
-    async deleteFestiveBoardItem(id: string) {
-        return this.delete(`/admin/festive-board/items/${id}`);
-    }
-
     // Chat methods
     async getChatRooms() {
         return this.get<{
@@ -740,7 +647,6 @@ class ApiClient {
                 activeEvents: number;
                 supportRequests: number;
                 documents: number;
-                festiveBoards: number;
             };
             recentActivity: Array<{
                 id: string;
@@ -840,8 +746,8 @@ class ApiClient {
         return this.delete(`/admin/meals/${id}`);
     }
 
-    // Trestle Board methods
-    async getTrestleBoards(params?: {
+    // Festive Board methods
+    async getFestiveBoards(params?: {
         page?: number;
         limit?: number;
         search?: string;
@@ -857,33 +763,33 @@ class ApiClient {
                     totalPages: number;
                 };
             };
-        }>('/admin/trestle-board', params);
+        }>('/admin/festive-board', params);
     }
 
-    async getTrestleBoard(id: string) {
-        return this.get(`/admin/trestle-board/${id}`);
+    async getFestiveBoard(id: string) {
+        return this.get(`/admin/festive-board/${id}`);
     }
 
-    async createTrestleBoard(boardData: {
+    async createFestiveBoard(boardData: {
         month: number;
         year: number;
         title: string;
         description?: string;
         mealIds: string[];
     }) {
-        return this.post<any>('/admin/trestle-board', boardData);
+        return this.post<any>('/admin/festive-board', boardData);
     }
 
-    async updateTrestleBoard(id: string, boardData: {
+    async updateFestiveBoard(id: string, boardData: {
         title: string;
         description?: string;
         mealIds: string[];
     }) {
-        return this.put<any>(`/admin/trestle-board/${id}`, boardData);
+        return this.put<any>(`/admin/festive-board/${id}`, boardData);
     }
 
-    async deleteTrestleBoard(id: string) {
-        return this.delete(`/admin/trestle-board/${id}`);
+    async deleteFestiveBoard(id: string) {
+        return this.delete(`/admin/festive-board/${id}`);
     }
 
     async searchMeals(params?: {
@@ -891,22 +797,22 @@ class ApiClient {
         categoryId?: string;
         limit?: number;
     }) {
-        return this.get<{ data: any[] }>('/admin/trestle-board/meals/search', params);
+        return this.get<{ data: any[] }>('/admin/festive-board/meals/search', params);
     }
 
-    // User-side Trestle Board methods
-    async getUserTrestleBoards(params?: {
+    // User-side Festive Board methods
+    async getUserFestiveBoards(params?: {
         year?: number;
         month?: number;
     }) {
-        return this.get<{ boards: any[] }>('/trestle-board', params);
+        return this.get<{ boards: any[] }>('/festive-board', params);
     }
 
     async markMealCompleted(data: {
-        trestleBoardMealId: string;
+        festiveBoardMealId: string;
         isCompleted: boolean;
     }) {
-        return this.post<any>('/trestle-board', data);
+        return this.post<any>('/festive-board', data);
     }
 }
 

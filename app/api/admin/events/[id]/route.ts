@@ -23,21 +23,6 @@ export async function GET(
             },
           },
         },
-        festiveBoard: {
-          include: {
-            items: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                  },
-                },
-              },
-            },
-          },
-        },
         _count: {
           select: {
             members: true,

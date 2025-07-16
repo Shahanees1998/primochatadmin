@@ -36,7 +36,6 @@ model User {
   // Relations
   events            EventMember[]
   calendarEvents    CalendarEvent[]
-  festiveBoardItems FestiveBoardItem[]
   notifications     Notification[]
   messages          Message[]
   chatParticipants  ChatParticipant[]
@@ -45,7 +44,7 @@ model User {
   phoneBookEntry    PhoneBookEntry?
   announcements     Announcement[]
   moderator         Moderator?
-  trestleBoards     TrestleBoard[]
+  festiveBoards     FestiveBoard[]
   userMealSelections UserMealSelection[]
 
   @@map("users")
@@ -67,8 +66,6 @@ model Event {
 
   // Relations
   members     EventMember[]
-  festiveBoard FestiveBoard?
-
   @@map("events")
 }
 
@@ -106,41 +103,6 @@ model CalendarEvent {
   @@map("calendar_events")
 }
 
-model FestiveBoard {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  eventId     String   @db.ObjectId @unique
-  title       String
-  description String?
-  date        DateTime
-  location    String?
-  maxParticipants Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  items       FestiveBoardItem[]
-
-  @@map("festive_boards")
-}
-
-model FestiveBoardItem {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  festiveBoardId String  @db.ObjectId
-  userId        String   @db.ObjectId
-  category      ItemCategory
-  name          String
-  description   String?
-  isAssigned    Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  festiveBoard  FestiveBoard @relation(fields: [festiveBoardId], references: [id], onDelete: Cascade)
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("festive_board_items")
-}
 
 model Notification {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -337,7 +299,6 @@ enum ItemCategory {
 
 enum NotificationType {
   EVENT_UPDATE
-  FESTIVE_BOARD_UPDATE
   DOCUMENT_UPLOAD
   CHAT_MESSAGE
   BROADCAST
@@ -433,12 +394,12 @@ model Meal {
 
   // Relations
   category      MealCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  trestleBoardMeals TrestleBoardMeal[]
+  festiveBoardMeals FestiveBoardMeal[]
 
   @@map("meals")
 }
 
-model TrestleBoard {
+model FestiveBoard {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   month       Int      // 1-12 for January to December
   year        Int
@@ -450,33 +411,33 @@ model TrestleBoard {
 
   // Relations
   createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  meals       TrestleBoardMeal[]
+  meals       FestiveBoardMeal[]
   userSelections UserMealSelection[]
 
   @@unique([month, year], name: "month_year")
-  @@map("trestle_boards")
+  @@map("festive_boards")
 }
 
-model TrestleBoardMeal {
+model FestiveBoardMeal {
   id             String       @id @default(auto()) @map("_id") @db.ObjectId
-  trestleBoardId String       @db.ObjectId
+  festiveBoardId String       @db.ObjectId
   mealId         String       @db.ObjectId
   createdAt      DateTime     @default(now())
 
   // Relations
-  trestleBoard   TrestleBoard @relation(fields: [trestleBoardId], references: [id], onDelete: Cascade)
+  festiveBoard   FestiveBoard @relation(fields: [festiveBoardId], references: [id], onDelete: Cascade)
   meal           Meal         @relation(fields: [mealId], references: [id], onDelete: Cascade)
   userSelections UserMealSelection[]
 
-  @@unique([trestleBoardId, mealId])
-  @@map("trestle_board_meals")
+  @@unique([festiveBoardId, mealId])
+  @@map("festive_board_meals")
 }
 
 model UserMealSelection {
   id                 String           @id @default(auto()) @map("_id") @db.ObjectId
   userId             String           @db.ObjectId
-  trestleBoardId     String           @db.ObjectId
-  trestleBoardMealId String           @db.ObjectId
+  festiveBoardId     String           @db.ObjectId
+  festiveBoardMealId String           @db.ObjectId
   isCompleted        Boolean          @default(false)
   completedAt        DateTime?
   createdAt          DateTime         @default(now())
@@ -484,9 +445,9 @@ model UserMealSelection {
 
   // Relations
   user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trestleBoard       TrestleBoard     @relation(fields: [trestleBoardId], references: [id], onDelete: Cascade)
-  trestleBoardMeal   TrestleBoardMeal @relation(fields: [trestleBoardMealId], references: [id], onDelete: Cascade)
+  festiveBoard       FestiveBoard     @relation(fields: [festiveBoardId], references: [id], onDelete: Cascade)
+  festiveBoardMeal   FestiveBoardMeal @relation(fields: [festiveBoardMealId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, trestleBoardMealId])
+  @@unique([userId, festiveBoardMealId])
   @@map("user_meal_selections")
 }

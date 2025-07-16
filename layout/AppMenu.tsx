@@ -41,18 +41,18 @@ const AppMenu = () => {
             ],
         },
         {
-            label: "Trestle Board",
+            label: "Festive Board",
             icon: "pi pi-calendar-plus",
             items: [
                 {
                     label: "All Boards",
                     icon: "pi pi-fw pi-list",
-                    to: "/admin/trestle-board",
+                    to: "/admin/festive-board",
                 },
                 {
                     label: "Create Board",
                     icon: "pi pi-fw pi-plus",
-                    to: "/admin/trestle-board/create",
+                    to: "/admin/festive-board/create",
                 },
             ],
         },
@@ -77,27 +77,6 @@ const AppMenu = () => {
                 },
             ],
         },
-        // {
-        //     label: "Festive Board",
-        //     icon: "pi pi-utensils",
-        //     items: [
-        //         {
-        //             label: "All Boards",
-        //             icon: "pi pi-fw pi-list",
-        //             to: "/admin/festive-board",
-        //         },
-        //         // {
-        //         //     label: "Create Board",
-        //         //     icon: "pi pi-fw pi-plus",
-        //         //     to: "/admin/festive-board/create",
-        //         // },
-        //         // {
-        //         //     label: "Manage Items",
-        //         //     icon: "pi pi-fw pi-pencil",
-        //         //     to: "/admin/festive-board/items",
-        //         // },
-        //     ],
-        // },
         {
             label: "Documents",
             icon: "pi pi-file",

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
-// GET - Search meals for trestle board
+// GET - Search meals for Festive board
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {

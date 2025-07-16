@@ -20,7 +20,7 @@ interface Notification {
     userId: string;
     title: string;
     message: string;
-    type: 'EVENT_UPDATE' | 'FESTIVE_BOARD_UPDATE' | 'DOCUMENT_UPLOAD' | 'CHAT_MESSAGE' | 'BROADCAST' | 'SUPPORT_RESPONSE';
+    type: 'EVENT_UPDATE' | 'DOCUMENT_UPLOAD' | 'CHAT_MESSAGE' | 'BROADCAST' | 'SUPPORT_RESPONSE';
     isRead: boolean;
     isArchived: boolean;
     createdAt: string;
@@ -49,7 +49,6 @@ export default function NotificationsPage() {
     const typeOptions = [
         { label: "All Types", value: "" },
         { label: "Event Update", value: "EVENT_UPDATE" },
-        { label: "Festive Board Update", value: "FESTIVE_BOARD_UPDATE" },
         { label: "Document Upload", value: "DOCUMENT_UPLOAD" },
         { label: "Chat Message", value: "CHAT_MESSAGE" },
         { label: "Broadcast", value: "BROADCAST" },
@@ -176,7 +175,6 @@ export default function NotificationsPage() {
     const getTypeSeverity = (type: string) => {
         switch (type) {
             case 'EVENT_UPDATE': return 'info';
-            case 'FESTIVE_BOARD_UPDATE': return 'success';
             case 'DOCUMENT_UPLOAD': return 'warning';
             case 'CHAT_MESSAGE': return 'primary';
             case 'BROADCAST': return 'danger';
@@ -188,7 +186,6 @@ export default function NotificationsPage() {
     const getTypeLabel = (type: string) => {
         switch (type) {
             case 'EVENT_UPDATE': return 'Event Update';
-            case 'FESTIVE_BOARD_UPDATE': return 'Festive Board';
             case 'DOCUMENT_UPLOAD': return 'Document';
             case 'CHAT_MESSAGE': return 'Chat';
             case 'BROADCAST': return 'Broadcast';

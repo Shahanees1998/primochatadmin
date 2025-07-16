@@ -10,7 +10,7 @@ import { Toast } from 'primereact/toast';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { apiClient } from '@/lib/apiClient';
 
-interface TrestleBoardMeal {
+interface FestiveBoardMeal {
   id: string;
   meal: {
     id: string;
@@ -33,13 +33,13 @@ interface TrestleBoardMeal {
   }>;
 }
 
-interface TrestleBoard {
+interface FestiveBoard {
   id: string;
   month: number;
   year: number;
   title: string;
   description?: string;
-  meals: TrestleBoardMeal[];
+  meals: FestiveBoardMeal[];
 }
 
 const monthOptions = [
@@ -63,8 +63,8 @@ const yearOptions = Array.from({ length: 5 }, (_, i) => ({
   value: currentYear - 2 + i,
 }));
 
-export default function UserTrestleBoardPage() {
-  const [boards, setBoards] = useState<TrestleBoard[]>([]);
+export default function UserFestiveBoardPage() {
+  const [boards, setBoards] = useState<FestiveBoard[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
@@ -84,27 +84,27 @@ export default function UserTrestleBoardPage() {
         params.month = selectedMonth;
       }
 
-      const response = await apiClient.getUserTrestleBoards(params);
+      const response = await apiClient.getUserFestiveBoards(params);
       if (response.data) {
         setBoards(response.data.boards || []);
       }
     } catch (error) {
-      console.error('Error loading trestle boards:', error);
+      console.error('Error loading Festive boards:', error);
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
-        detail: 'Failed to load trestle boards'
+        detail: 'Failed to load Festive boards'
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMealToggle = async (trestleBoardMealId: string, isCompleted: boolean) => {
+  const handleMealToggle = async (festiveBoardMealId: string, isCompleted: boolean) => {
     try {
-      setUpdatingMeal(trestleBoardMealId);
+      setUpdatingMeal(festiveBoardMealId);
       const response = await apiClient.markMealCompleted({
-        trestleBoardMealId,
+        festiveBoardMealId,
         isCompleted,
       });
 
@@ -117,7 +117,7 @@ export default function UserTrestleBoardPage() {
         prevBoards.map(board => ({
           ...board,
           meals: board.meals.map(meal => {
-            if (meal.id === trestleBoardMealId) {
+            if (meal.id === festiveBoardMealId) {
               return {
                 ...meal,
                 userSelections: response.data ? [response.data] : [],
@@ -149,23 +149,23 @@ export default function UserTrestleBoardPage() {
     return monthOptions.find(m => m.value === month)?.label || 'Unknown';
   };
 
-  const getCategories = (board: TrestleBoard) => {
+  const getCategories = (board: FestiveBoard) => {
     const categories = new Set(board.meals.map(meal => meal.meal.category.name));
     return Array.from(categories);
   };
 
-  const getFilteredMeals = (board: TrestleBoard) => {
+  const getFilteredMeals = (board: FestiveBoard) => {
     if (!selectedCategory) {
       return board.meals;
     }
     return board.meals.filter(meal => meal.meal.category.name === selectedCategory);
   };
 
-  const isMealCompleted = (meal: TrestleBoardMeal) => {
+  const isMealCompleted = (meal: FestiveBoardMeal) => {
     return meal.userSelections.some(selection => selection.isCompleted);
   };
 
-  const getCompletedCount = (board: TrestleBoard) => {
+  const getCompletedCount = (board: FestiveBoard) => {
     return board.meals.filter(meal => isMealCompleted(meal)).length;
   };
 
@@ -184,7 +184,7 @@ export default function UserTrestleBoardPage() {
       <Toast ref={toast} />
 
       <div className="mb-4">
-        <h1 className="text-2xl font-bold mb-2">Trestle Board</h1>
+        <h1 className="text-2xl font-bold mb-2">Festive Board</h1>
         <p className="text-600">Browse and mark your completed meals</p>
       </div>
 
@@ -218,9 +218,9 @@ export default function UserTrestleBoardPage() {
         <Card>
           <div className="text-center p-8">
             <i className="pi pi-calendar-times text-6xl text-400 mb-4"></i>
-            <h3 className="text-xl font-bold mb-2">No Trestle Boards Found</h3>
+            <h3 className="text-xl font-bold mb-2">No Festive Boards Found</h3>
             <p className="text-600">
-              No trestle boards are available for the selected period.
+              No Festive boards are available for the selected period.
             </p>
           </div>
         </Card>

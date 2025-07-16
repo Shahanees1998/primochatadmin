@@ -1,5 +1,5 @@
 // Script to help debug and fix authentication issues
-console.log('🔧 Trestle Board Authentication Debug Script');
+console.log('🔧 Festive Board Authentication Debug Script');
 console.log('============================================');
 
 console.log('\n📋 Steps to fix the JWT decryption issue:');
@@ -11,7 +11,7 @@ console.log('4. Test the meal search functionality');
 console.log('\n🔍 Debug endpoints to test:');
 console.log('- GET /api/admin/meals/test - Check if meals exist');
 console.log('- POST /api/auth/clear-session - Clear corrupted session');
-console.log('- GET /api/admin/trestle-board/meals/search - Test meal search');
+console.log('- GET /api/admin/festive-board/meals/search - Test meal search');
 
 console.log('\n💡 Common solutions:');
 console.log('- Set NEXTAUTH_SECRET in your .env file');
@@ -27,4 +27,4 @@ console.log('4. Log in again');
 
 console.log('\n✅ After fixing, test these URLs:');
 console.log('- http://localhost:3000/api/admin/meals/test');
-console.log('- http://localhost:3000/admin/trestle-board/create'); 
+console.log('- http://localhost:3000/admin/festive-board/create'); 

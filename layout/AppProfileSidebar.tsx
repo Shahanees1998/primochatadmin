@@ -127,7 +127,6 @@ const AppProfileSidebar = () => {
     const getNotificationIcon = (type: string) => {
         switch (type) {
             case 'EVENT_UPDATE': return 'pi-calendar';
-            case 'FESTIVE_BOARD_UPDATE': return 'pi-users';
             case 'DOCUMENT_UPLOAD': return 'pi-file';
             case 'CHAT_MESSAGE': return 'pi-comments';
             case 'BROADCAST': return 'pi-bell';

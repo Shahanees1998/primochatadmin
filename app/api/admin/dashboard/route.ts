@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
             activeEvents,
             supportRequests,
             documents,
-            festiveBoards,
             recentActivity
         ] = await Promise.all([
             // Total users
@@ -41,9 +40,7 @@ export async function GET(request: NextRequest) {
             // Documents
             prisma.document.count(),
             
-            // Festive boards
-            prisma.festiveBoard.count(),
-            
+            // Festive boards            
             // Recent activity (last 10 activities from various sources)
             Promise.all([
                 // Recent user registrations
@@ -199,8 +196,7 @@ export async function GET(request: NextRequest) {
                 pendingApprovals,
                 activeEvents,
                 supportRequests,
-                documents,
-                festiveBoards
+                documents
             },
             recentActivity: sortedActivities,
             growthData
