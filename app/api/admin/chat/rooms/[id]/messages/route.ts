@@ -6,7 +6,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '30');
-        const sortOrder = searchParams.get('sortOrder') === '1' ? 'asc' : 'desc';
+        const sortOrder = searchParams.get('sortOrder') === 'desc' ? 'desc' : 'asc';
         const skip = (page - 1) * limit;
         let chatRoomId = params.id;
 

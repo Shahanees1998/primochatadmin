@@ -9,7 +9,7 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || '7b537c24d1f5b2a460c4b3f88ad3e78b2f7462d49a9d9a93c3c86b48a211bc39'
 );
 
-const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
+const ACCESS_TOKEN_EXPIRY = '24h'; // 24 hours
 const REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
 
 export interface JWTPayload {
@@ -198,7 +198,7 @@ export class AuthService {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60, // 15 minutes
+      maxAge: 24 * 60 * 60, // 24 hours
       path: '/',
     });
 

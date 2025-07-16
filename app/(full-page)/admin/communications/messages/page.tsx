@@ -207,7 +207,13 @@ export default function MessagesPage() {
 
             // If the message is for the currently selected chat, add it to messages
             if (currentSelectedChat && chatRoomId === currentSelectedChat.id) {
-                setMessages((prev) => [...prev, message]);
+                setMessages((prev) => {
+                    const newMessages = [...prev, message];
+                    // Sort messages by creation time (oldest first, newest last)
+                    return newMessages.sort((a, b) => 
+                        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    );
+                });
 
                 // If this is a message from someone else, mark it as read immediately
                 if (message.senderId !== currentUserId) {
@@ -346,7 +352,13 @@ export default function MessagesPage() {
                 throw new Error(response.error);
             }
             const messages = response.data?.messages || [];
-            setMessages(messages);
+            
+            // Sort messages by creation time (oldest first, newest last)
+            const sortedMessages = messages.sort((a, b) => 
+                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+            
+            setMessages(sortedMessages);
 
             // Recalculate unread count based on actual messages
             const actualUnreadCount = messages.filter(msg =>
@@ -396,7 +408,13 @@ export default function MessagesPage() {
                     : undefined,
             };
 
-            setMessages((prev) => [...prev, optimisticMessage]);
+            setMessages((prev) => {
+                const newMessages = [...prev, optimisticMessage];
+                // Sort messages by creation time (oldest first, newest last)
+                return newMessages.sort((a, b) => 
+                    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                );
+            });
 
             // Update chat room's last message optimistically
             setChatRooms((prev) => prev.map(room =>
@@ -422,9 +440,15 @@ export default function MessagesPage() {
 
             // Update with real message data
             const realMessage = response.data;
-            setMessages((prev) => prev.map(m =>
-                m.id === optimisticMessage.id ? { ...realMessage, createdAt: realMessage.createdAt } : m
-            ));
+            setMessages((prev) => {
+                const updatedMessages = prev.map(m =>
+                    m.id === optimisticMessage.id ? { ...realMessage, createdAt: realMessage.createdAt } : m
+                );
+                // Sort messages by creation time (oldest first, newest last)
+                return updatedMessages.sort((a, b) => 
+                    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                );
+            });
 
             // Send via socket for real-time
             socket.sendMessage(selectedChat.id, realMessage);

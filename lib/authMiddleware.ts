@@ -48,7 +48,7 @@ export async function withAuth(
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60, // 15 minutes
+            maxAge: 24 * 60 * 60, // 24 hours
             path: '/',
           });
           
