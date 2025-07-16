@@ -14,128 +14,129 @@ datasource db {
 }
 
 model User {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  email             String   @unique
-  password          String
-  firstName         String
-  lastName          String
-  phone             String?
-  role              UserRole @default(MEMBER)
-  status            UserStatus @default(PENDING)
-  profileImage      String?
+  id                   String     @id @default(auto()) @map("_id") @db.ObjectId
+  email                String     @unique
+  password             String
+  firstName            String
+  lastName             String
+  phone                String?
+  role                 UserRole   @default(MEMBER)
+  status               UserStatus @default(PENDING)
+  profileImage         String?
   profileImagePublicId String? // Cloudinary public_id for profile image
-  membershipNumber  String?  @unique
-  joinDate          DateTime?
-  paidDate          DateTime? // Date when user paid membership
-  lastLogin         DateTime?
-  resetToken        String?
-  resetTokenExpiry  DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  membershipNumber     String?    @unique
+  joinDate             DateTime?
+  paidDate             DateTime? // Date when user paid membership
+  lastLogin            DateTime?
+  resetToken           String?
+  resetTokenExpiry     DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   // Relations
-  events            EventMember[]
-  calendarEvents    CalendarEvent[]
-  notifications     Notification[]
-  messages          Message[]
-  chatParticipants  ChatParticipant[]
-  supportRequests   SupportRequest[]
-  documents         Document[]
-  phoneBookEntry    PhoneBookEntry?
-  announcements     Announcement[]
-  moderator         Moderator?
-  festiveBoards     FestiveBoard[]
-  userMealSelections UserMealSelection[]
+  trestleBoards         TrestleBoardMember[]
+  calendarTrestleBoards CalendarTrestleBoard[]
+  notifications         Notification[]
+  messages              Message[]
+  chatParticipants      ChatParticipant[]
+  supportRequests       SupportRequest[]
+  documents             Document[]
+  phoneBookEntry        PhoneBookEntry?
+  announcements         Announcement[]
+  moderator             Moderator?
+  festiveBoards         FestiveBoard[]
+  userMealSelections    UserMealSelection[]
 
   @@map("users")
 }
 
-model Event {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
-  description String?
-  startDate   DateTime
-  endDate     DateTime?
-  location    String?
-  category    EventCategory
-  type        EventType
-  isRSVP      Boolean  @default(false)
+model TrestleBoard {
+  id           String               @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  description  String?
+  startDate    DateTime
+  endDate      DateTime?
+  startTime    String?              // Time in HH:MM format
+  endTime      String?              // Time in HH:MM format
+  location     String?
+  category     TrestleBoardCategory
+  isRSVP       Boolean              @default(false)
   maxAttendees Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
   // Relations
-  members     EventMember[]
-  @@map("events")
+  members TrestleBoardMember[]
+
+  @@map("trestleBoards")
 }
 
-model EventMember {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  eventId   String   @db.ObjectId
-  userId    String   @db.ObjectId
-  status    RSVPStatus @default(PENDING)
-  createdAt DateTime @default(now())
+model TrestleBoardMember {
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  trestleBoardId String     @db.ObjectId
+  userId         String     @db.ObjectId
+  status         RSVPStatus @default(PENDING)
+  createdAt      DateTime   @default(now())
 
   // Relations
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trestleBoard TrestleBoard @relation(fields: [trestleBoardId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([eventId, userId])
-  @@map("event_members")
+  @@unique([trestleBoardId, userId])
+  @@map("trestleBoard_members")
 }
 
-model CalendarEvent {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String   @db.ObjectId
-  title       String
-  description String?
-  startDate   DateTime
-  endDate     DateTime?
-  location    String?
-  isPersonal  Boolean  @default(true)
-  eventId     String?  @db.ObjectId // If linked to a main event
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model CalendarTrestleBoard {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String    @db.ObjectId
+  title          String
+  description    String?
+  startDate      DateTime
+  endDate        DateTime?
+  location       String?
+  isPersonal     Boolean   @default(true)
+  trestleBoardId String?   @db.ObjectId // If linked to a main trestleBoard
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relations
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("calendar_events")
+  @@map("calendar_trestleBoards")
 }
-
 
 model Notification {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
-  title     String
-  message   String
-  type      NotificationType
-  isRead    Boolean  @default(false)
-  isArchived Boolean @default(false)
-  createdAt DateTime @default(now())
+  id         String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String           @db.ObjectId
+  title      String
+  message    String
+  type       NotificationType
+  isRead     Boolean          @default(false)
+  isArchived Boolean          @default(false)
+  createdAt  DateTime         @default(now())
 
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
 
 model Document {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
-  description String?
-  fileName    String
-  fileUrl     String
+  id           String             @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  description  String?
+  fileName     String
+  fileUrl      String
   filePublicId String // Cloudinary public_id for download
-  fileType    String
-  fileSize    Int
-  category    String?
-  tags        String[]
-  permissions DocumentPermission @default(MEMBER_ONLY)
-  uploadedBy  String   @db.ObjectId
-  user        User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  fileType     String
+  fileSize     Int
+  category     String?
+  tags         String[]
+  permissions  DocumentPermission @default(MEMBER_ONLY)
+  uploadedBy   String             @db.ObjectId
+  user         User               @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@map("documents")
 }
@@ -162,53 +163,53 @@ model ChatParticipant {
   joinedAt   DateTime @default(now())
 
   // Relations
-  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatRoom ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([chatRoomId, userId])
   @@map("chat_participants")
 }
 
 model Message {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  chatRoomId String   @db.ObjectId
-  senderId   String   @db.ObjectId
-  content    String
-  type       MessageType @default(TEXT)
-  isRead     Boolean  @default(false)
-  isFlagged  Boolean  @default(false)
-  flagReason String?
-  isModerated Boolean @default(false)
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  chatRoomId       String      @db.ObjectId
+  senderId         String      @db.ObjectId
+  content          String
+  type             MessageType @default(TEXT)
+  isRead           Boolean     @default(false)
+  isFlagged        Boolean     @default(false)
+  flagReason       String?
+  isModerated      Boolean     @default(false)
   moderationAction String?
-  createdAt  DateTime @default(now())
+  createdAt        DateTime    @default(now())
 
   // Relations
-  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
-  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  chatRoom ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  sender   User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@map("messages")
 }
 
 model SupportRequest {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String   @db.ObjectId
-  subject     String
-  message     String
-  status      SupportStatus @default(OPEN)
-  priority    Priority @default(MEDIUM)
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String        @db.ObjectId
+  subject       String
+  message       String
+  status        SupportStatus @default(OPEN)
+  priority      Priority      @default(MEDIUM)
   adminResponse String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   // Relations
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("support_requests")
 }
 
 model PhoneBookEntry {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId @unique
+  userId    String   @unique @db.ObjectId
   email     String
   phone     String?
   address   String?
@@ -217,38 +218,38 @@ model PhoneBookEntry {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("phone_book_entries")
 }
 
 model Announcement {
-  id             String           @id @default(auto()) @map("_id") @db.ObjectId
-  title          String
-  content        String
-  type           AnnouncementType
-  status         AnnouncementStatus @default(PUBLISHED)
-  createdById    String           @db.ObjectId
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id          String             @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  content     String
+  type        AnnouncementType
+  status      AnnouncementStatus @default(PUBLISHED)
+  createdById String             @db.ObjectId
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   // Relations
-  createdBy      User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@map("announcements")
 }
 
 model Moderator {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String   @db.ObjectId @unique
-  permissions    String[]
-  assignedAreas  String[]
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @unique @db.ObjectId
+  permissions   String[]
+  assignedAreas String[]
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("moderators")
 }
@@ -267,7 +268,7 @@ enum UserStatus {
   DEACTIVATED
 }
 
-enum EventCategory {
+enum TrestleBoardCategory {
   REGULAR_MEETING
   DISTRICT
   EMERGENT
@@ -276,12 +277,7 @@ enum EventCategory {
   SOCIAL
 }
 
-enum EventType {
-  REGULAR
-  SOCIAL
-  DISTRICT
-  EMERGENT
-}
+
 
 enum RSVPStatus {
   PENDING
@@ -361,7 +357,7 @@ model SystemSettings {
   allowedFileTypes    String   @default("pdf,doc,docx,jpg,jpeg,png")
   enableNotifications Boolean  @default(true)
   enableChat          Boolean  @default(true)
-  enableEvents        Boolean  @default(true)
+  enableTrestleBoards Boolean  @default(true)
   enableDocuments     Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -377,23 +373,23 @@ model MealCategory {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  meals       Meal[]
+  meals Meal[]
 
   @@map("meal_categories")
 }
 
 model Meal {
-  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
   title         String
   description   String?
   imageUrl      String?
   imagePublicId String?
-  categoryId    String       @db.ObjectId
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  categoryId    String   @db.ObjectId
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
-  category      MealCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category          MealCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   festiveBoardMeals FestiveBoardMeal[]
 
   @@map("meals")
@@ -401,7 +397,7 @@ model Meal {
 
 model FestiveBoard {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  month       Int      // 1-12 for January to December
+  month       Int // 1-12 for January to December
   year        Int
   title       String
   description String?
@@ -410,8 +406,8 @@ model FestiveBoard {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  meals       FestiveBoardMeal[]
+  createdBy      User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  meals          FestiveBoardMeal[]
   userSelections UserMealSelection[]
 
   @@unique([month, year], name: "month_year")
@@ -419,14 +415,14 @@ model FestiveBoard {
 }
 
 model FestiveBoardMeal {
-  id             String       @id @default(auto()) @map("_id") @db.ObjectId
-  festiveBoardId String       @db.ObjectId
-  mealId         String       @db.ObjectId
-  createdAt      DateTime     @default(now())
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  festiveBoardId String   @db.ObjectId
+  mealId         String   @db.ObjectId
+  createdAt      DateTime @default(now())
 
   // Relations
-  festiveBoard   FestiveBoard @relation(fields: [festiveBoardId], references: [id], onDelete: Cascade)
-  meal           Meal         @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  festiveBoard   FestiveBoard        @relation(fields: [festiveBoardId], references: [id], onDelete: Cascade)
+  meal           Meal                @relation(fields: [mealId], references: [id], onDelete: Cascade)
   userSelections UserMealSelection[]
 
   @@unique([festiveBoardId, mealId])
@@ -434,19 +430,19 @@ model FestiveBoardMeal {
 }
 
 model UserMealSelection {
-  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
-  userId             String           @db.ObjectId
-  festiveBoardId     String           @db.ObjectId
-  festiveBoardMealId String           @db.ObjectId
-  isCompleted        Boolean          @default(false)
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String    @db.ObjectId
+  festiveBoardId     String    @db.ObjectId
+  festiveBoardMealId String    @db.ObjectId
+  isCompleted        Boolean   @default(false)
   completedAt        DateTime?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   // Relations
-  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  festiveBoard       FestiveBoard     @relation(fields: [festiveBoardId], references: [id], onDelete: Cascade)
-  festiveBoardMeal   FestiveBoardMeal @relation(fields: [festiveBoardMealId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  festiveBoard     FestiveBoard     @relation(fields: [festiveBoardId], references: [id], onDelete: Cascade)
+  festiveBoardMeal FestiveBoardMeal @relation(fields: [festiveBoardMealId], references: [id], onDelete: Cascade)
 
   @@unique([userId, festiveBoardMealId])
   @@map("user_meal_selections")

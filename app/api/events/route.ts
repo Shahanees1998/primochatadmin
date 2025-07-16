@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     if (category) where.category = category;
     if (type) where.type = type;
     const [events, total] = await Promise.all([
-      prisma.event.findMany({
+      prisma.trestleBoard.findMany({
         where,
         include: {
           members: {
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { startDate: 'asc' },
       }),
-      prisma.event.count({ where }),
+      prisma.trestleBoard.count({ where }),
     ]);
     return NextResponse.json({
       events,

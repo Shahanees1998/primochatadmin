@@ -59,7 +59,7 @@ export default function ChatPage() {
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [chatSearchTerm, setChatSearchTerm] = useState("");
-    
+    console.log(selectedUsers, 'LLLLLLLLLLLLLL??????????????????????????????')
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const toast = useRef<Toast>(null);
 
@@ -224,26 +224,26 @@ export default function ChatPage() {
 
     const createNewChat = async () => {
         if (selectedUsers.length === 0) return;
+        console.log('LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL', selectedUsers)
+        // try {
+        //     const response = await apiClient.createChatRoom({
+        //         participantIds: selectedUsers.map(u => u.id),
+        //         name: selectedUsers.length > 1 ? `Group Chat (${selectedUsers.length} members)` : undefined
+        //     });
 
-        try {
-            const response = await apiClient.createChatRoom({
-                participantIds: selectedUsers.map(u => u.id),
-                name: selectedUsers.length > 1 ? `Group Chat (${selectedUsers.length} members)` : undefined
-            });
+        //     if (response.error) {
+        //         throw new Error(response.error);
+        //     }
 
-            if (response.error) {
-                throw new Error(response.error);
-            }
-
-            const newChatRoom = response.data;
-            setChatRooms(prev => [newChatRoom, ...prev]);
-            setSelectedChat(newChatRoom);
-            setShowNewChatDialog(false);
-            setSelectedUsers([]);
-            showToast("success", "Success", "Chat room created successfully");
-        } catch (error) {
-            showToast("error", "Error", "Failed to create chat room");
-        }
+        //     const newChatRoom = response.data;
+        //     setChatRooms(prev => [newChatRoom, ...prev]);
+        //     setSelectedChat(newChatRoom);
+        //     setShowNewChatDialog(false);
+        //     setSelectedUsers([]);
+        //     showToast("success", "Success", "Chat room created successfully");
+        // } catch (error) {
+        //     showToast("error", "Error", "Failed to create chat room");
+        // }
     };
 
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {
@@ -255,7 +255,7 @@ export default function ChatPage() {
         if (room.isGroup && room.name) {
             return room.name.toLowerCase().includes(searchLower);
         }
-        return room.participants.some(user => 
+        return room.participants.some(user =>
             `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchLower) ||
             user.email.toLowerCase().includes(searchLower)
         );
@@ -279,7 +279,7 @@ export default function ChatPage() {
         const date = new Date(dateString);
         const now = new Date();
         const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-        
+
         if (diffInHours < 24) {
             return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } else if (diffInHours < 48) {
@@ -299,10 +299,10 @@ export default function ChatPage() {
                             <div className="p-3 border-bottom-1 surface-border">
                                 <div className="flex justify-content-between align-items-center mb-3">
                                     <h3 className="m-0">Chats</h3>
-                                    <Button 
-                                        icon="pi pi-plus" 
-                                        rounded 
-                                        text 
+                                    <Button
+                                        icon="pi pi-plus"
+                                        rounded
+                                        text
                                         onClick={() => setShowNewChatDialog(true)}
                                         tooltip="New Chat"
                                     />
@@ -335,8 +335,8 @@ export default function ChatPage() {
                                     <div className="p-3 text-center text-600">
                                         <i className="pi pi-comments text-3xl mb-2 block"></i>
                                         <p>No chats yet</p>
-                                        <Button 
-                                            label="Start a chat" 
+                                        <Button
+                                            label="Start a chat"
                                             size="small"
                                             onClick={() => setShowNewChatDialog(true)}
                                         />
@@ -346,9 +346,8 @@ export default function ChatPage() {
                                         {filteredChatRooms.map((chat) => (
                                             <div
                                                 key={chat.id}
-                                                className={`p-3 cursor-pointer hover:surface-100 transition-colors ${
-                                                    selectedChat?.id === chat.id ? 'surface-100' : ''
-                                                }`}
+                                                className={`p-3 cursor-pointer hover:surface-100 transition-colors ${selectedChat?.id === chat.id ? 'surface-100' : ''
+                                                    }`}
                                                 onClick={() => setSelectedChat(chat)}
                                             >
                                                 <div className="flex align-items-center gap-3">
@@ -356,13 +355,13 @@ export default function ChatPage() {
                                                         {chat.isGroup ? (
                                                             <div className="flex flex-column gap-1">
                                                                 {chat.participants.slice(0, 2).map((user, index) => (
-                                                                                                                            <Avatar
-                                                            key={user.id}
-                                                            image={user.profileImage}
-                                                            label={`${user.firstName[0]}${user.lastName[0]}`}
-                                                            size="normal"
-                                                            className={index === 1 ? 'ml-2' : ''}
-                                                        />
+                                                                    <Avatar
+                                                                        key={user.id}
+                                                                        image={user.profileImage}
+                                                                        label={`${user.firstName[0]}${user.lastName[0]}`}
+                                                                        size="normal"
+                                                                        className={index === 1 ? 'ml-2' : ''}
+                                                                    />
                                                                 ))}
                                                             </div>
                                                         ) : (
@@ -457,16 +456,14 @@ export default function ChatPage() {
                                                         className={`mb-3 flex ${message.senderId === 'current-user' ? 'justify-content-end' : 'justify-content-start'}`}
                                                     >
                                                         <div className={`max-w-70 ${message.senderId === 'current-user' ? 'text-right' : 'text-left'}`}>
-                                                            <div className={`p-3 border-round-lg ${
-                                                                message.senderId === 'current-user' 
-                                                                    ? 'bg-blue-500 text-white' 
+                                                            <div className={`p-3 border-round-lg ${message.senderId === 'current-user'
+                                                                    ? 'bg-blue-500 text-white'
                                                                     : 'bg-gray-100'
-                                                            }`}>
+                                                                }`}>
                                                                 <p className="m-0">{message.content}</p>
                                                             </div>
-                                                            <div className={`text-xs text-600 mt-1 ${
-                                                                message.senderId === 'current-user' ? 'text-right' : 'text-left'
-                                                            }`}>
+                                                            <div className={`text-xs text-600 mt-1 ${message.senderId === 'current-user' ? 'text-right' : 'text-left'
+                                                                }`}>
                                                                 {formatTime(message.createdAt)}
                                                                 {message.senderId === 'current-user' && (
                                                                     <i className={`pi ${message.isRead ? 'pi-check-double text-blue-500' : 'pi-check'} ml-1`}></i>
@@ -498,8 +495,8 @@ export default function ChatPage() {
                                                     else handleTyping();
                                                 }}
                                             />
-                                            <Button 
-                                                icon="pi pi-send" 
+                                            <Button
+                                                icon="pi pi-send"
                                                 onClick={sendMessage}
                                                 disabled={!newMessage.trim()}
                                             />
@@ -512,8 +509,8 @@ export default function ChatPage() {
                                         <i className="pi pi-comments text-6xl mb-3 block"></i>
                                         <h3>Select a chat to start messaging</h3>
                                         <p>Choose from your existing conversations or start a new one</p>
-                                        <Button 
-                                            label="Start New Chat" 
+                                        <Button
+                                            label="Start New Chat"
                                             icon="pi pi-plus"
                                             onClick={() => setShowNewChatDialog(true)}
                                         />
@@ -526,16 +523,16 @@ export default function ChatPage() {
             </div>
 
             {/* New Chat Dialog */}
-            <Dialog 
-                visible={showNewChatDialog} 
+            <Dialog
+                visible={showNewChatDialog}
                 onHide={() => setShowNewChatDialog(false)}
                 header="Start New Chat"
                 style={{ width: '50vw' }}
                 footer={
                     <div className="flex justify-content-end gap-2">
                         <Button label="Cancel" severity="secondary" onClick={() => setShowNewChatDialog(false)} />
-                        <Button 
-                            label="Create Chat" 
+                        <Button
+                            label="Create Chat"
                             onClick={createNewChat}
                             disabled={selectedUsers.length === 0}
                         />
@@ -573,18 +570,17 @@ export default function ChatPage() {
                             ) : (
                                 <div className="p-3">
                                     {users
-                                        .filter(user => 
+                                        .filter(user =>
                                             `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                             user.email.toLowerCase().includes(searchTerm.toLowerCase())
                                         )
                                         .map((user) => (
                                             <div
                                                 key={user.id}
-                                                className={`flex align-items-center gap-3 p-2 cursor-pointer border-round hover:surface-100 ${
-                                                    selectedUsers.some(u => u.id === user.id) ? 'surface-100' : ''
-                                                }`}
+                                                className={`flex align-items-center gap-3 p-2 cursor-pointer border-round hover:surface-100 ${selectedUsers.some(u => u.id === user.id) ? 'surface-100' : ''
+                                                    }`}
                                                 onClick={() => {
-                                                    setSelectedUsers(prev => 
+                                                    setSelectedUsers(prev =>
                                                         prev.some(u => u.id === user.id)
                                                             ? prev.filter(u => u.id !== user.id)
                                                             : [...prev, user]
@@ -616,11 +612,11 @@ export default function ChatPage() {
                             <div className="flex flex-wrap gap-2">
                                 {selectedUsers.map((user) => (
                                     <div key={user.id} className="flex align-items-center gap-2 p-2 surface-100 border-round">
-                                                                                    <Avatar
-                                                image={user.profileImage}
-                                                label={`${user.firstName[0]}${user.lastName[0]}`}
-                                                size="normal"
-                                            />
+                                        <Avatar
+                                            image={user.profileImage}
+                                            label={`${user.firstName[0]}${user.lastName[0]}`}
+                                            size="normal"
+                                        />
                                         <span className="text-sm">{user.firstName} {user.lastName}</span>
                                         <Button
                                             icon="pi pi-times"

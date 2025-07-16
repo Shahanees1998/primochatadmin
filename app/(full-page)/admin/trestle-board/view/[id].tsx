@@ -17,9 +17,10 @@ interface EventFormData {
     description: string;
     startDate: Date | null;
     endDate: Date | null;
+    startTime: string;
+    endTime: string;
     location: string;
     category: string;
-    type: string;
     isRSVP: boolean;
     maxAttendees: number | null;
 }
@@ -31,9 +32,10 @@ export default function CreateEventPage() {
         description: "",
         startDate: null,
         endDate: null,
+        startTime: "",
+        endTime: "",
         location: "",
         category: "",
-        type: "",
         isRSVP: false,
         maxAttendees: null,
     });
@@ -49,19 +51,12 @@ export default function CreateEventPage() {
         { label: "Social", value: "SOCIAL" },
     ];
 
-    const typeOptions = [
-        { label: "Regular", value: "REGULAR" },
-        { label: "Social", value: "SOCIAL" },
-        { label: "District", value: "DISTRICT" },
-        { label: "Emergent", value: "EMERGENT" },
-    ];
-
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {
         toast.current?.show({ severity, summary, detail, life: 3000 });
     };
 
     const createEvent = async () => {
-        if (!formData.title.trim() || !formData.startDate || !formData.category || !formData.type) {
+        if (!formData.title.trim() || !formData.startDate || !formData.category) {
             showToast("error", "Error", "Please fill in all required fields");
             return;
         }
@@ -73,27 +68,27 @@ export default function CreateEventPage() {
 
         setLoading(true);
         try {
-            const eventData = {
+            const trestleBoardData = {
                 ...formData,
                 startDate: formData.startDate?.toISOString(),
                 endDate: formData.endDate?.toISOString(),
             };
 
-            const response = await fetch('/api/admin/events', {
+            const response = await fetch('/api/admin/trestle-board', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(eventData),
+                body: JSON.stringify(trestleBoardData),
             });
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || 'Failed to create event');
+                throw new Error(error.error || 'Failed to create Trestle Board');
             }
 
             const result = await response.json();
-            showToast("success", "Success", "Event created successfully!");
+            showToast("success", "Success", "Trestle Board created successfully!");
             
             // Reset form
             setFormData({
@@ -101,19 +96,20 @@ export default function CreateEventPage() {
                 description: "",
                 startDate: null,
                 endDate: null,
+                startTime: "",
+                endTime: "",
                 location: "",
                 category: "",
-                type: "",
                 isRSVP: false,
                 maxAttendees: null,
             });
 
             // Redirect to events list after a short delay
             setTimeout(() => {
-                router.push('/admin/events');
+                router.push('/admin/trestle-board');
             }, 1500);
         } catch (error) {
-            showToast("error", "Error", error instanceof Error ? error.message : "Failed to create event");
+            showToast("error", "Error", error instanceof Error ? error.message : "Failed to create Trestle Board");
         } finally {
             setLoading(false);
         }
@@ -125,25 +121,25 @@ export default function CreateEventPage() {
                 <Card>
                     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3 mb-4">
                         <div className="flex flex-column">
-                            <h2 className="text-2xl font-bold m-0">Create New Event</h2>
-                            <span className="text-600">Schedule a new event for your organization</span>
+                            <h2 className="text-2xl font-bold m-0">Create New Trestle Board</h2>
+                            <span className="text-600">Schedule a new Trestle Board for your organization</span>
                         </div>
                         <Button
-                            label="Back to Events"
+                            label="Back to Trestle Board"
                             icon="pi pi-arrow-left"
-                            onClick={() => router.push('/admin/events')}
+                            onClick={() => router.push('/admin/trestle-board')}
                             severity="secondary"
                         />
                     </div>
 
                     <div className="grid">
                         <div className="col-12">
-                            <label htmlFor="title" className="font-bold">Event Title *</label>
+                            <label htmlFor="title" className="font-bold">Trestle Board Title *</label>
                             <InputText
                                 id="title"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                placeholder="Enter event title"
+                                placeholder="Enter Trestle Board title"
                                 className="w-full"
                             />
                         </div>
@@ -155,7 +151,7 @@ export default function CreateEventPage() {
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 rows={4}
-                                placeholder="Enter event description..."
+                                placeholder="Enter Trestle Board description..."
                                 className="w-full"
                             />
                         </div>
@@ -188,13 +184,34 @@ export default function CreateEventPage() {
                             />
                         </div>
 
+                        <div className="col-12 md:col-6">
+                            <label htmlFor="startTime" className="font-bold">Start Time</label>
+                            <InputText
+                                id="startTime"
+                                type="time"
+                                value={formData.startTime}
+                                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                                className="w-full"
+                            />
+                        </div>
+                        <div className="col-12 md:col-6">
+                            <label htmlFor="endTime" className="font-bold">End Time</label>
+                            <InputText
+                                id="endTime"
+                                type="time"
+                                value={formData.endTime}
+                                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                                className="w-full"
+                            />
+                        </div>
+
                         <div className="col-12">
                             <label htmlFor="location" className="font-bold">Location</label>
                             <InputText
                                 id="location"
                                 value={formData.location}
                                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                placeholder="Enter event location"
+                                placeholder="Enter Trestle Board location"
                                 className="w-full"
                             />
                         </div>
@@ -211,18 +228,6 @@ export default function CreateEventPage() {
                             />
                         </div>
 
-                        <div className="col-12 md:col-6">
-                            <label htmlFor="type" className="font-bold">Type *</label>
-                            <Dropdown
-                                id="type"
-                                value={formData.type}
-                                options={typeOptions}
-                                onChange={(e) => setFormData({ ...formData, type: e.value })}
-                                placeholder="Select type"
-                                className="w-full"
-                            />
-                        </div>
-
                         <div className="col-12">
                             <label className="font-bold">RSVP Settings</label>
                             <div className="flex align-items-center mt-2">
@@ -231,7 +236,7 @@ export default function CreateEventPage() {
                                     onChange={(e) => setFormData({ ...formData, isRSVP: e.value })}
                                     className="mr-2"
                                 />
-                                <label htmlFor="isRSVP">Require RSVP for this event</label>
+                                <label htmlFor="isRSVP">Require RSVP for this Trestle Board</label>
                             </div>
                         </div>
 
@@ -255,10 +260,10 @@ export default function CreateEventPage() {
                                     label="Cancel"
                                     icon="pi pi-times"
                                     severity="secondary"
-                                    onClick={() => router.push('/admin/events')}
+                                    onClick={() => router.push('/admin/trestle-board')}
                                 />
                                 <Button
-                                    label="Create Event"
+                                    label="Create Trestle Board"
                                     icon="pi pi-plus"
                                     onClick={createEvent}
                                     loading={loading}

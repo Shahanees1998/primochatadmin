@@ -414,11 +414,11 @@ export default function PhoneBookPage() {
                             <Column 
                                 header="Actions" 
                                 body={() => (
-                                    <div className="flex gap-2">
+                            <div className="flex gap-2">
                                         <Skeleton width="32px" height="32px" />
                                         <Skeleton width="32px" height="32px" />
                                         <Skeleton width="32px" height="32px" />
-                                    </div>
+                            </div>
                                 )}
                                 style={{ width: "120px" }}
                             />

@@ -36,6 +36,7 @@
     "bcryptjs": "^3.0.2",
     "chart.js": "4.4.1",
     "cloudinary": "^2.7.0",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.2.0",
     "ejs": "^3.1.9",
     "emoji-picker-react": "^4.7.18",

@@ -337,8 +337,8 @@ export default function ProfilePage() {
                                     // Refresh user data
                                     await refreshUser();
                                     
-                                    // Dispatch custom event to notify other components
-                                    window.dispatchEvent(new Event('profile-updated'));
+                                        // Dispatch custom event to notify other components
+                                        window.dispatchEvent(new Event('profile-updated'));
                                 }}
                                 size="medium"
                             />

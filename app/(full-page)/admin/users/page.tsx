@@ -380,7 +380,7 @@ export default function MembersPage() {
                                         <Skeleton width="32px" height="32px" />
                                         <Skeleton width="32px" height="32px" />
                                         <Skeleton width="32px" height="32px" />
-                                    </div>
+                            </div>
                                 )}
                                 style={{ width: "120px" }}
                             />

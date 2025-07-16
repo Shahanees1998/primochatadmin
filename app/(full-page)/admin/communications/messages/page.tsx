@@ -14,6 +14,7 @@ import { Badge } from "primereact/badge";
 import { Tooltip } from "primereact/tooltip";
 import { apiClient } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/hooks/useSocket";
 import { ChatMessage } from "@/types/socket";
 
@@ -57,6 +58,7 @@ interface Message {
 
 export default function MessagesPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
     const [selectedChat, setSelectedChat] = useState<ChatRoom | null>(null);
@@ -72,32 +74,16 @@ export default function MessagesPage() {
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const toast = useRef<Toast>(null);
-
-    const [currentUserId, setCurrentUserId] = useState<string>("");
+    const currentUserId = user?.id || "";
     const socket = useSocket({ userId: currentUserId });
     const [typingUsers, setTypingUsers] = useState<{ [chatId: string]: string[] }>({});
 
     useEffect(() => {
-        loadUsers();
-        loadChatRooms();
-        // Get admin user ID
-        getAdminUserId();
-    }, []);
-
-    const getAdminUserId = async () => {
-        try {
-            const response = await apiClient.getUsers({
-                page: 1,
-                limit: 1,
-                status: 'ACTIVE'
-            });
-            if (response.data?.users?.[0]) {
-                setCurrentUserId(response.data.users[0].id);
-            }
-        } catch (error) {
-            console.error('Failed to get admin user ID:', error);
+        if (user?.id) {
+            loadUsers();
+            loadChatRooms();
         }
-    };
+    }, [user?.id]);
 
     useEffect(() => {
         if (selectedChat) {
@@ -126,12 +112,19 @@ export default function MessagesPage() {
             // Update chat room's last message
             setChatRooms((prev) => prev.map(room => 
                 room.id === chatRoomId 
-                    ? { ...room, lastMessage: message, unreadCount: room.unreadCount + 1 }
+                    ? { 
+                        ...room, 
+                        lastMessage: message, 
+                        // Only increment unread count if the message is from someone else
+                        unreadCount: message.senderId === currentUserId 
+                            ? room.unreadCount 
+                            : room.unreadCount + 1 
+                    }
                     : room
             ));
         });
         return () => socket.offNewMessage();
-    }, [selectedChat, socket]);
+    }, [selectedChat, socket, currentUserId]);
 
     // Real-time: typing indicator
     useEffect(() => {
@@ -151,6 +144,12 @@ export default function MessagesPage() {
             if (selectedChat && chatRoomId === selectedChat.id) {
                 setMessages((prev) => prev.map(m => m.id === messageId ? { ...m, isRead: true } : m));
             }
+            // Update unread count when messages are marked as read
+            setChatRooms((prev) => prev.map(room => 
+                room.id === chatRoomId 
+                    ? { ...room, unreadCount: Math.max(0, room.unreadCount - 1) }
+                    : room
+            ));
         });
         return () => socket.offMessageRead();
     }, [selectedChat, socket]);
@@ -187,7 +186,29 @@ export default function MessagesPage() {
             if (response.error) {
                 throw new Error(response.error);
             }
-            setChatRooms(response.data?.chatRooms || []);
+            const chatRooms = response.data?.chatRooms || [];
+            
+            // Recalculate unread counts for all chat rooms
+            const updatedChatRooms = await Promise.all(
+                chatRooms.map(async (room) => {
+                    try {
+                        const messagesResponse = await apiClient.getChatMessages(room.id);
+                        if (!messagesResponse.error && messagesResponse.data?.messages) {
+                            const messages = messagesResponse.data.messages;
+                            const actualUnreadCount = messages.filter(msg => 
+                                !msg.isRead && msg.senderId !== currentUserId
+                            ).length;
+                            return { ...room, unreadCount: actualUnreadCount };
+                        }
+                        return room;
+                    } catch (error) {
+                        console.error('Error calculating unread count for room:', room.id, error);
+                        return room;
+                    }
+                })
+            );
+            
+            setChatRooms(updatedChatRooms);
         } catch (error) {
             showToast("error", "Error", "Failed to load chat rooms");
         }
@@ -200,7 +221,20 @@ export default function MessagesPage() {
             if (response.error) {
                 throw new Error(response.error);
             }
-            setMessages(response.data?.messages || []);
+            const messages = response.data?.messages || [];
+            setMessages(messages);
+            
+            // Recalculate unread count based on actual messages
+            const actualUnreadCount = messages.filter(msg => 
+                !msg.isRead && msg.senderId !== currentUserId
+            ).length;
+            
+            // Update chat room with correct unread count
+            setChatRooms((prev) => prev.map(room => 
+                room.id === chatRoomId 
+                    ? { ...room, unreadCount: actualUnreadCount }
+                    : room
+            ));
         } catch (error) {
             showToast("error", "Error", "Failed to load messages");
         } finally {
@@ -240,6 +274,17 @@ export default function MessagesPage() {
 
             setMessages((prev) => [...prev, optimisticMessage]);
 
+            // Update chat room's last message optimistically
+            setChatRooms((prev) => prev.map(room => 
+                room.id === selectedChat.id 
+                    ? { 
+                        ...room, 
+                        lastMessage: optimisticMessage,
+                        updatedAt: new Date().toISOString()
+                    }
+                    : room
+            ));
+
             // Send via API
             const response = await apiClient.sendMessage({
                 chatRoomId: selectedChat.id,
@@ -260,6 +305,17 @@ export default function MessagesPage() {
             // Send via socket for real-time
             socket.sendMessage(selectedChat.id, realMessage);
 
+            // Update the chat room's last message immediately
+            setChatRooms((prev) => prev.map(room => 
+                room.id === selectedChat.id 
+                    ? { 
+                        ...room, 
+                        lastMessage: realMessage,
+                        updatedAt: new Date().toISOString()
+                    }
+                    : room
+            ));
+
         } catch (error) {
             showToast("error", "Error", "Failed to send message");
             // Revert optimistic update
@@ -277,19 +333,38 @@ export default function MessagesPage() {
 
     // Mark all messages as read when opening chat
     useEffect(() => {
-        if (selectedChat) {
-            messages.forEach((msg) => {
-                if (!msg.isRead && msg.senderId !== currentUserId) {
+        if (selectedChat && messages.length > 0) {
+            const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== currentUserId);
+            if (unreadMessages.length > 0) {
+                // Mark messages as read
+                unreadMessages.forEach((msg) => {
                     socket.markMessageAsRead(selectedChat.id, msg.id, currentUserId);
-                }
-            });
+                });
+                
+                // Update unread count in chat rooms - set to 0 since we're reading all messages
+                setChatRooms((prev) => prev.map(room => 
+                    room.id === selectedChat.id 
+                        ? { ...room, unreadCount: 0 }
+                        : room
+                ));
+                
+            } else {
+                // If no unread messages, still set unread count to 0
+                setChatRooms((prev) => prev.map(room => 
+                    room.id === selectedChat.id 
+                        ? { ...room, unreadCount: 0 }
+                        : room
+                ));
+            }
         }
     }, [selectedChat, messages, currentUserId, socket]);
 
     const createNewChat = async () => {
+        console.log('================================>>>>>>>>>>>>', selectedUsers)
         if (selectedUsers.length === 0) return;
 
         try {
+            
             const response = await apiClient.createChatRoom({
                 participantIds: selectedUsers.map(u => u.id),
                 name: selectedUsers.length > 1 ? `Group Chat (${selectedUsers.length} members)` : undefined
@@ -300,6 +375,7 @@ export default function MessagesPage() {
             }
 
             const newChatRoom = response.data;
+            
             setChatRooms(prev => [newChatRoom, ...prev]);
             setSelectedChat(newChatRoom);
             setShowNewChatDialog(false);
@@ -318,8 +394,16 @@ export default function MessagesPage() {
         if (chat.isGroup) {
             return chat.name || `Group (${chat.participants.length} members)`;
         }
+        
         const otherParticipant = chat.participants.find(p => p.id !== currentUserId);
-        return otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : 'Unknown User';
+        
+        if (!otherParticipant) {
+            console.warn('No other participant found for chat:', chat.id);
+            return 'Unknown User';
+        }
+        
+        const chatName = `${otherParticipant.firstName} ${otherParticipant.lastName}`;
+        return chatName;
     };
 
     const getChatAvatar = (chat: ChatRoom) => {
@@ -412,34 +496,34 @@ export default function MessagesPage() {
         <div className="grid">
             <div className="col-12">
                 <div className="flex h-screen bg-white border-round shadow-1">
-                    {/* Chat Sidebar */}
-                    <div className="w-4 border-right-1 surface-border flex flex-column">
-                        {/* Header */}
-                        <div className="p-3 border-bottom-1 surface-border">
-                            <div className="flex align-items-center justify-content-between mb-3">
-                                <h2 className="text-xl font-bold m-0">Messages</h2>
-                                <Button
-                                    icon="pi pi-plus"
-                                    size="small"
-                                    rounded
-                                    onClick={() => setShowNewChatDialog(true)}
-                                    tooltip="New Chat"
-                                />
-                            </div>
-                            <span className="p-input-icon-left w-full">
-                                <i className="pi pi-search" />
-                                <InputText
-                                    value={chatSearchTerm}
-                                    onChange={(e) => setChatSearchTerm(e.target.value)}
-                                    placeholder="Search chats..."
-                                    className="w-full"
-                                />
-                            </span>
-                        </div>
+                                         {/* Chat Sidebar */}
+                     <div className="w-4 border-right-1 surface-border flex flex-column min-h-0">
+                         {/* Header */}
+                         <div className="p-3 border-bottom-1 surface-border flex-shrink-0">
+                             <div className="flex align-items-center justify-content-between mb-3">
+                                 <h2 className="text-xl font-bold m-0">Messages</h2>
+                                 <Button
+                                     icon="pi pi-plus"
+                                     size="small"
+                                     rounded
+                                     onClick={() => setShowNewChatDialog(true)}
+                                     tooltip="New Chat"
+                                 />
+                             </div>
+                             <span className="p-input-icon-left w-full">
+                                 <i className="pi pi-search" />
+                                 <InputText
+                                     value={chatSearchTerm}
+                                     onChange={(e) => setChatSearchTerm(e.target.value)}
+                                     placeholder="Search chats..."
+                                     className="w-full"
+                                 />
+                             </span>
+                         </div>
 
-                        {/* Chat List */}
-                        <ScrollPanel className="flex-1">
-                            <div className="p-2">
+                         {/* Chat List */}
+                         <ScrollPanel className="flex-1 overflow-hidden" style={{ height: 'calc(100vh - 120px)' }}>
+                             <div className="p-2">
                                 {filteredChatRooms.map((chat) => (
                                     <div
                                         key={chat.id}
@@ -476,7 +560,12 @@ export default function MessagesPage() {
                                                     </span>
                                                 </div>
                                                 {chat.lastMessage && (
-                                                    <p className="m-0 text-xs opacity-70 truncate">
+                                                    <p className="m-0 text-xs opacity-70 truncate" style={{ 
+                                                        whiteSpace: 'nowrap', 
+                                                        overflow: 'hidden', 
+                                                        textOverflow: 'ellipsis',
+                                                        maxWidth: '100%'
+                                                    }}>
                                                         {chat.lastMessage.senderId === currentUserId ? 'You: ' : ''}
                                                         {chat.lastMessage.content}
                                                     </p>
@@ -489,8 +578,8 @@ export default function MessagesPage() {
                         </ScrollPanel>
                     </div>
 
-                    {/* Main Chat Area */}
-                    <div className="flex-1 flex flex-column">
+                                         {/* Main Chat Area */}
+                     <div className="flex-1 flex flex-column min-h-0">
                         {selectedChat ? (
                             <>
                                 {/* Chat Header */}
@@ -528,8 +617,8 @@ export default function MessagesPage() {
                                     </div>
                                 </div>
 
-                                {/* Messages Area */}
-                                <ScrollPanel className="flex-1 px-3">
+                                                                 {/* Messages Area */}
+                                 <ScrollPanel className="flex-1 overflow-hidden px-3" style={{ height: 'calc(100vh - 200px)' }}>
                                     {messagesLoading ? (
                                         <div className="flex flex-column gap-3">
                                             {Array.from({ length: 5 }).map((_, i) => (

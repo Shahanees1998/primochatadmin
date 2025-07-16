@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const event = await prisma.event.findUnique({
+    const event = await prisma.trestleBoard.findUnique({
       where: { id: params.id },
       include: {
         members: {
@@ -59,15 +59,16 @@ export async function PUT(
       description,
       startDate,
       endDate,
+      startTime,
+      endTime,
       location,
       category,
-      type,
       isRSVP,
       maxAttendees,
     } = await request.json();
 
     // Check if event exists
-    const existingEvent = await prisma.event.findUnique({
+    const existingEvent = await prisma.trestleBoard.findUnique({
       where: { id: params.id },
     });
 
@@ -85,16 +86,28 @@ export async function PUT(
     if (description !== undefined) updateData.description = description;
     if (startDate) updateData.startDate = new Date(startDate);
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (startTime !== undefined) updateData.startTime = startTime;
+    if (endTime !== undefined) updateData.endTime = endTime;
     if (location !== undefined) updateData.location = location;
     if (category) updateData.category = category;
-    if (type) updateData.type = type;
     if (isRSVP !== undefined) updateData.isRSVP = isRSVP;
     if (maxAttendees !== undefined) updateData.maxAttendees = maxAttendees ? parseInt(maxAttendees) : null;
 
     // Update event
-    const event = await prisma.event.update({
+    const updatedEvent = await prisma.trestleBoard.update({
       where: { id: params.id },
-      data: updateData,
+      data: {
+        title,
+        description,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        startTime,
+        endTime,
+        location,
+        category,
+        isRSVP: isRSVP || false,
+        maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
+      },
       include: {
         members: {
           include: {
@@ -104,6 +117,7 @@ export async function PUT(
                 firstName: true,
                 lastName: true,
                 email: true,
+                phone: true,
               },
             },
           },
@@ -116,7 +130,7 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json(event);
+    return NextResponse.json(updatedEvent);
   } catch (error) {
     console.error('Update event error:', error);
     const err = error as any;
@@ -140,7 +154,7 @@ export async function DELETE(
 ) {
   try {
     // Check if event exists
-    const existingEvent = await prisma.event.findUnique({
+    const existingEvent = await prisma.trestleBoard.findUnique({
       where: { id: params.id },
     });
 
@@ -152,7 +166,7 @@ export async function DELETE(
     }
 
     // Delete event (this will cascade delete related records)
-    await prisma.event.delete({
+    await prisma.trestleBoard.delete({
       where: { id: params.id },
     });
 

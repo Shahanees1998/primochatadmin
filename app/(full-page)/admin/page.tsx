@@ -15,7 +15,7 @@ import { apiClient } from "@/lib/apiClient";
 interface DashboardStats {
     totalUsers: number;
     pendingApprovals: number;
-    activeEvents: number;
+    activeTrestleBoards: number;
     supportRequests: number;
     documents: number;
 }
@@ -33,7 +33,7 @@ interface RecentActivity {
 interface GrowthData {
     labels: string[];
     newMembers: number[];
-    events: number[];
+    trestleBoards: number[];
 }
 
 export default function AdminDashboard() {
@@ -42,7 +42,7 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState<DashboardStats>({
         totalUsers: 0,
         pendingApprovals: 0,
-        activeEvents: 0,
+        activeTrestleBoards: 0,
         supportRequests: 0,
         documents: 0
     });
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
     const [growthData, setGrowthData] = useState<GrowthData>({
         labels: [],
         newMembers: [],
-        events: []
+        trestleBoards: []
     });
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -116,8 +116,8 @@ export default function AdminDashboard() {
                 tension: 0.4,
             },
             {
-                label: 'Events',
-                data: growthData.events,
+                label: 'TrestleBoards',
+                data: growthData.trestleBoards,
                 borderColor: '#2196F3',
                 backgroundColor: 'rgba(33, 150, 243, 0.1)',
                 tension: 0.4,
@@ -153,7 +153,7 @@ export default function AdminDashboard() {
     const getActivityTypeLabel = (type: string) => {
         switch (type) {
             case "USER_REGISTRATION": return "Registration";
-            case "EVENT_CREATED": return "Event";
+            case "EVENT_CREATED": return "TrestleBoard";
             case "SUPPORT_REQUEST": return "Support";
             case "DOCUMENT_UPLOADED": return "Document";
             default: return type;
@@ -258,9 +258,9 @@ export default function AdminDashboard() {
                         </Card>
                     </div>
                     <div className="col-12 md:col-6 lg:col-2">
-                        <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/events')}>
-                            <div className="text-3xl font-bold text-green-500">{stats.activeEvents}</div>
-                            <div className="text-600">Active Events</div>
+                        <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/trestle-board')}>
+                            <div className="text-3xl font-bold text-green-500">{stats.activeTrestleBoards}</div>
+                            <div className="text-600">Active TrestleBoards</div>
                         </Card>
                     </div>
                     <div className="col-12 md:col-6 lg:col-2">
@@ -306,11 +306,11 @@ export default function AdminDashboard() {
                         <div className="flex align-items-center justify-content-center" style={{ height: '300px' }}>
                             <div className="text-600">Loading chart data...</div>
                         </div>
-                    ) : growthData.newMembers.every(val => val === 0) && growthData.events.every(val => val === 0) ? (
+                    ) : growthData.newMembers.every(val => val === 0) && growthData.trestleBoards.every(val => val === 0) ? (
                         <div className="flex align-items-center justify-content-center flex-column" style={{ height: '300px' }}>
                             <i className="pi pi-chart-line text-4xl text-gray-400 mb-3"></i>
                             <div className="text-600 text-center">No growth data available</div>
-                            <div className="text-sm text-gray-500 text-center">Growth data will appear here as users and events are created</div>
+                            <div className="text-sm text-gray-500 text-center">Growth data will appear here as users and trestleBoards are created</div>
                         </div>
                     ) : (
                         <Chart type="line" data={chartData} options={chartOptions} style={{ height: '300px' }} />

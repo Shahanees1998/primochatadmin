@@ -16,10 +16,11 @@ const AppSidebar = () => {
     };
     return (
         <>
-            <div className="sidebar-header mr-6">
-                <Link href="/admin" className="app-logo flex items-center gap-2">
-                <Image src="/images/logo.svg" alt="PrimoChat Logo" width={32} height={32} />
-                   <div style={{fontSize: '1.5rem', fontWeight: 'bold', fontStyle: 'italic'}}>PRIMOCHAT</div>
+            <div className="sidebar-header">
+                <Link style={{display:'flex', alignItems: 'center' }} href="/admin" className="app-logo flex items-center justify-content-center gap-3">
+                    <img src="/images/logo.svg" alt="PrimoChat Logo"  style={{height:'100px'}}/>
+                    <div style={{fontSize:'2rem'}}>|</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', fontStyle: 'italic' }}>Admin</div>
                 </Link>
                 <button
                     className="layout-sidebar-anchor p-link z-2 mb-2"

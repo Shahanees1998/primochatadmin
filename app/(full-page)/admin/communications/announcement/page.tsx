@@ -299,8 +299,8 @@ export default function AnnouncementPage() {
                     </div>
 
                     <div className="grid">
-                        <div className="col-12">
-                            <label htmlFor="title" className="font-bold">Announcement Title *</label>
+                    <div className="col-12 md:col-6">
+                    <label htmlFor="title" className="font-bold">Announcement Title *</label>
                             <InputText
                                 id="title"
                                 value={formData.title}
@@ -309,7 +309,17 @@ export default function AnnouncementPage() {
                                 className="w-full"
                             />
                         </div>
-
+                        <div className="col-12 md:col-6">
+                            <label htmlFor="priority" className="font-bold">Priority</label>
+                            <Dropdown
+                                id="priority"
+                                value={formData.priority}
+                                options={priorityOptions}
+                                onChange={(e) => setFormData({ ...formData, priority: e.value })}
+                                placeholder="Select Priority"
+                                className="w-full"
+                            />
+                        </div>
                         <div className="col-12">
                             <label htmlFor="message" className="font-bold">Message *</label>
                             <InputTextarea
@@ -322,118 +332,6 @@ export default function AnnouncementPage() {
                             />
                         </div>
 
-                        <div className="col-12 md:col-6">
-                            <label htmlFor="priority" className="font-bold">Priority</label>
-                            <Dropdown
-                                id="priority"
-                                value={formData.priority}
-                                options={priorityOptions}
-                                onChange={(e) => setFormData({ ...formData, priority: e.value })}
-                                placeholder="Select Priority"
-                                className="w-full"
-                            />
-                        </div>
-
-                        <div className="col-12 md:col-6">
-                            <label htmlFor="scheduledDate" className="font-bold">Schedule Date (Optional)</label>
-                            <Calendar
-                                id="scheduledDate"
-                                value={formData.scheduledDate}
-                                onChange={(e) => {
-                                    const selectedDate = e.value as Date;
-                                    setFormData({ 
-                                        ...formData, 
-                                        scheduledDate: selectedDate,
-                                        sendImmediately: !selectedDate // Auto-uncheck "Send Immediately" when date is selected
-                                    });
-                                }}
-                                showIcon
-                                showTime
-                                dateFormat="dd/mm/yy"
-                                placeholder="Select date and time"
-                                disabled={formData.sendImmediately}
-                                className="w-full"
-                            />
-                            {formData.sendImmediately && (
-                                <small className="text-500 block mt-1">
-                                    Uncheck "Send Immediately" to enable date scheduling
-                                </small>
-                            )}
-                        </div>
-
-                        <div className="col-12">
-                            <label className="font-bold mb-3 block">Target Audience *</label>
-                            <div className="grid">
-                                {audienceOptions.map((option) => (
-                                    <div key={option.value} className="col-12 md:col-6 lg:col-4">
-                                        <div className="flex align-items-center">
-                                            <input
-                                                type="checkbox"
-                                                id={option.value}
-                                                checked={formData.targetAudience.includes(option.value)}
-                                                onChange={() => handleAudienceChange(option.value)}
-                                                className="mr-2"
-                                            />
-                                            <label htmlFor={option.value} className="ml-2">
-                                                {option.label}
-                                            </label>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="col-12">
-                            <label className="font-bold mb-3 block">Delivery Options</label>
-                            <div className="grid">
-                                <div className="col-12 md:col-4">
-                                    <div className="flex align-items-center">
-                                        <input
-                                            type="checkbox"
-                                            id="sendImmediately"
-                                            checked={formData.sendImmediately}
-                                            onChange={e => setFormData({ 
-                                                ...formData, 
-                                                sendImmediately: e.target.checked,
-                                                scheduledDate: e.target.checked ? null : formData.scheduledDate // Clear date when "Send Immediately" is checked
-                                            })}
-                                            className="mr-2"
-                                        />
-                                        <label htmlFor="sendImmediately" className="ml-2">
-                                            Send Immediately
-                                        </label>
-                                    </div>
-                                </div>
-                                <div className="col-12 md:col-4">
-                                    <div className="flex align-items-center">
-                                        <input
-                                            type="checkbox"
-                                            id="includeEmail"
-                                            checked={formData.includeEmail}
-                                            onChange={e => setFormData({ ...formData, includeEmail: e.target.checked })}
-                                            className="mr-2"
-                                        />
-                                        <label htmlFor="includeEmail" className="ml-2">
-                                            Send Email
-                                        </label>
-                                    </div>
-                                </div>
-                                <div className="col-12 md:col-4">
-                                    <div className="flex align-items-center">
-                                        <input
-                                            type="checkbox"
-                                            id="includePushNotification"
-                                            checked={formData.includePushNotification}
-                                            onChange={e => setFormData({ ...formData, includePushNotification: e.target.checked })}
-                                            className="mr-2"
-                                        />
-                                        <label htmlFor="includePushNotification" className="ml-2">
-                                            Push Notification
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         <div className="col-12">
                             <div className="flex gap-2 justify-content-end">

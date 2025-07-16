@@ -11,32 +11,31 @@ import { Skeleton } from "primereact/skeleton";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Dialog } from "primereact/dialog";
-import { Calendar } from "primereact/calendar";
-import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Dropdown } from "primereact/dropdown";
 import { apiClient } from "@/lib/apiClient";
 
-interface Event {
+interface TrestleBoard {
     id: string;
     title: string;
     description?: string;
     startDate: string;
     endDate?: string;
+    startTime?: string;
+    endTime?: string;
     location?: string;
     category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
-    type: 'REGULAR' | 'SOCIAL' | 'DISTRICT' | 'EMERGENT';
     isRSVP: boolean;
     maxAttendees?: number;
     createdAt: string;
     updatedAt: string;
-    members?: EventMember[];
+    members?: TrestleBoardMember[];
     _count?: {
         members: number;
     };
 }
 
-interface EventMember {
+interface TrestleBoardMember {
     id: string;
     status: 'PENDING' | 'CONFIRMED' | 'DECLINED' | 'MAYBE';
     createdAt: string;
@@ -54,14 +53,14 @@ interface RSVPFormData {
     notes?: string;
 }
 
-export default function EventViewPage() {
+export default function TrestleBoardViewPage() {
     const params = useParams();
     const router = useRouter();
-    const [event, setEvent] = useState<Event | null>(null);
+    const [trestleBoard, setTrestleBoard] = useState<TrestleBoard | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showRSVPDialog, setShowRSVPDialog] = useState(false);
-    const [selectedMember, setSelectedMember] = useState<EventMember | null>(null);
+    const [selectedMember, setSelectedMember] = useState<TrestleBoardMember | null>(null);
     const [rsvpForm, setRSVPForm] = useState<RSVPFormData>({
         status: 'CONFIRMED',
         notes: ''
@@ -69,28 +68,28 @@ export default function EventViewPage() {
     const [saveLoading, setSaveLoading] = useState(false);
     const toast = useRef<Toast>(null);
 
-    const eventId = params.id as string;
+    const trestleBoardId = params.id as string;
 
     useEffect(() => {
-        if (eventId) {
-            loadEvent();
+        if (trestleBoardId) {
+            loadTrestleBoard();
         }
-    }, [eventId]);
+    }, [trestleBoardId]);
 
-    const loadEvent = async () => {
+    const loadTrestleBoard = async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await apiClient.getEvent(eventId);
+            const response = await apiClient.getTrestleBoard(trestleBoardId);
             
             if (response.error) {
                 throw new Error(response.error);
             }
 
-            setEvent(response.data);
+            setTrestleBoard(response.data);
         } catch (error) {
-            setError("Failed to load event. Please check your connection or try again later.");
-            showToast("error", "Error", "Failed to load event");
+            setError("Failed to load Trestle Board. Please check your connection or try again later.");
+            showToast("error", "Error", "Failed to load Trestle Board");
         } finally {
             setLoading(false);
         }
@@ -108,16 +107,6 @@ export default function EventViewPage() {
             case "PRACTICE": return "secondary";
             case "CGP": return "success";
             case "SOCIAL": return "success";
-            default: return "info";
-        }
-    };
-
-    const getTypeSeverity = (type: string) => {
-        switch (type) {
-            case "REGULAR": return "info";
-            case "SOCIAL": return "success";
-            case "DISTRICT": return "warning";
-            case "EMERGENT": return "danger";
             default: return "info";
         }
     };
@@ -142,7 +131,7 @@ export default function EventViewPage() {
         }
     };
 
-    const openRSVPDialog = (member: EventMember) => {
+    const openRSVPDialog = (member: TrestleBoardMember) => {
         setSelectedMember(member);
         setRSVPForm({
             status: member.status === 'PENDING' ? 'CONFIRMED' : member.status,
@@ -162,7 +151,7 @@ export default function EventViewPage() {
             setShowRSVPDialog(false);
             
             // Reload event to get updated data
-            await loadEvent();
+            await loadTrestleBoard();
         } catch (error) {
             showToast("error", "Error", "Failed to update RSVP status");
         } finally {
@@ -203,7 +192,7 @@ export default function EventViewPage() {
         return `${diffMinutes}m`;
     };
 
-    const memberBodyTemplate = (rowData: EventMember) => {
+    const memberBodyTemplate = (rowData: TrestleBoardMember) => {
         return (
             <div className="flex align-items-center gap-2">
                 <Avatar
@@ -220,7 +209,7 @@ export default function EventViewPage() {
         );
     };
 
-    const statusBodyTemplate = (rowData: EventMember) => {
+    const statusBodyTemplate = (rowData: TrestleBoardMember) => {
         return (
             <Tag 
                 value={getRSVPStatusLabel(rowData.status)} 
@@ -229,7 +218,7 @@ export default function EventViewPage() {
         );
     };
 
-    const actionBodyTemplate = (rowData: EventMember) => {
+    const actionBodyTemplate = (rowData: TrestleBoardMember) => {
         return (
             <Button
                 icon="pi pi-pencil"
@@ -275,21 +264,21 @@ export default function EventViewPage() {
         );
     }
 
-    if (error || !event) {
+    if (error || !trestleBoard) {
         return (
             <div className="grid">
                 <div className="col-12">
                     <Card>
                         <div className="text-center p-4">
                             <i className="pi pi-exclamation-triangle text-6xl text-orange-500 mb-3"></i>
-                            <h2 className="text-2xl font-bold mb-2">Event Not Found</h2>
+                            <h2 className="text-2xl font-bold mb-2">Trestle Board Not Found</h2>
                             <p className="text-600 mb-4">
-                                {error || "The event you're looking for doesn't exist or has been removed."}
+                                {error || "The Trestle Board you're looking for doesn't exist or has been removed."}
                             </p>
                             <Button 
-                                label="Back to Events" 
+                                label="Back to Trestle Board" 
                                 icon="pi pi-arrow-left" 
-                                onClick={() => router.push('/admin/events')}
+                                onClick={() => router.push('/admin/trestle-board')}
                                 severity="secondary"
                             />
                         </div>
@@ -305,58 +294,65 @@ export default function EventViewPage() {
                 {/* Header */}
                 <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3 mb-4">
                     <div className="flex flex-column">
-                        <h1 className="text-3xl font-bold m-0">{event.title}</h1>
+                        <h1 className="text-3xl font-bold m-0">{trestleBoard.title}</h1>
                         <div className="flex align-items-center gap-2 mt-2">
-                            <Tag value={event.category} severity={getCategorySeverity(event.category)} />
-                            <Tag value={event.type} severity={getTypeSeverity(event.type)} />
-                            {event.isRSVP && (
+                            <Tag value={trestleBoard.category} severity={getCategorySeverity(trestleBoard.category)} />
+                            {trestleBoard.isRSVP && (
                                 <Tag value="RSVP Required" severity="warning" />
                             )}
                         </div>
                     </div>
                     <div className="flex gap-2">
                         <Button
-                            label="Back to Events"
+                            label="Back to Trestle Board"
                             icon="pi pi-arrow-left"
-                            onClick={() => router.push('/admin/events')}
+                            onClick={() => router.push('/admin/trestle-board')}
                             severity="secondary"
                         />
                         {/* <Button
-                            label="Edit Event"
+                            label="Edit Trestle Board"
                             icon="pi pi-pencil"
-                            onClick={() => router.push(`/admin/events/edit/${event.id}`)}
+                            onClick={() => router.push(`/admin/trestle-board/edit/${trestleBoard.id}`)}
                             severity="info"
                         /> */}
                     </div>
                 </div>
 
                 <div className="grid">
-                    {/* Event Details Card */}
+                    {/* Trestle Board Details Card */}
                     <div className="col-12 lg:col-8">
                         <Card>
                             <div className="grid">
                                 <div className="col-12 md:col-6">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-semibold mb-2">Event Information</h3>
+                                        <h3 className="text-lg font-semibold mb-2">Trestle Board Information</h3>
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="font-bold text-600">Start Date & Time</label>
-                                                <p className="text-lg">{formatDate(event.startDate)}</p>
+                                                <p className="text-lg">{formatDate(trestleBoard.startDate)}</p>
                                             </div>
-                                            {event.endDate && (
+                                            <div>
+                                                <label className="font-bold text-600">Start Time</label>
+                                                <p className="text-lg">{trestleBoard.startTime || '-'}</p>
+                                            </div>
+                                            {trestleBoard.endDate && (
                                                 <div>
                                                     <label className="font-bold text-600">End Date & Time</label>
-                                                    <p className="text-lg">{formatDate(event.endDate)}</p>
+                                                    <p className="text-lg">{formatDate(trestleBoard.endDate)}</p>
                                                 </div>
                                             )}
                                             <div>
-                                                <label className="font-bold text-600">Duration</label>
-                                                <p className="text-lg">{getDuration(event.startDate, event.endDate)}</p>
+                                                <label className="font-bold text-600">End Time</label>
+                                                <p className="text-lg">{trestleBoard.endTime || '-'}</p>
                                             </div>
-                                            {event.location && (
+                                            <div>
+                                                <label className="font-bold text-600">Duration</label>
+                                                <p className="text-lg">{getDuration(trestleBoard.startDate, trestleBoard.endDate)}</p>
+                                            </div>
+                                            {trestleBoard.location && (
                                                 <div>
                                                     <label className="font-bold text-600">Location</label>
-                                                    <p className="text-lg">{event.location}</p>
+                                                    <p className="text-lg">{trestleBoard.location}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -364,34 +360,30 @@ export default function EventViewPage() {
                                 </div>
                                 <div className="col-12 md:col-6">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-semibold mb-2">Event Details</h3>
+                                        <h3 className="text-lg font-semibold mb-2">Trestle Board Details</h3>
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="font-bold text-600">Category</label>
-                                                <p className="text-lg">{event.category.replace('_', ' ')}</p>
-                                            </div>
-                                            <div>
-                                                <label className="font-bold text-600">Type</label>
-                                                <p className="text-lg">{event.type}</p>
+                                                <p className="text-lg">{trestleBoard.category.replace('_', ' ')}</p>
                                             </div>
                                             <div>
                                                 <label className="font-bold text-600">RSVP Required</label>
-                                                <p className="text-lg">{event.isRSVP ? 'Yes' : 'No'}</p>
+                                                <p className="text-lg">{trestleBoard.isRSVP ? 'Yes' : 'No'}</p>
                                             </div>
-                                            {event.maxAttendees && (
+                                            {trestleBoard.maxAttendees && (
                                                 <div>
                                                     <label className="font-bold text-600">Max Attendees</label>
-                                                    <p className="text-lg">{event.maxAttendees}</p>
+                                                    <p className="text-lg">{trestleBoard.maxAttendees}</p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                {event.description && (
+                                {trestleBoard.description && (
                                     <div className="col-12">
                                         <div className="mb-4">
                                             <h3 className="text-lg font-semibold mb-2">Description</h3>
-                                            <p className="text-lg line-height-3">{event.description}</p>
+                                            <p className="text-lg line-height-3">{trestleBoard.description}</p>
                                         </div>
                                     </div>
                                 )}
@@ -402,31 +394,31 @@ export default function EventViewPage() {
                     {/* Event Stats Card */}
                     <div className="col-12 lg:col-4">
                         <Card>
-                            <h3 className="text-lg font-semibold mb-3">Event Statistics</h3>
+                            <h3 className="text-lg font-semibold mb-3">Trestle Board Statistics</h3>
                             <div className="space-y-4">
                                 <div className="text-center p-3 bg-blue-50 border-round">
                                     <div className="text-2xl font-bold text-blue-600">
-                                        {event._count?.members || 0}
+                                        {trestleBoard._count?.members || 0}
                                     </div>
                                     <div className="text-600">Total Attendees</div>
                                 </div>
-                                {event.maxAttendees && (
+                                {trestleBoard.maxAttendees && (
                                     <div className="text-center p-3 bg-green-50 border-round">
                                         <div className="text-2xl font-bold text-green-600">
-                                            {event.maxAttendees - (event._count?.members || 0)}
+                                            {trestleBoard.maxAttendees - (trestleBoard._count?.members || 0)}
                                         </div>
                                         <div className="text-600">Available Spots</div>
                                     </div>
                                 )}
                                 <div className="text-center p-3 bg-orange-50 border-round">
                                     <div className="text-2xl font-bold text-orange-600">
-                                        {event.members?.filter(m => m.status === 'CONFIRMED').length || 0}
+                                        {trestleBoard.members?.filter(m => m.status === 'CONFIRMED').length || 0}
                                     </div>
                                     <div className="text-600">Confirmed</div>
                                 </div>
                                 <div className="text-center p-3 bg-red-50 border-round">
                                     <div className="text-2xl font-bold text-red-600">
-                                        {event.members?.filter(m => m.status === 'DECLINED').length || 0}
+                                        {trestleBoard.members?.filter(m => m.status === 'DECLINED').length || 0}
                                     </div>
                                     <div className="text-600">Declined</div>
                                 </div>
@@ -435,12 +427,12 @@ export default function EventViewPage() {
                     </div>
 
                     {/* Attendees List */}
-                    {event.isRSVP && event.members && event.members.length > 0 && (
+                    {trestleBoard.isRSVP && trestleBoard.members && trestleBoard.members.length > 0 && (
                         <div className="col-12">
                             <Card>
                                 <h3 className="text-lg font-semibold mb-3">Attendees</h3>
                                 <DataTable
-                                    value={event.members}
+                                    value={trestleBoard.members}
                                     paginator
                                     rows={10}
                                     responsiveLayout="scroll"

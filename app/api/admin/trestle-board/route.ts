@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
-    const type = searchParams.get('type') || '';
     const sortField = searchParams.get('sortField');
     const sortOrder = searchParams.get('sortOrder');
 
@@ -30,9 +29,7 @@ export async function GET(request: NextRequest) {
       where.category = category;
     }
 
-    if (type) {
-      where.type = type;
-    }
+
 
     // Build orderBy clause
     let orderBy: any = { startDate: 'desc' };
@@ -43,8 +40,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get events with pagination
-    const [events, total] = await Promise.all([
-      prisma.event.findMany({
+    const [trestleBoards, total] = await Promise.all([
+      prisma.trestleBoard.findMany({
         where,
         include: {
           members: {
@@ -69,11 +66,10 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy,
       }),
-      prisma.event.count({ where }),
+      prisma.trestleBoard.count({ where }),
     ]);
-
     return NextResponse.json({
-      events,
+      trestleBoards,
       pagination: {
         page,
         limit,
@@ -98,30 +94,32 @@ export async function POST(request: NextRequest) {
       description,
       startDate,
       endDate,
+      startTime,
+      endTime,
       location,
       category,
-      type,
       isRSVP,
       maxAttendees,
     } = await request.json();
 
-    if (!title || !startDate || !category || !type) {
+    if (!title || !startDate || !category) {
       return NextResponse.json(
-        { error: 'Title, start date, category, and type are required' },
+        { error: 'Title, start date, and category are required' },
         { status: 400 }
       );
     }
 
     // Create event
-    const event = await prisma.event.create({
+    const event = await prisma.trestleBoard.create({
       data: {
         title,
         description,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
+        startTime,
+        endTime,
         location,
         category,
-        type,
         isRSVP: isRSVP || false,
         maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
       },

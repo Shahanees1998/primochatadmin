@@ -57,23 +57,23 @@ const AppMenu = () => {
             ],
         },
         {
-            label: "Event Management",
+            label: "Trestle Board",
             icon: "pi pi-calendar",
             items: [
                 {
-                    label: "All Events",
+                    label: "All Boards",
                     icon: "pi pi-fw pi-calendar",
-                    to: "/admin/events",
+                    to: "/admin/trestle-board",
                 },
                 // {
-                //     label: "Create Event",
+                //     label: "Create Board",
                 //     icon: "pi pi-fw pi-plus",
                 //     to: "/admin/events/create",
                 // },
                 {
-                    label: "Event Categories",
+                    label: "Board Categories",
                     icon: "pi pi-fw pi-tags",
-                    to: "/admin/events/categories",
+                    to: "/admin/trestle-board/categories",
                 },
             ],
         },
@@ -160,11 +160,11 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-cog",
                     to: "/admin/settings",
                 },
-                {
-                    label: "Permissions",
-                    icon: "pi pi-fw pi-lock",
-                    to: "/admin/settings/permissions",
-                },
+                // {
+                //     label: "Permissions",
+                //     icon: "pi pi-fw pi-lock",
+                //     to: "/admin/settings/permissions",
+                // },
             ],
         },
     ];

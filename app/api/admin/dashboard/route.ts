@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
         const [
             totalUsers,
             pendingApprovals,
-            activeEvents,
+            activeTrestleBoards,
             supportRequests,
             documents,
             recentActivity
@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
                 where: { status: 'PENDING' }
             }),
             
-            // Active events (events that haven't ended yet)
-            prisma.event.count({
+            // Active trestleBoards (trestleBoards that haven't ended yet)
+            prisma.trestleBoard.count({
                 where: {
                     OR: [
                         { endDate: null },
@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
                     }
                 }),
                 
-                // Recent events
-                prisma.event.findMany({
+                // Recent trestleBoards
+                prisma.trestleBoard.findMany({
                     take: 3,
                     orderBy: { createdAt: 'desc' },
                     select: {
@@ -117,13 +117,13 @@ export async function GET(request: NextRequest) {
                 user: `${user.firstName} ${user.lastName}`,
                 status: user.status
             })),
-            ...recentActivity[1].map(event => ({
-                id: event.id,
+            ...recentActivity[1].map(trestleBoard => ({
+                id: trestleBoard.id,
                 type: 'EVENT_CREATED',
-                description: `New event created: ${event.title}`,
-                timestamp: event.createdAt.toISOString(),
+                description: `New trestleBoard created: ${trestleBoard.title}`,
+                timestamp: trestleBoard.createdAt.toISOString(),
                 user: 'Admin',
-                startDate: event.startDate
+                startDate: trestleBoard.startDate
             })),
             ...recentActivity[2].map(request => ({
                 id: request.id,
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
                             }
                         }
                     }),
-                    prisma.event.count({
+                    prisma.trestleBoard.count({
                         where: {
                             createdAt: {
                                 gte: startDate,
@@ -187,14 +187,14 @@ export async function GET(request: NextRequest) {
         const growthData = {
             labels: ['January', 'February', 'March', 'April', 'May', 'June'],
             newMembers: monthlyStats.map(([users]) => users),
-            events: monthlyStats.map(([, events]) => events)
+            trestleBoards: monthlyStats.map(([, trestleBoards]) => trestleBoards)
         };
 
         return NextResponse.json({
             stats: {
                 totalUsers,
                 pendingApprovals,
-                activeEvents,
+                activeTrestleBoards,
                 supportRequests,
                 documents
             },

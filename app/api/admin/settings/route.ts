@@ -4,7 +4,7 @@ import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 
 export async function GET(request: NextRequest) {
     return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
-        try {
+    try {
 
         // Get settings from database
         const settings = await prisma.systemSettings.findFirst();
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
-        try {
+    try {
 
         const body = await request.json();
         

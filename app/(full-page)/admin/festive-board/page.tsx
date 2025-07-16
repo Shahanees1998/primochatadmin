@@ -15,15 +15,15 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 
 interface FestiveBoard {
-  id: string;
+    id: string;
   month: number;
   year: number;
-  title: string;
-  description?: string;
+    title: string;
+    description?: string;
   createdBy: {
     id: string;
-    firstName: string;
-    lastName: string;
+        firstName: string;
+        lastName: string;
     email: string;
   };
   meals: Array<{
@@ -60,30 +60,30 @@ const monthOptions = [
 // Removed year filter - showing all boards by default
 
 export default function FestiveBoardPage() {
-  const router = useRouter();
+    const router = useRouter();
   const [boards, setBoards] = useState<FestiveBoard[]>([]);
-  const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   // Removed year filter state
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
   const toast = React.useRef<Toast>(null);
 
-  useEffect(() => {
+    useEffect(() => {
     loadBoards();
   }, [searchTerm, currentPage, rowsPerPage]);
 
   const loadBoards = async () => {
     try {
-      setLoading(true);
-      const response = await apiClient.getFestiveBoards({
-        page: currentPage,
-        limit: rowsPerPage,
+        setLoading(true);
+            const response = await apiClient.getFestiveBoards({
+                page: currentPage,
+                limit: rowsPerPage,
         search: searchTerm,
-      });
-      
-      if (response.error) {
+            });
+
+            if (response.error) {
         console.error('API Error:', response.error);
         toast.current?.show({
           severity: 'error',
@@ -100,17 +100,17 @@ export default function FestiveBoardPage() {
         setBoards([]);
         setTotalRecords(0);
       }
-    } catch (error) {
+        } catch (error) {
       console.error('Error loading Festive boards:', error);
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
         detail: 'Failed to load Festive boards'
       });
-    } finally {
-      setLoading(false);
-    }
-  };
+        } finally {
+            setLoading(false);
+        }
+    };
 
   const handleDelete = (board: FestiveBoard) => {
     confirmDialog({
@@ -130,7 +130,7 @@ export default function FestiveBoardPage() {
         detail: 'Festive board deleted successfully'
       });
       loadBoards();
-    } catch (error) {
+        } catch (error) {
       console.error('Error deleting Festive board:', error);
       toast.current?.show({
         severity: 'error',
@@ -190,56 +190,56 @@ export default function FestiveBoardPage() {
   };
 
   const actionsBodyTemplate = (rowData: FestiveBoard) => {
-    return (
-      <div className="flex gap-2">
-        <Button
-          icon="pi pi-eye"
+        return (
+            <div className="flex gap-2">
+                <Button
+                    icon="pi pi-eye"
           className="p-button-sm p-button-outlined"
-          onClick={() => router.push(`/admin/festive-board/${rowData.id}`)}
+                    onClick={() => router.push(`/admin/festive-board/${rowData.id}`)}
           tooltip="View Board"
-        />
-        <Button
-          icon="pi pi-pencil"
+                />
+                <Button
+                    icon="pi pi-pencil"
           className="p-button-sm p-button-outlined"
           onClick={() => router.push(`/admin/festive-board/${rowData.id}/edit`)}
-          tooltip="Edit Board"
-        />
-        <Button
-          icon="pi pi-trash"
+                    tooltip="Edit Board"
+                />
+                <Button
+                    icon="pi pi-trash"
           className="p-button-sm p-button-outlined p-button-danger"
           onClick={() => handleDelete(rowData)}
-          tooltip="Delete Board"
-        />
-      </div>
-    );
-  };
+                    tooltip="Delete Board"
+                />
+            </div>
+        );
+    };
 
   const header = useMemo(() => (
-    <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
-      <div className="flex flex-column">
-        <h2 className="text-2xl font-bold m-0">Festive Board Management</h2>
+        <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
+            <div className="flex flex-column">
+                <h2 className="text-2xl font-bold m-0">Festive Board Management</h2>
         <span className="text-600">Manage monthly meal boards</span>
-      </div>
-      <div className="flex gap-2">
-        <span className="p-input-icon-left">
-          <i className="pi pi-search" />
-          <InputText
+            </div>
+            <div className="flex gap-2">
+                <span className="p-input-icon-left">
+                    <i className="pi pi-search" />
+                    <InputText
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search boards..."
-            className="w-full"
-          />
-        </span>
+                        placeholder="Search boards..."
+                        className="w-full"
+                    />
+                </span>
 
-        <Button
-          label="Create Board"
-          icon="pi pi-plus"
+                <Button
+                    label="Create Board"
+                    icon="pi pi-plus"
           onClick={() => router.push('/admin/festive-board/create')}
-          severity="success"
-        />
+                    severity="success"
+                />
 
-      </div>
-    </div>
+            </div>
+        </div>
   ), [searchTerm]);
 
   const skeletonRows = Array.from({ length: 5 }, (_, i) => ({
@@ -263,7 +263,7 @@ export default function FestiveBoardPage() {
         <Toast ref={toast} />
         <ConfirmDialog />
 
-        <Card>
+                <Card>
           <DataTable
             value={skeletonRows}
             className="p-datatable-sm"
@@ -289,8 +289,8 @@ export default function FestiveBoardPage() {
                   <div className="flex gap-1">
                     <Skeleton width="50px" height="20px" />
                     <Skeleton width="60px" height="20px" />
-                  </div>
-                </div>
+                                            </div>
+                                        </div>
               )}
               style={{ minWidth: '250px' }}
             />
@@ -301,7 +301,7 @@ export default function FestiveBoardPage() {
                 <div className="flex flex-column">
                   <Skeleton width="100px" height="16px" className="mb-1" />
                   <Skeleton width="120px" height="14px" />
-                </div>
+                                    </div>
               )}
               style={{ minWidth: '200px' }}
             />
@@ -318,13 +318,13 @@ export default function FestiveBoardPage() {
                   <Skeleton width="32px" height="32px" />
                   <Skeleton width="32px" height="32px" />
                   <Skeleton width="32px" height="32px" />
-                </div>
+                            </div>
               )}
               style={{ width: '150px' }}
             />
           </DataTable>
         </Card>
-      </div>
+                        </div>
     );
   }
 
@@ -334,19 +334,19 @@ export default function FestiveBoardPage() {
       <ConfirmDialog />
 
       <Card>
-        <DataTable
+                        <DataTable
           value={boards}
-          paginator
-          rows={rowsPerPage}
-          totalRecords={totalRecords}
-          lazy
-          first={(currentPage - 1) * rowsPerPage}
-          onPage={(e) => {
-            setCurrentPage((e.page || 0) + 1);
-            setRowsPerPage(e.rows || 10);
-          }}
-          loading={loading}
-          header={header}
+                            paginator
+                            rows={rowsPerPage}
+                            totalRecords={totalRecords}
+                            lazy
+                            first={(currentPage - 1) * rowsPerPage}
+                            onPage={(e) => {
+                                setCurrentPage((e.page || 0) + 1);
+                                setRowsPerPage(e.rows || 10);
+                            }}
+                            loading={loading}
+                            header={header}
           emptyMessage="No Festive boards found"
           className="p-datatable-sm"
         >
@@ -383,6 +383,6 @@ export default function FestiveBoardPage() {
           />
         </DataTable>
       </Card>
-    </div>
-  );
+        </div>
+    );
 } 

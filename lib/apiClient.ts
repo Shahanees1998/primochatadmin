@@ -198,61 +198,62 @@ class ApiClient {
         return this.post('/users/change-password', { userId, currentPassword, newPassword });
     }
 
-    // Event methods
-    async getEvents(params?: {
+    // TrestleBoard methods
+    async getTrestleBoards(params?: {
         page?: number;
         limit?: number;
         search?: string;
         category?: string;
-        type?: string;
         sortField?: string;
         sortOrder?: number;
     }) {
         return this.get<{
-            events: any[];
+            trestleBoards: any[];
             pagination: {
                 page: number;
                 limit: number;
                 total: number;
                 totalPages: number;
             };
-        }>('/admin/events', params);
+        }>('/admin/trestle-board', params);
     }
 
-    async getEvent(id: string) {
-        return this.get<any>(`/admin/events/${id}`);
+    async getTrestleBoard(id: string) {
+        return this.get<any>(`/admin/trestle-board/${id}`);
     }
 
-    async createEvent(eventData: {
+    async createTrestleBoard(trestleBoardData: {
         title: string;
         description?: string;
         startDate: string;
         endDate?: string;
+        startTime?: string;
+        endTime?: string;
         location?: string;
         category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
-        type: 'REGULAR' | 'SOCIAL' | 'DISTRICT' | 'EMERGENT';
         isRSVP?: boolean;
         maxAttendees?: number;
     }) {
-        return this.post<any>('/admin/events', eventData);
+        return this.post<any>('/admin/trestle-board', trestleBoardData);
     }
 
-    async updateEvent(id: string, eventData: {
+    async updateTrestleBoard(id: string, trestleBoardData: {
         title: string;
         description?: string;
         startDate: string;
         endDate?: string;
+        startTime?: string;
+        endTime?: string;
         location?: string;
         category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
-        type: 'REGULAR' | 'SOCIAL' | 'DISTRICT' | 'EMERGENT';
         isRSVP?: boolean;
         maxAttendees?: number;
     }) {
-        return this.put<any>(`/admin/events/${id}`, eventData);
+        return this.put<any>(`/admin/trestle-board/${id}`, trestleBoardData);
     }
 
-    async deleteEvent(id: string) {
-        return this.delete(`/admin/events/${id}`);
+    async deleteTrestleBoard(id: string) {
+        return this.delete(`/admin/trestle-board/${id}`);
     }
 
     // Document methods
@@ -621,7 +622,7 @@ class ApiClient {
     async createAnnouncement(data: {
         title: string;
         content: string;
-        type: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'EVENT' | 'UPDATE';
+        type: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'UPDATE';
     }) {
         return this.post<any>('/admin/announcements', data);
     }
@@ -629,7 +630,7 @@ class ApiClient {
     async updateAnnouncement(id: string, data: {
         title?: string;
         content?: string;
-        type?: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'EVENT' | 'UPDATE';
+        type?: 'GENERAL' | 'IMPORTANT' | 'URGENT' | 'UPDATE';
     }) {
         return this.put<any>(`/admin/announcements/${id}`, data);
     }
@@ -644,7 +645,7 @@ class ApiClient {
             stats: {
                 totalUsers: number;
                 pendingApprovals: number;
-                activeEvents: number;
+                activeTrestleBoards: number;
                 supportRequests: number;
                 documents: number;
             };
@@ -660,7 +661,7 @@ class ApiClient {
             growthData: {
                 labels: string[];
                 newMembers: number[];
-                events: number[];
+                trestleBoards: number[];
             };
         }>('/admin/dashboard');
     }

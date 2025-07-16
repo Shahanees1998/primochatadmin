@@ -19,36 +19,38 @@ import { Skeleton } from "primereact/skeleton";
 import { apiClient } from "@/lib/apiClient";
 import { SortOrderType } from "@/types";
 
-interface Event {
+interface TrestleBoard {
     id: string;
     title: string;
     description?: string;
     startDate: string;
     endDate?: string;
+    startTime?: string;
+    endTime?: string;
     location?: string;
     category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
-    type: 'REGULAR' | 'SOCIAL' | 'DISTRICT' | 'EMERGENT';
     isRSVP: boolean;
     maxAttendees?: number;
     createdAt: string;
     updatedAt: string;
 }
 
-interface EventFormData {
+interface TrestleBoardFormData {
     title: string;
     description: string;
     startDate: Date | null;
     endDate: Date | null;
+    startTime: string;
+    endTime: string;
     location: string;
     category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
-    type: 'REGULAR' | 'SOCIAL' | 'DISTRICT' | 'EMERGENT';
     isRSVP: boolean;
     maxAttendees: number;
 }
 
-export default function EventsPage() {
+export default function TrestleBoardPage() {
     const router = useRouter();
-    const [events, setEvents] = useState<Event[]>([]);
+    const [trestleBoards, setTrestleBoards] = useState<TrestleBoard[]>([]);
     const [loading, setLoading] = useState(true);
     const [totalRecords, setTotalRecords] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
@@ -58,18 +60,18 @@ export default function EventsPage() {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         title: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
         category: { value: null, matchMode: FilterMatchMode.EQUALS },
-        type: { value: null, matchMode: FilterMatchMode.EQUALS },
     });
-    const [showEventDialog, setShowEventDialog] = useState(false);
-    const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-    const [eventForm, setEventForm] = useState<EventFormData>({
+    const [showTrestleBoardDialog, setShowTrestleBoardDialog] = useState(false);
+    const [editingTrestleBoard, setEditingTrestleBoard] = useState<TrestleBoard | null>(null);
+    const [trestleBoardForm, setTrestleBoardForm] = useState<TrestleBoardFormData>({
         title: "",
         description: "",
         startDate: null,
         endDate: null,
+        startTime: "",
+        endTime: "",
         location: "",
         category: "REGULAR_MEETING",
-        type: "REGULAR",
         isRSVP: false,
         maxAttendees: 0,
     });
@@ -88,22 +90,15 @@ export default function EventsPage() {
         { label: "Social", value: "SOCIAL" },
     ];
 
-    const typeOptions = [
-        { label: "Regular", value: "REGULAR" },
-        { label: "Social", value: "SOCIAL" },
-        { label: "District", value: "DISTRICT" },
-        { label: "Emergent", value: "EMERGENT" },
-    ];
-
     useEffect(() => {
-        loadEvents();
+        loadTrestleBoards();
     }, [currentPage, rowsPerPage, globalFilterValue, sortField, sortOrder]);
 
-    const loadEvents = async () => {
+    const loadTrestleBoards = async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await apiClient.getEvents({
+            const response = await apiClient.getTrestleBoards({
                 page: currentPage,
                 limit: rowsPerPage,
                 search: globalFilterValue,
@@ -115,11 +110,11 @@ export default function EventsPage() {
                 throw new Error(response.error);
             }
 
-            setEvents(response.data?.events || []);
+            setTrestleBoards(response.data?.trestleBoards || []);
             setTotalRecords(response.data?.pagination?.total || 0);
         } catch (error) {
-            setError("Failed to load events. Please check your connection or try again later.");
-            showToast("error", "Error", "Failed to load events");
+            setError("Failed to load trestle boards. Please check your connection or try again later.");
+            showToast("error", "Error", "Failed to load trestle boards");
         } finally {
             setLoading(false);
         }
@@ -134,126 +129,128 @@ export default function EventsPage() {
         setCurrentPage(1); // Reset to first page when searching
     };
 
-    const onSort = (event: any) => {
-        setSortField(event.sortField);
-        setSortOrder(event.sortOrder);
+    const onSort = (trestleBoard: any) => {
+        setSortField(trestleBoard.sortField);
+        setSortOrder(trestleBoard.sortOrder);
     };
 
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {
         toast.current?.show({ severity, summary, detail, life: 3000 });
     };
 
-    const openNewEventDialog = () => {
-        setEditingEvent(null);
-        setEventForm({
+    const openNewTrestleBoardDialog = () => {
+        setEditingTrestleBoard(null);
+        setTrestleBoardForm({
             title: "",
             description: "",
             startDate: null,
             endDate: null,
+            startTime: "",
+            endTime: "",
             location: "",
             category: "REGULAR_MEETING",
-            type: "REGULAR",
             isRSVP: false,
             maxAttendees: 0,
         });
-        setShowEventDialog(true);
+        setShowTrestleBoardDialog(true);
     };
 
-    const openEditEventDialog = (event: Event) => {
-        setEditingEvent(event);
-        setEventForm({
-            title: event.title,
-            description: event.description || "",
-            startDate: new Date(event.startDate),
-            endDate: event.endDate ? new Date(event.endDate) : null,
-            location: event.location || "",
-            category: event.category,
-            type: event.type,
-            isRSVP: event.isRSVP,
-            maxAttendees: event.maxAttendees || 0,
+    const openEditTrestleBoardDialog = (trestleBoard: TrestleBoard) => {
+        setEditingTrestleBoard(trestleBoard);
+        setTrestleBoardForm({
+            title: trestleBoard.title,
+            description: trestleBoard.description || "",
+            startDate: new Date(trestleBoard.startDate),
+            endDate: trestleBoard.endDate ? new Date(trestleBoard.endDate) : null,
+            startTime: trestleBoard.startTime || "",
+            endTime: trestleBoard.endTime || "",
+            location: trestleBoard.location || "",
+            category: trestleBoard.category,
+            isRSVP: trestleBoard.isRSVP,
+            maxAttendees: trestleBoard.maxAttendees || 0,
         });
-        setShowEventDialog(true);
+        setShowTrestleBoardDialog(true);
     };
 
-    const saveEvent = async () => {
+    const saveTrestleBoard = async () => {
         // Validation
-        if (!eventForm.title.trim()) {
+        if (!trestleBoardForm.title.trim()) {
             showToast("error", "Validation Error", "Title is required");
             return;
         }
 
-        if (!eventForm.startDate) {
+        if (!trestleBoardForm.startDate) {
             showToast("error", "Validation Error", "Start date is required");
             return;
         }
 
-        if (eventForm.endDate && eventForm.endDate < eventForm.startDate) {
+        if (trestleBoardForm.endDate && trestleBoardForm.endDate < trestleBoardForm.startDate) {
             showToast("error", "Validation Error", "End date cannot be before start date");
             return;
         }
 
         setSaveLoading(true);
         try {
-            const eventData = {
-                ...eventForm,
-                startDate: eventForm.startDate.toISOString(),
-                endDate: eventForm.endDate?.toISOString(),
+            const trestleBoardData = {
+                ...trestleBoardForm,
+                startDate: trestleBoardForm.startDate.toISOString(),
+                endDate: trestleBoardForm.endDate?.toISOString(),
             };
 
             let response: any;
-            if (editingEvent) {
-                // Update existing event
-                response = await apiClient.updateEvent(editingEvent.id, eventData);
+            if (editingTrestleBoard) {
+                // Update existing trestleBoard
+                response = await apiClient.updateTrestleBoard(editingTrestleBoard.id, trestleBoardData);
             } else {
-                // Create new event
-                response = await apiClient.createEvent(eventData);
+                // Create new trestleBoard
+                response = await apiClient.createTrestleBoard(trestleBoardData);
             }
 
             if (response.error) {
                 throw new Error(response.error);
             }
 
-            if (editingEvent) {
-                const updatedEvents = events.map(event =>
-                    event.id === editingEvent.id ? response.data : event
+            if (editingTrestleBoard) {
+                const updatedTrestleBoards = trestleBoards.map(trestleBoard =>
+                    trestleBoard.id === editingTrestleBoard.id ? response.data : trestleBoard
                 );
-                setEvents(updatedEvents);
-                showToast("success", "Success", "Event updated successfully");
+                setTrestleBoards(updatedTrestleBoards);
+                showToast("success", "Success", "TrestleBoard updated successfully");
             } else {
-                setEvents([response.data, ...events]);
-                showToast("success", "Success", "Event created successfully");
+                setTrestleBoards([response.data, ...trestleBoards]);
+                showToast("success", "Success", "TrestleBoard created successfully");
             }
 
-            setShowEventDialog(false);
+            setShowTrestleBoardDialog(false);
         } catch (error) {
-            showToast("error", "Error", error instanceof Error ? error.message : "Failed to save event");
+            showToast("error", "Error", error instanceof Error ? error.message : "Failed to save trestleBoard");
         } finally {
             setSaveLoading(false);
         }
     };
 
-    const confirmDeleteEvent = (event: Event) => {
+    const confirmDeleteTrestleBoard = (trestleBoard: TrestleBoard) => {
         confirmDialog({
-            message: `Are you sure you want to delete "${event.title}"?`,
+            message: `Are you sure you want to delete "${trestleBoard.title}"?`,
             header: "Delete Confirmation",
             icon: "pi pi-exclamation-triangle",
             acceptClassName: "p-button-danger",
-            accept: () => deleteEvent(event.id),
+            accept: () => deleteTrestleBoard(trestleBoard.id),
         });
     };
 
-    const deleteEvent = async (eventId: string) => {
+    const deleteTrestleBoard = async (trestleBoardId: string) => {
         try {
-            const response = await apiClient.deleteEvent(eventId);
+            const response = await apiClient.deleteTrestleBoard(trestleBoardId);
             
             if (response.error) {
                 throw new Error(response.error);
             }
 
-            setEvents(events.filter(event => event.id !== eventId));
-            showToast("success", "Success", "Event deleted successfully");
+            setTrestleBoards(trestleBoards.filter(trestleBoard => trestleBoard.id !== trestleBoardId));
+            showToast("success", "Success", "TrestleBoard deleted successfully");
         } catch (error) {
-            showToast("error", "Error", "Failed to delete event");
+            showToast("error", "Error", "Failed to delete trestleBoard");
         }
     };
 
@@ -269,17 +266,7 @@ export default function EventsPage() {
         }
     };
 
-    const getTypeSeverity = (type: string) => {
-        switch (type) {
-            case "REGULAR": return "info";
-            case "SOCIAL": return "success";
-            case "DISTRICT": return "warning";
-            case "EMERGENT": return "danger";
-            default: return "info";
-        }
-    };
-
-    const actionBodyTemplate = (rowData: Event) => {
+    const actionBodyTemplate = (rowData: TrestleBoard) => {
         return (
             <div className="flex gap-2">
                 <Button
@@ -287,23 +274,23 @@ export default function EventsPage() {
                     size="small"
                     text
                     tooltip="View Details"
-                    onClick={() => router.push(`/admin/events/${rowData.id}`)}
+                    onClick={() => router.push(`/admin/trestle-board/${rowData.id}`)}
                 />
                 <Button
                     icon="pi pi-pencil"
                     size="small"
                     text
                     severity="secondary"
-                    tooltip="Edit Event"
-                    onClick={() => openEditEventDialog(rowData)}
+                    tooltip="Edit TrestleBoard"
+                    onClick={() => openEditTrestleBoardDialog(rowData)}
                 />
                 <Button
                     icon="pi pi-trash"
                     size="small"
                     text
                     severity="danger"
-                    tooltip="Delete Event"
-                    onClick={() => confirmDeleteEvent(rowData)}
+                    tooltip="Delete TrestleBoard"
+                    onClick={() => confirmDeleteTrestleBoard(rowData)}
                 />
             </div>
         );
@@ -312,8 +299,8 @@ export default function EventsPage() {
     const header = useMemo(() => (
         <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
             <div className="flex flex-column">
-                <h2 className="text-2xl font-bold m-0">Event Management</h2>
-                <span className="text-600">Create and manage all events</span>
+                <h2 className="text-2xl font-bold m-0">TrestleBoard Management</h2>
+                <span className="text-600">Create and manage all trestleBoards</span>
             </div>
             <div className="flex gap-2">
                 <span className="p-input-icon-left">
@@ -321,14 +308,14 @@ export default function EventsPage() {
                     <InputText
                         value={globalFilterValue}
                         onChange={onGlobalFilterChange}
-                        placeholder="Search events..."
+                        placeholder="Search trestleBoards..."
                         className="w-full"
                     />
                 </span>
                 <Button
-                    label="Create Event"
+                    label="Create TrestleBoard"
                     icon="pi pi-plus"
-                    onClick={openNewEventDialog}
+                    onClick={openNewTrestleBoardDialog}
                     severity="success"
                 />
             </div>
@@ -397,7 +384,7 @@ export default function EventsPage() {
                         </DataTable>
                     ) : (
                         <DataTable
-                            value={events}
+                            value={trestleBoards}
                             paginator
                             rows={rowsPerPage}
                             totalRecords={totalRecords}
@@ -412,7 +399,7 @@ export default function EventsPage() {
                             filterDisplay="menu"
                             globalFilterFields={["title", "description", "location"]}
                             header={header}
-                            emptyMessage={error ? "Unable to load events. Please check your connection or try again later." : "No events found."}
+                            emptyMessage={error ? "Unable to load trestleBoards. Please check your connection or try again later." : "No trestleBoards found."}
                             responsiveLayout="scroll"
                             onSort={onSort}
                             sortField={sortField}
@@ -427,9 +414,6 @@ export default function EventsPage() {
                             <Column field="category" header="Category" body={(rowData) => (
                                 <Tag value={rowData.category} severity={getCategorySeverity(rowData.category)} />
                             )} sortable style={{ minWidth: "120px" }} />
-                            <Column field="type" header="Type" body={(rowData) => (
-                                <Tag value={rowData.type} severity={getTypeSeverity(rowData.type)} />
-                            )} sortable style={{ minWidth: "120px" }} />
                             <Column field="isRSVP" header="RSVP" body={(rowData) => (
                                 <Tag value={rowData.isRSVP ? "Yes" : "No"} severity={rowData.isRSVP ? "success" : "secondary"} />
                             )} style={{ minWidth: "80px" }} />
@@ -439,21 +423,21 @@ export default function EventsPage() {
                 </Card>
             </div>
 
-            {/* Event Dialog */}
+            {/* TrestleBoard Dialog */}
             <Dialog
-                visible={showEventDialog}
+                visible={showTrestleBoardDialog}
                 style={{ width: "700px" }}
-                header={editingEvent ? "Edit Event" : "Create New Event"}
+                header={editingTrestleBoard ? "Edit TrestleBoard" : "Create New TrestleBoard"}
                 modal
                 className="p-fluid"
-                onHide={() => setShowEventDialog(false)}
+                onHide={() => setShowTrestleBoardDialog(false)}
                 footer={
                     <div className="flex gap-2 justify-content-end">
-                        <Button label="Cancel" icon="pi pi-times" text onClick={() => setShowEventDialog(false)} disabled={saveLoading} />
+                        <Button label="Cancel" icon="pi pi-times" text onClick={() => setShowTrestleBoardDialog(false)} disabled={saveLoading} />
                         <Button
                             label={saveLoading ? "Saving..." : "Save"}
                             icon={saveLoading ? "pi pi-spin pi-spinner" : "pi pi-check"}
-                            onClick={saveEvent}
+                            onClick={saveTrestleBoard}
                             disabled={saveLoading}
                         />
                     </div>
@@ -464,8 +448,8 @@ export default function EventsPage() {
                         <label htmlFor="title" className="font-bold">Title *</label>
                         <InputText
                             id="title"
-                            value={eventForm.title}
-                            onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                            value={trestleBoardForm.title}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, title: e.target.value })}
                             required
                         />
                     </div>
@@ -473,8 +457,8 @@ export default function EventsPage() {
                         <label htmlFor="description" className="font-bold">Description</label>
                         <InputTextarea
                             id="description"
-                            value={eventForm.description}
-                            onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                            value={trestleBoardForm.description}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, description: e.target.value })}
                             rows={3}
                         />
                     </div>
@@ -482,8 +466,8 @@ export default function EventsPage() {
                         <label htmlFor="startDate" className="font-bold">Start Date *</label>
                         <Calendar
                             id="startDate"
-                            value={eventForm.startDate}
-                            onChange={(e) => setEventForm({ ...eventForm, startDate: e.value as Date })}
+                            value={trestleBoardForm.startDate}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, startDate: e.value as Date })}
                             showIcon
                             showTime
                             dateFormat="dd/mm/yy"
@@ -493,8 +477,8 @@ export default function EventsPage() {
                         <label htmlFor="endDate" className="font-bold">End Date</label>
                         <Calendar
                             id="endDate"
-                            value={eventForm.endDate}
-                            onChange={(e) => setEventForm({ ...eventForm, endDate: e.value as Date })}
+                            value={trestleBoardForm.endDate}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, endDate: e.value as Date })}
                             showIcon
                             showTime
                             dateFormat="dd/mm/yy"
@@ -504,28 +488,18 @@ export default function EventsPage() {
                         <label htmlFor="location" className="font-bold">Location</label>
                         <InputText
                             id="location"
-                            value={eventForm.location}
-                            onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })}
+                            value={trestleBoardForm.location}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, location: e.target.value })}
                         />
                     </div>
                     <div className="col-12 md:col-6">
                         <label htmlFor="category" className="font-bold">Category *</label>
                         <Dropdown
                             id="category"
-                            value={eventForm.category}
+                            value={trestleBoardForm.category}
                             options={categoryOptions}
-                            onChange={(e) => setEventForm({ ...eventForm, category: e.value })}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, category: e.value })}
                             placeholder="Select Category"
-                        />
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="type" className="font-bold">Type *</label>
-                        <Dropdown
-                            id="type"
-                            value={eventForm.type}
-                            options={typeOptions}
-                            onChange={(e) => setEventForm({ ...eventForm, type: e.value })}
-                            placeholder="Select Type"
                         />
                     </div>
                     <div className="col-12 md:col-6">
@@ -533,8 +507,26 @@ export default function EventsPage() {
                         <InputText
                             id="maxAttendees"
                             type="number"
-                            value={eventForm.maxAttendees?.toString() || ''}
-                            onChange={(e) => setEventForm({ ...eventForm, maxAttendees: parseInt(e.target.value) || 0 })}
+                            value={trestleBoardForm.maxAttendees?.toString() || ''}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, maxAttendees: parseInt(e.target.value) || 0 })}
+                        />
+                    </div>
+                    <div className="col-12 md:col-6">
+                        <label htmlFor="startTime" className="font-bold">Start Time</label>
+                        <InputText
+                            id="startTime"
+                            type="time"
+                            value={trestleBoardForm.startTime}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, startTime: e.target.value })}
+                        />
+                    </div>
+                    <div className="col-12 md:col-6">
+                        <label htmlFor="endTime" className="font-bold">End Time</label>
+                        <InputText
+                            id="endTime"
+                            type="time"
+                            value={trestleBoardForm.endTime}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, endTime: e.target.value })}
                         />
                     </div>
                     <div className="col-12 md:col-6">
@@ -543,11 +535,11 @@ export default function EventsPage() {
                             <input
                                 type="checkbox"
                                 id="isRSVP"
-                                checked={eventForm.isRSVP}
-                                onChange={(e) => setEventForm({ ...eventForm, isRSVP: e.target.checked })}
+                                checked={trestleBoardForm.isRSVP}
+                                onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, isRSVP: e.target.checked })}
                                 className="mr-2"
                             />
-                            <label htmlFor="isRSVP">Enable RSVP for this event</label>
+                            <label htmlFor="isRSVP">Enable RSVP for this trestleBoard</label>
                         </div>
                     </div>
                 </div>

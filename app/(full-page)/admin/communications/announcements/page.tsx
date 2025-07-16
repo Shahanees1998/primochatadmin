@@ -283,7 +283,7 @@ export default function AnnouncementsPage() {
     const audienceBodyTemplate = (rowData: Announcement) => {
         return (
             <Badge 
-                value={rowData.targetAudience.replace('_', ' ')} 
+                value={rowData.targetAudience ? rowData.targetAudience.replace('_', ' ') : 'Unknown'} 
                 severity="info"
             />
         );
@@ -360,7 +360,7 @@ export default function AnnouncementsPage() {
                                     <div className="flex flex-column gap-1">
                                         <Skeleton width="200px" height="16px" />
                                         <Skeleton width="150px" height="14px" />
-                                    </div>
+                            </div>
                                 )}
                                 sortable={false}
                             />
@@ -399,7 +399,7 @@ export default function AnnouncementsPage() {
                                         <Skeleton width="32px" height="32px" />
                                         <Skeleton width="32px" height="32px" />
                                         <Skeleton width="32px" height="32px" />
-                                    </div>
+                                </div>
                                 )}
                                 style={{ width: '120px' }}
                             />
