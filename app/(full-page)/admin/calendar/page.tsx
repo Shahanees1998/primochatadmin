@@ -12,6 +12,7 @@ import { Dialog } from 'primereact/dialog';
 import { Chip } from 'primereact/chip';
 import { Badge } from 'primereact/badge';
 import { TabView, TabPanel } from 'primereact/tabview';
+import { Skeleton } from 'primereact/skeleton';
 import { apiClient } from '@/lib/apiClient';
 import { useToast } from '@/store/toast.context';
 
@@ -91,21 +92,22 @@ export default function AdminCalendarPage() {
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (filters.startDate) params.append('startDate', filters.startDate);
-      if (filters.endDate) params.append('endDate', filters.endDate);
-      if (filters.eventType) params.append('eventType', filters.eventType);
-      if (filters.userId) params.append('userId', filters.userId);
+      const params: Record<string, string> = {};
+      if (filters.startDate) params.startDate = filters.startDate;
+      if (filters.endDate) params.endDate = filters.endDate;
+      if (filters.eventType) params.eventType = filters.eventType;
+      if (filters.userId) params.userId = filters.userId;
 
-      const response = await apiClient.get(`/api/admin/calendar?${params.toString()}`);
+      const response = await apiClient.get('/admin/calendar', params);
       if (response.error) {
         throw new Error(response.error);
       }
-      const data = response.data as { events: CalendarEvent[] } | CalendarEvent[];
-      setEvents('events' in data ? data.events : data);
+      const data = response.data as { events: CalendarEvent[] };
+      setEvents(data?.events || []);
     } catch (error) {
       console.error('Error fetching events:', error);
       showToast('error', 'Error', 'Failed to fetch events');
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -122,6 +124,7 @@ export default function AdminCalendarPage() {
     } catch (error) {
       console.error('Error fetching trestle boards:', error);
       showToast('error', 'Error', 'Failed to fetch trestle boards');
+      setTrestleBoards([]);
     }
   };
 
@@ -155,7 +158,7 @@ export default function AdminCalendarPage() {
 
   const handleUpdateSignupStatus = async (signupId: string, status: string) => {
     try {
-      const response = await apiClient.put(`/api/admin/trestle-board/${selectedTrestleBoard?.id}/signups`, {
+      const response = await apiClient.put(`/admin/trestle-board/${selectedTrestleBoard?.id}/signups`, {
         signupId,
         status,
       });
@@ -286,6 +289,94 @@ export default function AdminCalendarPage() {
       onClick={() => handleViewSignups(rowData)}
     />
   );
+
+  // Skeleton loader for the calendar page
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="mb-6">
+          <Skeleton height="2rem" width="60%" className="mb-2" />
+          <Skeleton height="1rem" width="40%" />
+        </div>
+
+        <div className="border-1 surface-border border-round">
+          {/* Tab header skeleton */}
+          <div className="p-4 border-bottom-1 surface-border">
+            <div className="flex gap-4">
+              <Skeleton height="2rem" width="120px" />
+              <Skeleton height="2rem" width="150px" />
+            </div>
+          </div>
+
+          {/* Tab content skeleton */}
+          <div className="p-6">
+            {/* Filters skeleton */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <Skeleton height="1.5rem" width="20%" className="mb-4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <Skeleton height="1rem" width="30%" className="mb-2" />
+                  <Skeleton height="2.5rem" width="100%" />
+                </div>
+                <div>
+                  <Skeleton height="1rem" width="30%" className="mb-2" />
+                  <Skeleton height="2.5rem" width="100%" />
+                </div>
+                <div>
+                  <Skeleton height="1rem" width="30%" className="mb-2" />
+                  <Skeleton height="2.5rem" width="100%" />
+                </div>
+                <div>
+                  <Skeleton height="1rem" width="30%" className="mb-2" />
+                  <Skeleton height="2.5rem" width="100%" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Skeleton height="2.5rem" width="120px" />
+                <Skeleton height="2.5rem" width="120px" />
+              </div>
+            </div>
+
+            {/* Table skeleton */}
+            <div className="border-1 surface-border border-round">
+              {/* Table header skeleton */}
+              <div className="p-4 border-bottom-1 surface-border">
+                <div className="grid grid-cols-7 gap-4">
+                  <Skeleton height="1.5rem" width="100%" />
+                  <Skeleton height="1.5rem" width="100%" />
+                  <Skeleton height="1.5rem" width="100%" />
+                  <Skeleton height="1.5rem" width="100%" />
+                  <Skeleton height="1.5rem" width="100%" />
+                  <Skeleton height="1.5rem" width="100%" />
+                  <Skeleton height="1.5rem" width="100%" />
+                </div>
+              </div>
+
+              {/* Table rows skeleton */}
+              <div>
+                {[1, 2, 3, 4].map((index) => (
+                  <div key={index} className="p-4 border-bottom-1 surface-border last:border-bottom-none">
+                    <div className="grid grid-cols-7 gap-4 items-center">
+                      <Skeleton height="1.2rem" width="80%" />
+                      <Skeleton height="1.5rem" width="60px" />
+                      <Skeleton height="1rem" width="70%" />
+                      <Skeleton height="1rem" width="60%" />
+                      <div className="space-y-1">
+                        <Skeleton height="1rem" width="80%" />
+                        <Skeleton height="0.8rem" width="60%" />
+                      </div>
+                      <Skeleton height="1rem" width="70%" />
+                      <Skeleton height="2rem" width="80px" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

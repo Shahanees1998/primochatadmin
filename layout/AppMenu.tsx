@@ -75,11 +75,11 @@ const AppMenu = () => {
                 //     icon: "pi pi-fw pi-plus",
                 //     to: "/admin/events/create",
                 // },
-                {
-                    label: "Board Categories",
-                    icon: "pi pi-fw pi-tags",
-                    to: "/admin/trestle-board/categories",
-                },
+                // {
+                //     label: "Board Categories",
+                //     icon: "pi pi-fw pi-tags",
+                //     to: "/admin/trestle-board/categories",
+                // },
             ],
         },
         {

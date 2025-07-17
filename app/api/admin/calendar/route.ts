@@ -40,15 +40,15 @@ export async function GET(request: NextRequest) {
         prisma.calendarEvent.findMany({
           where,
           include: {
-                      user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              membershipNumber: true,
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                membershipNumber: true,
+              },
             },
-          },
           },
           orderBy: { startDate: 'asc' },
           skip,
@@ -57,8 +57,26 @@ export async function GET(request: NextRequest) {
         prisma.calendarEvent.count({ where }),
       ]);
 
+      // Transform the data to match frontend expectations
+      const transformedEvents = events.map((event: any) => ({
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: event.startDate.toISOString(),
+        eventType: event.eventType,
+        location: event.location,
+        user: {
+          id: event.user.id,
+          name: `${event.user.firstName} ${event.user.lastName}`,
+          email: event.user.email,
+          membershipNumber: event.user.membershipNumber,
+        },
+        createdAt: event.createdAt.toISOString(),
+        updatedAt: event.updatedAt.toISOString(),
+      }));
+
       return NextResponse.json({
-        events,
+        events: transformedEvents,
         pagination: {
           page,
           limit,

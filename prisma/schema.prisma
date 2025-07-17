@@ -34,20 +34,21 @@ model User {
   updatedAt            DateTime   @updatedAt
 
   // Relations
-  trestleBoards         TrestleBoardMember[]
-  calendarEvents        CalendarEvent[]
-  notifications         Notification[]
-  messages              Message[]
-  chatParticipants      ChatParticipant[]
-  supportRequests       SupportRequest[]
-  documents             Document[]
-  phoneBookEntry        PhoneBookEntry?
-  announcements         Announcement[]
-  moderator             Moderator?
-  festiveBoards         FestiveBoard[]
-  userMealSelections    UserMealSelection[]
-  adminSignups          TrestleBoardMember[] @relation("AdminSignups")
-  createdTrestleBoards TrestleBoard[] @relation("CreatedTrestleBoards")
+  trestleBoards        TrestleBoardMember[]
+  calendarEvents       CalendarEvent[]
+  notifications        Notification[]
+  messages             Message[]
+  chatParticipants     ChatParticipant[]
+  supportRequests      SupportRequest[]
+  documents            Document[]
+  phoneBookEntry       PhoneBookEntry?
+  announcements        Announcement[]
+  moderator            Moderator?
+  festiveBoards        FestiveBoard[]
+  userMealSelections   UserMealSelection[]
+  adminSignups         TrestleBoardMember[] @relation("AdminSignups")
+  createdTrestleBoards TrestleBoard[]       @relation("CreatedTrestleBoards")
+
   @@map("users")
 }
 
@@ -57,8 +58,8 @@ model TrestleBoard {
   description  String?
   startDate    DateTime
   endDate      DateTime?
-  startTime    String?              // Time in HH:MM format
-  endTime      String?              // Time in HH:MM format
+  startTime    String? // Time in HH:MM format
+  endTime      String? // Time in HH:MM format
   location     String?
   category     TrestleBoardCategory
   isRSVP       Boolean              @default(false)
@@ -68,8 +69,8 @@ model TrestleBoard {
   updatedAt    DateTime             @updatedAt
 
   // Relations
-  members TrestleBoardMember[]
-  createdBy User @relation("CreatedTrestleBoards", fields: [createdById], references: [id], onDelete: Cascade)
+  members        TrestleBoardMember[]
+  createdBy      User                 @relation("CreatedTrestleBoards", fields: [createdById], references: [id], onDelete: Cascade)
   calendarEvents CalendarEvent[]
 
   @@map("trestleBoards")
@@ -84,9 +85,9 @@ model TrestleBoardMember {
   createdAt      DateTime   @default(now())
 
   // Relations
-  trestleBoard TrestleBoard @relation(fields: [trestleBoardId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  signedUpByUser User?      @relation("AdminSignups", fields: [signedUpBy], references: [id])
+  trestleBoard   TrestleBoard @relation(fields: [trestleBoardId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signedUpByUser User?        @relation("AdminSignups", fields: [signedUpBy], references: [id])
 
   @@unique([trestleBoardId, userId])
   @@map("trestleBoard_members")
@@ -99,18 +100,18 @@ model CalendarEvent {
   description    String?
   startDate      DateTime
   endDate        DateTime?
-  startTime      String?   // Time in HH:MM format
-  endTime        String?   // Time in HH:MM format
+  startTime      String? // Time in HH:MM format
+  endTime        String? // Time in HH:MM format
   location       String?
   eventType      EventType @default(PERSONAL)
   trestleBoardId String?   @db.ObjectId // If linked to a main trestleBoard
-  color          String?   // Calendar event color
+  color          String? // Calendar event color
   isAllDay       Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   // Relations
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   trestleBoard TrestleBoard? @relation(fields: [trestleBoardId], references: [id], onDelete: Cascade)
 
   @@map("calendar_events")
@@ -287,8 +288,6 @@ enum TrestleBoardCategory {
   CGP
   SOCIAL
 }
-
-
 
 enum RSVPStatus {
   PENDING

@@ -12,7 +12,7 @@ export async function GET(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      const signups = await prisma.trestleBoardSignup.findMany({
+      const signups = await prisma.trestleBoardMember.findMany({
         where: {
           trestleBoardId: params.id,
         },
@@ -20,16 +20,18 @@ export async function GET(
           user: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               email: true,
               membershipNumber: true,
               phone: true,
             },
           },
-          admin: {
+          signedUpByUser: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
             },
           },
         },
@@ -38,7 +40,26 @@ export async function GET(
         },
       });
 
-      return NextResponse.json(signups);
+      // Transform the data to match frontend expectations
+      const transformedSignups = signups.map(signup => ({
+        id: signup.id,
+        status: signup.status,
+        user: {
+          id: signup.user.id,
+          name: `${signup.user.firstName} ${signup.user.lastName}`,
+          email: signup.user.email,
+          membershipNumber: signup.user.membershipNumber,
+          phone: signup.user.phone,
+        },
+        admin: signup.signedUpByUser ? {
+          id: signup.signedUpByUser.id,
+          name: `${signup.signedUpByUser.firstName} ${signup.signedUpByUser.lastName}`,
+        } : undefined,
+        createdAt: signup.createdAt.toISOString(),
+        updatedAt: signup.createdAt.toISOString(),
+      }));
+
+      return NextResponse.json(transformedSignups);
     } catch (error) {
       console.error('Error fetching trestle board signups:', error);
       return NextResponse.json(
@@ -76,18 +97,18 @@ export async function PUT(
         );
       }
 
-      const signup = await prisma.trestleBoardSignup.update({
+      const signup = await prisma.trestleBoardMember.update({
         where: { id: signupId },
         data: {
           status,
-          adminId: authenticatedReq.user.userId,
-          updatedAt: new Date(),
+          signedUpBy: authenticatedReq.user.userId,
         },
         include: {
           user: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               email: true,
               membershipNumber: true,
             },

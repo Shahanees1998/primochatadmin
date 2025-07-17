@@ -68,7 +68,7 @@ export default function AdminMealSelectionManager({
   const [meals, setMeals] = useState<MealSelection[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showUserDialog, setShowUserDialog] = useState(false);
+
   const [selectedMeal, setSelectedMeal] = useState<MealSelection | null>(null);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -85,6 +85,15 @@ export default function AdminMealSelectionManager({
     fetchSelections();
     fetchUsers();
   }, [festiveBoardId]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
 
   const fetchSelections = async () => {
     try {
@@ -118,9 +127,11 @@ export default function AdminMealSelectionManager({
   const searchUsers = async (query: string) => {
     try {
       setSearchingUsers(true);
+      
+      // Always search from server when there's a query
       const response = await apiClient.getUsers({ 
         page: 1, 
-        limit: query.trim() ? 10 : 12,
+        limit: 20,
         search: query.trim() || undefined
       });
       
@@ -135,10 +146,13 @@ export default function AdminMealSelectionManager({
 
         const availableUsers = response.data.users.filter((user: User) => !assignedUserIds.has(user.id));
         setFilteredUsers(availableUsers);
+      } else {
+        setFilteredUsers([]);
       }
     } catch (error) {
       console.error('Error searching users:', error);
       showToast('error', 'Error', 'Failed to search users');
+      setFilteredUsers([]);
     } finally {
       setSearchingUsers(false);
     }
@@ -150,18 +164,21 @@ export default function AdminMealSelectionManager({
       clearTimeout(searchTimeout);
     }
 
+    // If query is empty, show empty state immediately
+    if (!query.trim()) {
+      setFilteredUsers([]);
+      return;
+    }
+
     // Set new timeout for debounced search
     const timeout = setTimeout(() => {
       searchUsers(query);
-    }, 300); // 300ms debounce
+    }, 500); // 500ms debounce for better performance
 
     setSearchTimeout(timeout);
   };
 
-  const handleViewUsers = (meal: MealSelection) => {
-    setSelectedMeal(meal);
-    setShowUserDialog(true);
-  };
+
 
   const handleAddUser = async (meal: MealSelection) => {
     setSelectedMeal(meal);
@@ -169,8 +186,6 @@ export default function AdminMealSelectionManager({
     setUserSearchQuery('');
     setFilteredUsers([]);
     setShowAddUserDialog(true);
-    // Load initial 12 users when dialog opens
-    await searchUsers('');
   };
 
   const handleAddUserSelection = async () => {
@@ -238,25 +253,46 @@ export default function AdminMealSelectionManager({
   );
 
   const selectionCountTemplate = (rowData: MealSelection) => (
-    <div className="flex items-center gap-2 justify-end">
-      <Badge value={rowData.selectionCount} severity="info" />
+    <div className="flex items-center justify-end">
+      {rowData.selectionCount > 0 ? (
+        <div className="text-right">
+          <div className="text-sm text-gray-600">
+            {rowData.selections[0]?.user.firstName} {rowData.selections[0]?.user.lastName}
+          </div>
+          <div className="text-xs text-gray-500">
+            #{rowData.selections[0]?.user.membershipNumber}
+          </div>
+        </div>
+      ) : (
+        <span className="text-gray-400 text-sm">-</span>
+      )}
     </div>
   );
 
   const actionsTemplate = (rowData: MealSelection) => (
     <div className="flex items-center gap-2 justify-end">
-      <Button
-        label="Manage Users"
-        size="small"
-        onClick={() => handleViewUsers(rowData)}
-      />
-      <Button
-        label="Add User"
-        size="small"
-        severity="success"
-        onClick={() => handleAddUser(rowData)}
-        disabled={rowData.selectionCount > 0}
-      />
+      {rowData.selectionCount > 0 ? (
+        <Button
+          label="Remove User"
+          size="small"
+          severity="danger"
+          icon="pi pi-trash"
+          onClick={() => {
+            const firstSelection = rowData.selections[0];
+            if (firstSelection) {
+              handleRemoveUserSelection(firstSelection.userId, rowData.mealId);
+            }
+          }}
+        />
+      ) : (
+        <Button
+          label="Add User"
+          size="small"
+          severity="success"
+          icon="pi pi-plus"
+          onClick={() => handleAddUser(rowData)}
+        />
+      )}
     </div>
   );
 
@@ -299,31 +335,70 @@ export default function AdminMealSelectionManager({
   if (loading) {
     return (
       <Card className="w-full">
-        <div className="space-y-4">
-          {/* Header skeleton */}
-          <div className="space-y-2">
+        <div className="space-y-6">
+          {/* Festive Board Header skeleton */}
+          <div className="space-y-2 mb-6">
             <Skeleton height="2rem" width="60%" />
             <Skeleton height="1rem" width="40%" />
             <Skeleton height="1rem" width="30%" />
           </div>
           
-          {/* Summary section skeleton */}
-          <div className="p-4 bg-blue-50 border-1 border-blue-200 border-round">
+          {/* Page Title skeleton */}
+          <div className="space-y-2 mb-4">
+            <Skeleton height="1.5rem" width="50%" />
+            <Skeleton height="1rem" width="70%" />
+          </div>
+          
+          {/* Summary Section skeleton */}
+          <div className="p-4 bg-blue-50 border-1 border-blue-200 border-round mb-4">
             <div className="flex justify-between items-center">
               <div className="space-y-2">
                 <Skeleton height="1.5rem" width="40%" />
-                <Skeleton height="1rem" width="60%" />
+                <Skeleton height="1rem" width="80%" />
               </div>
-              <Skeleton height="2.5rem" width="200px" />
+              <Skeleton height="2.5rem" width="220px" />
             </div>
           </div>
           
-          {/* Table skeleton */}
-          <div className="space-y-2">
-            <Skeleton height="3rem" width="100%" />
-            <Skeleton height="4rem" width="100%" />
-            <Skeleton height="4rem" width="100%" />
-            <Skeleton height="4rem" width="100%" />
+          {/* DataTable skeleton */}
+          <div className="border-1 surface-border border-round">
+            {/* Table header skeleton */}
+            <div className="p-4 border-bottom-1 surface-border">
+              <div className="grid grid-cols-3 gap-4">
+                <Skeleton height="1.5rem" width="100%" />
+                <Skeleton height="1.5rem" width="100%" />
+                <Skeleton height="1.5rem" width="100%" />
+              </div>
+            </div>
+            
+            {/* Table rows skeleton */}
+            <div>
+              {[1, 2, 3, 4].map((index) => (
+                <div key={index} className="p-4 border-bottom-1 surface-border last:border-bottom-none">
+                  <div className="grid grid-cols-3 gap-4 items-center">
+                    {/* Meal column */}
+                    <div className="space-y-2">
+                      <Skeleton height="1.2rem" width="80%" />
+                      <Skeleton height="1.5rem" width="60px" />
+                      <Skeleton height="1rem" width="50%" />
+                    </div>
+                    
+                    {/* Selections column */}
+                    <div className="flex justify-center">
+                      <div className="text-center space-y-1">
+                        <Skeleton height="1rem" width="80px" />
+                        <Skeleton height="0.8rem" width="60px" />
+                      </div>
+                    </div>
+                    
+                    {/* Actions column */}
+                    <div className="flex justify-end">
+                      <Skeleton height="2rem" width="100px" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </Card>
@@ -376,101 +451,10 @@ export default function AdminMealSelectionManager({
       >
         <Column field="meal" header="Meal" body={mealTemplate} />
         <Column field="selectionCount" header="Selections" body={selectionCountTemplate} />
-        <Column field="" header="Actions" body={actionsTemplate} />
+        <Column field="" header="Actions" body={actionsTemplate} style={{ textAlign: 'right', width: '120px' }} headerStyle={{ textAlign: 'right' }} />
       </DataTable>
 
-      {/* User Selection Dialog */}
-      <Dialog
-        visible={showUserDialog}
-        onHide={() => setShowUserDialog(false)}
-        header={`Manage Users for: ${selectedMeal?.meal.title}`}
-        modal
-        className="w-full max-w-4xl"
-        style={{ width: '80vw', maxWidth: '1200px' }}
-      >
-        {selectedMeal && (
-          <div>
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold">{selectedMeal.meal.title}</h4>
-              <p className="text-sm text-gray-600">{selectedMeal.meal.description}</p>
-              <div className="flex gap-4 mt-2">
-                <span className="text-sm">
-                  Category: {selectedMeal.meal.category.name}
-                </span>
-              </div>
-            </div>
 
-            {/* Add User Selection */}
-            <div className="mb-4 p-4 border-1 surface-border border-round">
-              <h5 className="font-semibold mb-3">Add User Selection</h5>
-              <p className="text-sm text-gray-600 mb-3">
-                Note: Each user can only select one meal per festive board. Adding a user to this meal will remove any existing meal selection for this board.
-              </p>
-              <div className="flex gap-3 items-end">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium mb-1">Search and Select User</label>
-                  <InputText
-                    value={userSearchQuery}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const query = e.target.value;
-                      setUserSearchQuery(query);
-                      searchUsers(query);
-                    }}
-                    placeholder="Search for a user..."
-                    className="w-full mb-2"
-                  />
-                  {userSearchQuery && (
-                    <div className="border-1 surface-border border-round max-h-40 overflow-y-auto">
-                      {filteredUsers.length === 0 ? (
-                        <div className="p-3 text-center text-600">
-                          No available users found
-                        </div>
-                      ) : (
-                        filteredUsers.map((user) => (
-                          <div
-                            key={user.id}
-                            className="p-3 cursor-pointer hover:surface-100 border-bottom-1 surface-border last:border-bottom-none"
-                            onClick={() => {
-                              setSelectedUser(user.id);
-                              setUserSearchQuery(`${user.firstName} ${user.lastName} (${user.email})`);
-                            }}
-                          >
-                            <div className="font-medium">{user.firstName} {user.lastName}</div>
-                            <div className="text-sm text-gray-600">{user.email}</div>
-                            <div className="text-sm text-gray-500">#{user.membershipNumber}</div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-                <Button
-                  label="Add Selection"
-                  icon="pi pi-plus"
-                  onClick={handleAddUserSelection}
-                  disabled={!selectedUser || saving}
-                  loading={saving}
-                  style={{height : '40px'}}
-                />
-              </div>
-            </div>
-
-            <DataTable
-              value={selectedMeal.selections}
-              emptyMessage="No users have selected this meal yet"
-              className="w-full"
-            >
-              <Column field="user" header="User" body={userTemplate} />
-              <Column 
-                field="createdAt" 
-                header="Selected On" 
-                body={(rowData) => new Date(rowData.createdAt).toLocaleDateString()} 
-              />
-              <Column header="Actions" body={userActionTemplate} />
-            </DataTable>
-          </div>
-        )}
-      </Dialog>
 
       {/* Unassigned Users Dialog */}
       <Dialog
@@ -552,25 +536,36 @@ export default function AdminMealSelectionManager({
         <div className="flex flex-column gap-3">
           <div>
             <label className="font-bold mb-2 block">Search Users</label>
-                         <InputText
-               value={userSearchQuery}
-               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                 const query = e.target.value;
-                 setUserSearchQuery(query);
-                 debouncedSearch(query);
-               }}
-               placeholder="Search users..."
-               className="w-full"
-             />
+            <InputText
+              value={userSearchQuery}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const query = e.target.value;
+                setUserSearchQuery(query);
+                debouncedSearch(query);
+              }}
+              placeholder="Type to search users (e.g., anees)..."
+              className="w-full"
+            />
+            {searchingUsers && (
+              <div className="mt-2 text-sm text-gray-500">
+                <i className="pi pi-spin pi-spinner mr-2"></i>
+                Searching...
+              </div>
+            )}
           </div>
 
           <div>
             <label className="font-bold mb-2 block">Select User</label>
             <div className="border-1 surface-border border-round max-h-40 overflow-y-auto">
-              {userSearchQuery ? (
+              {searchingUsers ? (
+                <div className="p-3 text-center text-600">
+                  <i className="pi pi-spin pi-spinner mr-2"></i>
+                  Searching users...
+                </div>
+              ) : userSearchQuery ? (
                 filteredUsers.length === 0 ? (
                   <div className="p-3 text-center text-600">
-                    No available users found
+                    No available users found for "{userSearchQuery}"
                   </div>
                 ) : (
                   filteredUsers.map((user) => (
@@ -592,7 +587,7 @@ export default function AdminMealSelectionManager({
                 )
               ) : (
                 <div className="p-3 text-center text-600">
-                  Start typing to search users
+                  Start typing to search users (e.g., name, email, or membership number)
                 </div>
               )}
             </div>
