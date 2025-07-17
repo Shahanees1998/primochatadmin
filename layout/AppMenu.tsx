@@ -65,6 +65,11 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-calendar",
                     to: "/admin/trestle-board",
                 },
+                {
+                    label: "Calendar Management",
+                    icon: "pi pi-fw pi-calendar-plus",
+                    to: "/admin/calendar",
+                },
                 // {
                 //     label: "Create Board",
                 //     icon: "pi pi-fw pi-plus",
@@ -151,22 +156,22 @@ const AppMenu = () => {
             ],
         },
 
-        {
-            label: "Settings",
-            icon: "pi pi-cog",
-            items: [
-                {
-                    label: "General Settings",
-                    icon: "pi pi-fw pi-cog",
-                    to: "/admin/settings",
-                },
-                // {
-                //     label: "Permissions",
-                //     icon: "pi pi-fw pi-lock",
-                //     to: "/admin/settings/permissions",
-                // },
-            ],
-        },
+        // {
+        //     label: "Settings",
+        //     icon: "pi pi-cog",
+        //     items: [
+        //         {
+        //             label: "General Settings",
+        //             icon: "pi pi-fw pi-cog",
+        //             to: "/admin/settings",
+        //         },
+        //         // {
+        //         //     label: "Permissions",
+        //         //     icon: "pi pi-fw pi-lock",
+        //         //     to: "/admin/settings/permissions",
+        //         // },
+        //     ],
+        // },
     ];
 
     return <AppSubMenu model={model} />;

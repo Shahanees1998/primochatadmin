@@ -687,6 +687,7 @@ class ApiClient {
                 totalUsers: number;
                 pendingApprovals: number;
                 activeTrestleBoards: number;
+                activeFestiveBoards: number;
                 supportRequests: number;
                 documents: number;
             };
@@ -703,6 +704,7 @@ class ApiClient {
                 labels: string[];
                 newMembers: number[];
                 trestleBoards: number[];
+                festiveBoards: number[];
             };
         }>('/admin/dashboard');
     }

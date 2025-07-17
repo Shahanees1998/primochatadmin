@@ -16,6 +16,7 @@ interface DashboardStats {
     totalUsers: number;
     pendingApprovals: number;
     activeTrestleBoards: number;
+    activeFestiveBoards: number;
     supportRequests: number;
     documents: number;
 }
@@ -34,6 +35,7 @@ interface GrowthData {
     labels: string[];
     newMembers: number[];
     trestleBoards: number[];
+    festiveBoards: number[];
 }
 
 export default function AdminDashboard() {
@@ -43,6 +45,7 @@ export default function AdminDashboard() {
         totalUsers: 0,
         pendingApprovals: 0,
         activeTrestleBoards: 0,
+        activeFestiveBoards: 0,
         supportRequests: 0,
         documents: 0
     });
@@ -50,7 +53,8 @@ export default function AdminDashboard() {
     const [growthData, setGrowthData] = useState<GrowthData>({
         labels: [],
         newMembers: [],
-        trestleBoards: []
+        trestleBoards: [],
+        festiveBoards: []
     });
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -122,6 +126,13 @@ export default function AdminDashboard() {
                 backgroundColor: 'rgba(33, 150, 243, 0.1)',
                 tension: 0.4,
             },
+            {
+                label: 'FestiveBoards',
+                data: growthData.festiveBoards,
+                borderColor: '#FF9800',
+                backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                tension: 0.4,
+            },
         ],
     };
 
@@ -144,6 +155,7 @@ export default function AdminDashboard() {
         switch (type) {
             case "USER_REGISTRATION": return "success";
             case "EVENT_CREATED": return "info";
+            case "FESTIVE_BOARD_CREATED": return "warning";
             case "SUPPORT_REQUEST": return "warning";
             case "DOCUMENT_UPLOADED": return "secondary";
             default: return "info";
@@ -154,6 +166,7 @@ export default function AdminDashboard() {
         switch (type) {
             case "USER_REGISTRATION": return "Registration";
             case "EVENT_CREATED": return "TrestleBoard";
+            case "FESTIVE_BOARD_CREATED": return "FestiveBoard";
             case "SUPPORT_REQUEST": return "Support";
             case "DOCUMENT_UPLOADED": return "Document";
             default: return type;
@@ -169,11 +182,27 @@ export default function AdminDashboard() {
             color: "blue",
         },
         {
+            title: "Trestle Boards",
+            description: "Manage trestle board events and meetings",
+            icon: "pi pi-calendar",
+            route: "/admin/trestle-board",
+            color: "green",
+            refreshAction: () => loadDashboardData(),
+        },
+        {
+            title: "Festive Boards",
+            description: "Manage festive board meals and selections",
+            icon: "pi pi-apple",
+            route: "/admin/festive-board",
+            color: "orange",
+            refreshAction: () => loadDashboardData(),
+        },
+        {
             title: "Send Announcement",
             description: "Broadcast messages to all members",
             icon: "pi pi-bullhorn",
             route: "/admin/communications/announcement",
-            color: "orange",
+            color: "purple",
         },
         {
             title: "Support Requests",
@@ -187,7 +216,7 @@ export default function AdminDashboard() {
             description: "Manage and organize documents",
             icon: "pi pi-file-plus",
             route: "/admin/documents",
-            color: "purple",
+            color: "indigo",
         },
     ];
 
@@ -209,6 +238,12 @@ export default function AdminDashboard() {
             label: "Active TrestleBoards",
             color: "text-green-500",
             route: "/admin/trestle-board",
+        },
+        {
+            value: stats.activeFestiveBoards,
+            label: "Active FestiveBoards",
+            color: "text-yellow-500",
+            route: "/admin/festive-board",
         },
         {
             value: stats.supportRequests,
@@ -302,13 +337,30 @@ export default function AdminDashboard() {
                     <div className="grid">
                         {quickActions.map((action, index) => (
                             <div key={index} className="col-12 md:col-6 lg:col-4">
-                                <Card style={{height : '100px'}} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push(action.route)}>
-                                    <div className="flex align-items-center gap-3">
-                                        <i className={`${action.icon} text-2xl text-${action.color}-500`}></i>
-                                        <div>
-                                            <h3 className="text-lg font-semibold m-0">{action.title}</h3>
-                                            <p className="text-600 text-sm m-0">{action.description}</p>
+                                <Card style={{height : '120px'}} className="cursor-pointer hover:shadow-lg transition-shadow">
+                                    <div className="flex align-items-center justify-content-between h-full">
+                                        <div 
+                                            className="flex align-items-center gap-3 flex-1 cursor-pointer"
+                                            onClick={() => router.push(action.route)}
+                                        >
+                                            <i className={`${action.icon} text-2xl text-${action.color}-500`}></i>
+                                            <div>
+                                                <h3 className="text-lg font-semibold m-0">{action.title}</h3>
+                                                <p className="text-600 text-sm m-0">{action.description}</p>
+                                            </div>
                                         </div>
+                                        {action.refreshAction && (
+                                            <Button
+                                                icon="pi pi-refresh"
+                                                size="small"
+                                                severity="secondary"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    action.refreshAction();
+                                                }}
+                                                tooltip="Refresh Data"
+                                            />
+                                        )}
                                     </div>
                                 </Card>
                             </div>
@@ -324,11 +376,11 @@ export default function AdminDashboard() {
                         <div className="flex align-items-center justify-content-center" style={{ height: '300px' }}>
                             <div className="text-600">Loading chart data...</div>
                         </div>
-                    ) : growthData.newMembers.every(val => val === 0) && growthData.trestleBoards.every(val => val === 0) ? (
+                    ) : growthData.newMembers.every(val => val === 0) && growthData.trestleBoards.every(val => val === 0) && growthData.festiveBoards.every(val => val === 0) ? (
                         <div className="flex align-items-center justify-content-center flex-column" style={{ height: '300px' }}>
                             <i className="pi pi-chart-line text-4xl text-gray-400 mb-3"></i>
                             <div className="text-600 text-center">No growth data available</div>
-                            <div className="text-sm text-gray-500 text-center">Growth data will appear here as users and trestleBoards are created</div>
+                            <div className="text-sm text-gray-500 text-center">Growth data will appear here as users, trestleBoards, and festiveBoards are created</div>
                         </div>
                     ) : (
                         <Chart type="line" data={chartData} options={chartOptions} style={{ height: '300px' }} />

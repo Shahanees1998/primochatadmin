@@ -8,6 +8,7 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 import { Skeleton } from 'primereact/skeleton';
 import { useRouter, useParams } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
+import AdminMealSelectionManager from '@/components/AdminMealSelectionManager';
 
 export default function FestiveBoardViewPage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function FestiveBoardViewPage() {
   const [board, setBoard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showMealSelections, setShowMealSelections] = useState(false);
   const toast = React.useRef<Toast>(null);
 
   const boardId = params?.id as string;
@@ -73,6 +75,7 @@ export default function FestiveBoardViewPage() {
               <Skeleton width="180px" height="20px" />
             </div>
             <div className="flex gap-2">
+              <Skeleton width="120px" height="36px" borderRadius="8px" />
               <Skeleton width="120px" height="36px" borderRadius="8px" />
               <Skeleton width="120px" height="36px" borderRadius="8px" />
             </div>
@@ -155,6 +158,18 @@ export default function FestiveBoardViewPage() {
     );
   }
 
+  if (showMealSelections) {
+    return (
+      <div className="p-4">
+        <Toast ref={toast} />
+        <AdminMealSelectionManager 
+          festiveBoardId={boardId} 
+          onClose={() => setShowMealSelections(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4">
       <Toast ref={toast} />
@@ -168,6 +183,12 @@ export default function FestiveBoardViewPage() {
             <span className="text-600">Board ID: {board.id}</span>
           </div>
           <div className="flex gap-2">
+            <Button
+              label="Manage Meal Selections"
+              icon="pi pi-users"
+              className="p-button-success"
+              onClick={() => setShowMealSelections(true)}
+            />
             <Button
               label="Edit Board"
               icon="pi pi-pencil"

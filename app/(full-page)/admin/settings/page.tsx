@@ -253,7 +253,7 @@ export default function SettingsPage() {
                                         className="w-full"
                                     />
                                 </div>
-
+{/* 
                                 <div className="field mb-4">
                                     <label htmlFor="allowedFileTypes" className="block text-900 font-medium mb-2">
                                         Allowed File Types
@@ -266,7 +266,7 @@ export default function SettingsPage() {
                                         className="w-full"
                                     />
                                     <small className="text-600">Comma-separated list of file extensions</small>
-                                </div>
+                                </div> */}
                             </Card>
 
                             <Card title="Feature Toggles" className="mb-4">
