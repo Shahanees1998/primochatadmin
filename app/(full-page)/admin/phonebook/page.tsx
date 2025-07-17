@@ -451,7 +451,7 @@ export default function PhoneBookPage() {
                         emptyMessage="No phone book entries found."
                         responsiveLayout="scroll"
                     >
-                        <Column field="user.firstName" header="Name" body={nameBodyTemplate} sortable style={{ minWidth: "200px" }} />
+                        <Column field="user.firstName" header="Name" body={nameBodyTemplate} style={{ minWidth: "200px" }} />
                         <Column field="phone" header="Contact" body={contactBodyTemplate} style={{ minWidth: "150px" }} />
                         <Column field="address" header="Address" body={addressBodyTemplate} style={{ minWidth: "200px" }} />
                         <Column field="isPublic" header="Public" body={(rowData) => (
@@ -459,7 +459,7 @@ export default function PhoneBookPage() {
                         )} style={{ minWidth: "100px" }} />
                         <Column field="createdAt" header="Added" body={(rowData) => (
                             new Date(rowData.createdAt).toLocaleDateString()
-                        )} sortable style={{ minWidth: "120px" }} />
+                        )} style={{ minWidth: "120px" }} />
                         <Column body={actionBodyTemplate} style={{ width: "150px" }} />
                     </DataTable>
                 </Card>

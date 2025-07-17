@@ -71,7 +71,10 @@ export default function MealsPage() {
   const loadCategories = async () => {
     try {
       setCategoriesLoading(true);
-      const response = await apiClient.getMealCategories();
+      const response = await apiClient.getMealCategories({
+        limit: 1000, // Fetch all categories since there are typically limited categories
+        page: 1
+      });
       if (response.data) {
         setCategories(response.data.categories || response.data);
       }
@@ -281,7 +284,7 @@ export default function MealsPage() {
             className="w-full"
           />
         </span>
-        <Dropdown
+        {/* <Dropdown
           placeholder="Filter by category"
           value={selectedCategory}
           options={[
@@ -291,7 +294,7 @@ export default function MealsPage() {
           onChange={(e) => setSelectedCategory(e.value)}
           className="min-w-[200px]"
           disabled={categoriesLoading}
-        />
+        /> */}
         <Button
           label="Add New Meal"
           icon="pi pi-plus"
@@ -384,14 +387,14 @@ export default function MealsPage() {
           loading={loading}
           header={header}
         >
-          <Column field="title" header="Title" sortable />
+          <Column field="title" header="Title" />
           <Column field="description" header="Description" style={{ maxWidth: '300px' }} />
-          <Column field="category.name" header="Category" body={categoryBodyTemplate} sortable />
+          <Column field="category.name" header="Category" body={categoryBodyTemplate} />
           <Column 
             field="createdAt" 
             header="Created At" 
             body={(rowData) => new Date(rowData.createdAt).toLocaleDateString()}
-            sortable 
+            
           />
           <Column header="Actions" body={actionsBodyTemplate} style={{ width: '120px' }} />
         </DataTable>
@@ -447,6 +450,9 @@ export default function MealsPage() {
               placeholder="Select a category"
               className="w-full"
               disabled={submitting || categoriesLoading}
+              filter
+              filterMatchMode="contains"
+              showClear
             />
           </div>
 

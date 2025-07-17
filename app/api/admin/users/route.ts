@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
   return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
         const body = await request.json();
-        const { firstName, lastName, email, phone, joinDate, password, paidDate } = body;
+        const { firstName, lastName, email, phone, joinDate, password, paidDate, status } = body;
 
         // Validate required fields
         if (!firstName || !lastName || !email) {
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
                 password: hashedPassword,
                 phone,
                 role: 'MEMBER',
-                status: 'PENDING',
+                status: status || 'PENDING',
                 membershipNumber,
                 joinDate: joinDate ? new Date(joinDate) : null,
                 paidDate: paidDate ? new Date(paidDate) : null,

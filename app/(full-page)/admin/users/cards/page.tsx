@@ -486,19 +486,19 @@ export default function MembershipCardsPage() {
                                 field="firstName" 
                                 header="Name" 
                                 body={nameBodyTemplate} 
-                                sortable 
+                                
                                 style={{ minWidth: "200px" }} 
                             />
                             <Column 
                                 field="email" 
                                 header="Email" 
-                                sortable 
+                                
                                 style={{ minWidth: "200px" }} 
                             />
                             <Column 
                                 field="membershipNumber" 
                                 header="Member ID" 
-                                sortable 
+                                
                                 style={{ minWidth: "150px" }} 
                             />
                             <Column 
@@ -507,7 +507,7 @@ export default function MembershipCardsPage() {
                                 body={(rowData) => (
                                     <Tag value={rowData.role} severity="info" />
                                 )} 
-                                sortable 
+                                
                                 style={{ minWidth: "120px" }} 
                             />
                             <Column 
@@ -516,7 +516,7 @@ export default function MembershipCardsPage() {
                                 body={(rowData) => (
                                     <Tag value={rowData.status} severity={getStatusSeverity(rowData.status)} />
                                 )} 
-                                sortable 
+                                
                                 style={{ minWidth: "120px" }} 
                             />
                             <Column 

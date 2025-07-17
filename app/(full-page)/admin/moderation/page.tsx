@@ -401,7 +401,7 @@ export default function ModerationPage() {
                         )} style={{ minWidth: "150px" }} />
                         <Column field="createdAt" header="Date" body={(rowData) => (
                             new Date(rowData.createdAt).toLocaleDateString()
-                        )} sortable style={{ minWidth: "120px" }} />
+                        )} style={{ minWidth: "120px" }} />
                         <Column body={actionBodyTemplate} style={{ width: "150px" }} />
                     </DataTable>
                 </Card>

@@ -299,7 +299,7 @@ export default function TrestleBoardPage() {
     const header = useMemo(() => (
         <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
             <div className="flex flex-column">
-                <h2 className="text-2xl font-bold m-0">TrestleBoard Management</h2>
+                <h2 className="text-2xl font-bold m-0">Trestle Board Management</h2>
                 <span className="text-600">Create and manage all trestleBoards</span>
             </div>
             <div className="flex gap-2">
@@ -406,14 +406,14 @@ export default function TrestleBoardPage() {
                             sortOrder={sortOrder}
                             loadingIcon="pi pi-spinner"
                         >
-                            <Column field="title" header="Title" sortable style={{ minWidth: "200px" }} />
+                            <Column field="title" header="Title" style={{ minWidth: "200px" }} />
                             <Column field="startDate" header="Start Date" body={(rowData) => (
                                 new Date(rowData.startDate).toLocaleDateString()
-                            )} sortable style={{ minWidth: "120px" }} />
+                            )} style={{ minWidth: "120px" }} />
                             <Column field="location" header="Location" style={{ minWidth: "150px" }} />
                             <Column field="category" header="Category" body={(rowData) => (
                                 <Tag value={rowData.category} severity={getCategorySeverity(rowData.category)} />
-                            )} sortable style={{ minWidth: "120px" }} />
+                            )} style={{ minWidth: "120px" }} />
                             <Column field="isRSVP" header="RSVP" body={(rowData) => (
                                 <Tag value={rowData.isRSVP ? "Yes" : "No"} severity={rowData.isRSVP ? "success" : "secondary"} />
                             )} style={{ minWidth: "80px" }} />

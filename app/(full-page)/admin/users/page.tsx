@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { Skeleton } from "primereact/skeleton";
 import { apiClient } from "@/lib/apiClient";
 import { getProfileImageUrl } from "@/lib/cloudinary-client";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface User {
     id: string;
@@ -42,7 +43,6 @@ interface UserFormData {
     email: string;
     phone: string;
     status: string;
-    membershipNumber: string;
     joinDate: Date | null;
     paidDate: Date | null;
     password?: string;
@@ -71,18 +71,19 @@ export default function MembersPage() {
         email: "",
         phone: "",
         status: "PENDING",
-        membershipNumber: "",
         joinDate: null,
         paidDate: null,
         password: "",
     });
+    const [showPassword, setShowPassword] = useState(false);
     const toast = useRef<Toast>(null);
     const [error, setError] = useState<string | null>(null);
     const [saveLoading, setSaveLoading] = useState(false);
     const [sortField, setSortField] = useState<string | undefined>(undefined);
     const [sortOrder, setSortOrder] = useState<number | undefined>(undefined);
 
-
+    // Use debounce hook for search
+    const debouncedFilterValue = useDebounce(globalFilterValue, 500);
 
     const statusOptions = [
         { label: "Active", value: "ACTIVE" },
@@ -93,7 +94,7 @@ export default function MembersPage() {
 
     useEffect(() => {
         loadMembers();
-    }, [currentPage, rowsPerPage, globalFilterValue]);
+    }, [currentPage, rowsPerPage, debouncedFilterValue]);
 
     const loadMembers = async () => {
         setLoading(true);
@@ -102,7 +103,7 @@ export default function MembersPage() {
             const response = await apiClient.getUsers({
                 page: currentPage,
                 limit: rowsPerPage,
-                search: globalFilterValue,
+                search: debouncedFilterValue,
                 sortField,
                 sortOrder,
             });
@@ -134,19 +135,20 @@ export default function MembersPage() {
         toast.current?.show({ severity, summary, detail, life: 3000 });
     };
 
-    const openNewMemberDialog = () => {
+    const openNewMemberDialog = async () => {
         setEditingUser(null);
+        
         setUserForm({
             firstName: "",
             lastName: "",
             email: "",
             phone: "",
             status: "PENDING",
-            membershipNumber: "",
             joinDate: null,
             paidDate: null,
             password: "",
         });
+        setShowPassword(false);
         setShowUserDialog(true);
     };
 
@@ -158,10 +160,10 @@ export default function MembersPage() {
             email: user.email,
             phone: user.phone || "",
             status: user.status,
-            membershipNumber: user.membershipNumber || "",
             joinDate: user.joinDate ? new Date(user.joinDate) : null,
             paidDate: user.paidDate ? new Date(user.paidDate) : null,
         });
+        setShowPassword(false);
         setShowUserDialog(true);
     };
 
@@ -411,18 +413,18 @@ export default function MembersPage() {
                             sortField={sortField}
                             sortOrder={sortOrder as 1 | 0 | -1 | undefined}
                         >
-                            <Column field="firstName" header="Name" body={nameBodyTemplate} sortable style={{ minWidth: "200px" }} />
-                            <Column field="email" header="Email" sortable style={{ minWidth: "200px" }} />
+                            <Column field="firstName" header="Name" body={nameBodyTemplate} style={{ minWidth: "200px" }} />
+                            <Column field="email" header="Email" style={{ minWidth: "200px" }} />
                             <Column field="phone" header="Phone" style={{ minWidth: "150px" }} />
                             <Column field="paidDate" header="Paid Date" body={(rowData) => (
                                 rowData.paidDate ? new Date(rowData.paidDate).toLocaleDateString() : "Not paid"
-                            )} sortable style={{ minWidth: "120px" }} />
+                            )} style={{ minWidth: "120px" }} />
                             <Column field="status" header="Status" body={(rowData) => (
                                 <Tag value={rowData.status} severity={getStatusSeverity(rowData.status)} />
-                            )} sortable style={{ minWidth: "120px" }} />
+                            )} style={{ minWidth: "120px" }} />
                             {/* <Column field="joinDate" header="Join Date" body={(rowData) => (
                                 new Date(rowData.joinDate || "").toLocaleDateString()
-                            )} sortable style={{ minWidth: "120px" }} /> */}
+                            )} style={{ minWidth: "120px" }} /> */}
                             <Column body={actionBodyTemplate} style={{ width: "150px" }} />
                         </DataTable>
                     )}
@@ -457,6 +459,7 @@ export default function MembersPage() {
                             id="firstName"
                             value={userForm.firstName}
                             onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
+                            placeholder="Enter first name"
                             required
                             className="w-full"
                         />
@@ -467,6 +470,7 @@ export default function MembersPage() {
                             id="lastName"
                             value={userForm.lastName}
                             onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
+                            placeholder="Enter last name"
                             required
                             className="w-full"
                         />
@@ -478,6 +482,7 @@ export default function MembersPage() {
                             type="email"
                             value={userForm.email}
                             onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                            placeholder="Enter email address"
                             required
                             className="w-full"
                         />
@@ -488,6 +493,7 @@ export default function MembersPage() {
                             id="phone"
                             value={userForm.phone}
                             onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                            placeholder="Enter phone number"
                             className="w-full"
                         />
                     </div>
@@ -499,20 +505,12 @@ export default function MembersPage() {
                             value={userForm.status}
                             options={statusOptions}
                             onChange={(e) => setUserForm({ ...userForm, status: e.value })}
-                            placeholder="Select Status"
+                            placeholder="Select member status"
                             className="w-full"
                             style={{ minWidth: 0 }}
                         />
                     </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="membershipNumber" className="block font-bold mb-2">Membership Number</label>
-                        <InputText
-                            id="membershipNumber"
-                            value={userForm.membershipNumber}
-                            onChange={(e) => setUserForm({ ...userForm, membershipNumber: e.target.value })}
-                            className="w-full"
-                        />
-                    </div>
+
                     <div className="col-12 md:col-6">
                         <label htmlFor="joinDate" className="block font-bold mb-2">Join Date</label>
                         <Calendar
@@ -521,33 +519,44 @@ export default function MembersPage() {
                             onChange={(e) => setUserForm({ ...userForm, joinDate: e.value as Date })}
                             showIcon
                             dateFormat="dd/mm/yy"
+                            placeholder="Select join date"
                             className="w-full"
                             style={{ minWidth: 0 }}
                         />
                     </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="paidDate" className="block font-bold mb-2">Paid Date</label>
-                        <Calendar
-                            id="paidDate"
-                            value={userForm.paidDate}
-                            onChange={(e) => setUserForm({ ...userForm, paidDate: e.value as Date })}
-                            showIcon
-                            dateFormat="dd/mm/yy"
-                            className="w-full"
-                            style={{ minWidth: 0 }}
-                        />
-                    </div>
+                    {editingUser && (
+                        <div className="col-12 md:col-6">
+                            <label htmlFor="paidDate" className="block font-bold mb-2">Paid Date</label>
+                            <Calendar
+                                id="paidDate"
+                                value={userForm.paidDate}
+                                onChange={(e) => setUserForm({ ...userForm, paidDate: e.value as Date })}
+                                showIcon
+                                dateFormat="dd/mm/yy"
+                                placeholder="Select paid date"
+                                className="w-full"
+                                style={{ minWidth: 0 }}
+                            />
+                        </div>
+                    )}
                     {!editingUser && (
                         <div className="col-12">
                             <label htmlFor="password" className="font-bold">Password</label>
-                            <InputText
-                                id="password"
-                                type="password"
-                                value={userForm.password}
-                                onChange={e => setUserForm({ ...userForm, password: e.target.value })}
-                                placeholder="Set password (leave blank for default)"
-                                className="w-full"
-                            />
+                            <div className="p-input-icon-right w-full">
+                                <InputText
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    value={userForm.password}
+                                    onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                                    placeholder="Set password (leave blank for default)"
+                                    className="w-full"
+                                />
+                                <i 
+                                    className={`pi ${showPassword ? 'pi-eye-slash' : 'pi-eye'} cursor-pointer`}
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{ cursor: 'pointer' }}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>

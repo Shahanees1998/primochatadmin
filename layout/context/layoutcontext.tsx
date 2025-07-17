@@ -89,7 +89,7 @@ export const LayoutProvider = (props: ChildContainerProps) => {
     };
 
     const isDesktop = () => {
-        return window.innerWidth > 991;
+        return typeof window !== 'undefined' && window.innerWidth > 991;
     };
 
     const value = {

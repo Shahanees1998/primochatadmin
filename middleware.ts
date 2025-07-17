@@ -24,6 +24,7 @@ export async function middleware(req: NextRequest) {
   // Check if user is authenticated
   const token = AuthService.getTokenFromRequest(req);
   console.log('Token>>>>>>>>>>>>>>>>>>>>>>>>>>>>>:', token);
+  
   // Protect admin routes (both frontend and API)
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     if (!token) {
@@ -31,7 +32,7 @@ export async function middleware(req: NextRequest) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json(
           { error: 'Authentication required' },
-          { status: 401 }
+          { status:401}
         );
       }
       
@@ -45,13 +46,14 @@ export async function middleware(req: NextRequest) {
       // Verify the token
       const payload = await AuthService.verifyToken(token);
       console.log('Payload>>>>>>>>>>>>>>>>>>>>>>>>>>>>>:', payload);
+      
       // Check if user has admin role
       // if (payload.role !== 'ADMIN') {
       //   // For API routes, return 403 instead of redirecting
       //   if (pathname.startsWith('/api/')) {
       //     return NextResponse.json(
       //       { error: 'Admin access required' },
-      //       { status: 403 }
+      //       { status: 403}
       //     );
       //   }
         
@@ -59,18 +61,29 @@ export async function middleware(req: NextRequest) {
       //   return NextResponse.redirect(new URL('/auth/access', req.url));
       // }
     } catch (error) {
-      // Token is invalid
-      if (pathname.startsWith('/api/')) {
-        return NextResponse.json(
-          { error: 'Invalid token' },
-          { status: 401 }
-        );
+      // Token is invalid or expired
+      console.log('Token verification failed:', error);
+      
+      // Clear invalid tokens
+      const response = pathname.startsWith('/api/')
+        ? NextResponse.json(
+            { error: 'Invalid or expired token' },
+            { status: 401 }
+          )
+        : NextResponse.redirect(new URL('/auth/login', req.url));
+      
+      // Clear cookies for both API and frontend responses
+      response.cookies.delete('access_token');
+      response.cookies.delete('refresh_token');
+      
+      // For frontend routes, add callback URL
+      if (!pathname.startsWith('/api/')) {
+        const loginUrl = new URL('/auth/login', req.url);
+        loginUrl.searchParams.set('callbackUrl', pathname);
+        return NextResponse.redirect(loginUrl);
       }
       
-      // For frontend routes, redirect to login
-      const loginUrl = new URL('/auth/login', req.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
+      return response;
     }
   }
 

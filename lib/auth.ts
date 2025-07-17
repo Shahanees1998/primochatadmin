@@ -250,6 +250,6 @@ export class AuthService {
    */
   static async generateMembershipNumber(): Promise<string> {
     const userCount = await prisma.user.count();
-    return `5000${userCount + 1}`;
+    return `primo${userCount + 1}`;
   }
 } 

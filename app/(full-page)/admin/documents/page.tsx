@@ -458,21 +458,21 @@ export default function DocumentsPage() {
                             sortOrder={sortOrder}
                             loadingIcon="pi pi-spinner"
                         >
-                        <Column field="title" header="Title" sortable style={{ minWidth: "200px" }} />
+                        <Column field="title" header="Title" style={{ minWidth: "200px" }} />
                         <Column field="fileName" header="File Name" style={{ minWidth: "150px" }} />
                         <Column field="fileSize" header="Size" body={(rowData) => formatFileSize(rowData.fileSize)} style={{ minWidth: "100px" }} />
                         <Column field="category" header="Category" body={(rowData) => (
                             <Tag value={rowData.category.replace("_", " ")} severity={getCategorySeverity(rowData.category)} />
-                        )} sortable style={{ minWidth: "120px" }} />
+                        )} style={{ minWidth: "120px" }} />
                         <Column field="permissions" header="Permissions" body={(rowData) => (
                             <Tag value={rowData.permissions.replace("_", " ")} severity={getPermissionSeverity(rowData.permissions)} />
-                        )} sortable style={{ minWidth: "120px" }} />
+                        )} style={{ minWidth: "120px" }} />
                         <Column field="user" header="Uploaded By" body={(rowData) => (
                             rowData.user ? `${rowData.user.firstName} ${rowData.user.lastName}` : "Unknown"
                         )} style={{ minWidth: "150px" }} />
                             <Column field="createdAt" header="Upload Date" body={(rowData) => (
                                 new Date(rowData.createdAt).toLocaleDateString()
-                            )} sortable style={{ minWidth: "120px" }} />
+                            )} style={{ minWidth: "120px" }} />
                             <Column body={actionBodyTemplate} style={{ width: "150px" }} />
                         </DataTable>
                     )}

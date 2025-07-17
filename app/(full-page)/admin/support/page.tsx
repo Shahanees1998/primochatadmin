@@ -447,7 +447,7 @@ export default function SupportPage() {
                         )} style={{ minWidth: "120px" }} />
                         <Column field="createdAt" header="Created" body={(rowData) => (
                             new Date(rowData.createdAt).toLocaleDateString()
-                        )} sortable style={{ minWidth: "120px" }} />
+                        )} style={{ minWidth: "120px" }} />
                         <Column body={actionBodyTemplate} style={{ width: "200px" }} />
                     </DataTable>
                 </Card>

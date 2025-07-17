@@ -191,6 +191,39 @@ export default function AdminDashboard() {
         },
     ];
 
+    const cardData = [
+        {
+            value: stats.totalUsers,
+            label: "Total Members",
+            color: "text-blue-500",
+            route: "/admin/users",
+        },
+        {
+            value: stats.pendingApprovals,
+            label: "Pending Approvals",
+            color: "text-orange-500",
+            route: "/admin/users/pending",
+        },
+        {
+            value: stats.activeTrestleBoards,
+            label: "Active TrestleBoards",
+            color: "text-green-500",
+            route: "/admin/trestle-board",
+        },
+        {
+            value: stats.supportRequests,
+            label: "Support Requests",
+            color: "text-red-500",
+            route: "/admin/support",
+        },
+        {
+            value: stats.documents,
+            label: "Documents",
+            color: "text-purple-500",
+            route: "/admin/documents",
+        },
+    ];
+
     return (
         <div className="grid">
             {/* Header */}
@@ -245,36 +278,21 @@ export default function AdminDashboard() {
                 </>
             ) : (
                 <>
-                    <div className="col-12 md:col-6 lg:col-2">
-                        <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/users')}>
-                            <div className="text-3xl font-bold text-blue-500">{stats.totalUsers}</div>
-                            <div className="text-600">Total Members</div>
-                        </Card>
-                    </div>
-                    <div className="col-12 md:col-6 lg:col-2">
-                        <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/users/pending')}>
-                            <div className="text-3xl font-bold text-orange-500">{stats.pendingApprovals}</div>
-                            <div className="text-600">Pending Approvals</div>
-                        </Card>
-                    </div>
-                    <div className="col-12 md:col-6 lg:col-2">
-                        <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/trestle-board')}>
-                            <div className="text-3xl font-bold text-green-500">{stats.activeTrestleBoards}</div>
-                            <div className="text-600">Active TrestleBoards</div>
-                        </Card>
-                    </div>
-                    <div className="col-12 md:col-6 lg:col-2">
-                        <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/support')}>
-                            <div className="text-3xl font-bold text-red-500">{stats.supportRequests}</div>
-                            <div className="text-600">Support Requests</div>
-                        </Card>
-                    </div>
-                    <div className="col-12 md:col-6 lg:col-2">
-                        <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/admin/documents')}>
-                            <div className="text-3xl font-bold text-purple-500">{stats.documents}</div>
-                            <div className="text-600">Documents</div>
-                        </Card>
-                    </div>
+                    {cardData.map((card) => (
+                        <div className="col-12 md:col-6 lg:col-2" key={card.label}>
+                            <Card
+                                style={{ height: "150px" }}
+                                className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+                                onClick={() => router.push(card.route)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyPress={e => { if (e.key === "Enter") router.push(card.route); }}
+                            >
+                                <div className={`text-3xl font-bold ${card.color}`}>{card.value}</div>
+                                <div className="text-600">{card.label}</div>
+                            </Card>
+                        </div>
+                    ))}
                 </>
             )}
 
@@ -284,7 +302,7 @@ export default function AdminDashboard() {
                     <div className="grid">
                         {quickActions.map((action, index) => (
                             <div key={index} className="col-12 md:col-6 lg:col-4">
-                                <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push(action.route)}>
+                                <Card style={{height : '100px'}} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push(action.route)}>
                                     <div className="flex align-items-center gap-3">
                                         <i className={`${action.icon} text-2xl text-${action.color}-500`}></i>
                                         <div>

@@ -5,6 +5,7 @@ import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import { Skeleton } from 'primereact/skeleton';
 import { useRouter, useParams } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 
@@ -66,10 +67,67 @@ export default function FestiveBoardViewPage() {
       <div className="p-4">
         <Toast ref={toast} />
         <Card>
-          <div className="flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-            <div className="text-center">
-              <ProgressSpinner style={{ width: '50px', height: '50px' }} />
-              <p className="mt-3">Loading Festive board...</p>
+          <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3 mb-4">
+            <div className="flex flex-column">
+              <Skeleton width="250px" height="32px" className="mb-2" />
+              <Skeleton width="180px" height="20px" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton width="120px" height="36px" borderRadius="8px" />
+              <Skeleton width="120px" height="36px" borderRadius="8px" />
+            </div>
+          </div>
+
+          <div className="grid">
+            <div className="col-12">
+              <Skeleton width="200px" height="24px" className="mb-3" />
+              <div className="grid">
+                <div className="col-12 md:col-6">
+                  <div className="mb-3">
+                    <Skeleton width="80px" height="16px" className="mb-2" />
+                    <Skeleton width="100px" height="24px" />
+                  </div>
+                </div>
+                <div className="col-12 md:col-6">
+                  <div className="mb-3">
+                    <Skeleton width="100px" height="16px" className="mb-2" />
+                    <Skeleton width="100px" height="24px" />
+                  </div>
+                </div>
+                <div className="col-12">
+                  <div className="mb-3">
+                    <Skeleton width="120px" height="16px" className="mb-2" />
+                    <Skeleton width="100px" height="24px" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-12">
+              <Skeleton width="150px" height="24px" className="mb-3" />
+              <div className="grid">
+                {[1,2,3].map((index) => (
+                  <div key={index} className="col-12 md:col-6 lg:col-4">
+                    <div className="p-3 border-1 surface-border border-round">
+                      <Skeleton width="80px" height="20px" className="mb-2" />
+                      <Skeleton width="60px" height="16px" className="mb-2" />
+                      <Skeleton width="40px" height="16px" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="col-12">
+              <Skeleton width="120px" height="24px" className="mb-3" />
+              <div className="p-3 surface-50 border-round">
+                <div className="flex align-items-center gap-3">
+                  <div className="flex flex-column">
+                    <Skeleton width="150px" height="20px" className="mb-2" />
+                    <Skeleton width="200px" height="16px" />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Card>

@@ -36,7 +36,7 @@ const LoginContent = () => {
         // Clear previous errors
         setEmailError("");
         setPasswordError("");
-        
+
         // Validate inputs
         let hasError = false;
         if (!email) {
@@ -46,12 +46,12 @@ const LoginContent = () => {
             setEmailError("Please enter a valid email address");
             hasError = true;
         }
-        
+
         if (!password) {
             setPasswordError("Password is required");
             hasError = true;
         }
-        
+
         if (hasError) {
             return;
         }
@@ -64,7 +64,7 @@ const LoginContent = () => {
         } catch (error) {
             console.error('Login error:', error);
             let errorMessage = 'An unexpected error occurred. Please try again.';
-            
+
             if (error instanceof Error) {
                 errorMessage = error.message;
                 if (error.message === 'Invalid email or password') {
@@ -77,7 +77,7 @@ const LoginContent = () => {
                     errorMessage = 'Account is not active. Please contact admin.';
                 }
             }
-            
+
             toast.current?.show({
                 severity: 'error',
                 summary: 'Login Failed',
@@ -123,7 +123,12 @@ const LoginContent = () => {
             <div className="min-h-screen flex justify-content-center align-items-center">
                 <div className="border-1 surface-border surface-card border-round py-7 px-4 md:px-7 z-1">
                     <div className="mb-4">
-                        <div className="text-900 text-xl font-bold mb-2">
+                        <div style={{ display: 'flex', alignItems: 'center' }} className="app-logo flex items-center justify-content-center gap-3">
+                            <img src="/images/logo.svg" alt="PrimoChat Logo" style={{ width: '50px' }} />
+                            <div style={{ fontSize: '2rem' }}>|</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', fontStyle: 'italic' }}>Admin</div>
+                        </div>
+                        <div className="text-900 text-xl font-bold mb-2 mt-4">
                             Log in
                         </div>
                         <span className="text-600 font-medium">
@@ -188,7 +193,7 @@ const LoginContent = () => {
                             <small className="p-error block mb-3">{passwordError}</small>
                         )}
                         <div className="mb-4 flex flex-wrap gap-3 align-items-center">
-                            <div className="flex align-items-center">
+                            {/* <div className="flex align-items-center">
                                 <input
                                     type="checkbox"
                                     id="rememberMe"
@@ -204,7 +209,7 @@ const LoginContent = () => {
                                 >
                                     Remember Me
                                 </label>
-                            </div>
+                            </div> */}
                             <a
                                 className="text-600 cursor-pointer hover:text-primary ml-auto transition-colors transition-duration-300"
                                 onClick={() => router.push('/auth/forgotpassword')}

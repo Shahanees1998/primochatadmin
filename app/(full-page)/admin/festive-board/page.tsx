@@ -354,7 +354,7 @@ export default function FestiveBoardPage() {
             field="month" 
             header="Month/Year" 
             body={monthYearBodyTemplate}
-            sortable 
+            
             style={{ minWidth: '200px' }}
           />
           <Column 
@@ -373,7 +373,7 @@ export default function FestiveBoardPage() {
             field="createdAt" 
             header="Created At" 
             body={(rowData) => new Date(rowData.createdAt).toLocaleDateString()}
-            sortable 
+            
             style={{ minWidth: '120px' }}
           />
           <Column 

@@ -64,7 +64,6 @@ export default function CreateFestiveBoardPage() {
     mealIds: [] as string[],
   });
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [availableMeals, setAvailableMeals] = useState<Meal[]>([]);
   const [selectedMeals, setSelectedMeals] = useState<Meal[]>([]);
   const [searchingMeals, setSearchingMeals] = useState(false);
@@ -74,7 +73,7 @@ export default function CreateFestiveBoardPage() {
 
   // Debounced search function
   const debouncedSearch = useCallback(
-    (search: string, category: string) => {
+    (search: string) => {
       // Clear previous timeout
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
@@ -82,8 +81,8 @@ export default function CreateFestiveBoardPage() {
       
       // Set new timeout
       searchTimeoutRef.current = setTimeout(() => {
-        if (search || category) {
-          searchMeals(search, category);
+        if (search) {
+          searchMeals(search);
         }
       }, 300); // 300ms delay
     },
@@ -94,11 +93,11 @@ export default function CreateFestiveBoardPage() {
     loadCategories();
     loadAvailableMonths();
     // Load initial meals
-    searchMeals('', '');
+    searchMeals('');
   }, []);
 
   useEffect(() => {
-    debouncedSearch(searchTerm, selectedCategory);
+    debouncedSearch(searchTerm);
     
     // Cleanup timeout on unmount
     return () => {
@@ -106,7 +105,7 @@ export default function CreateFestiveBoardPage() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchTerm, selectedCategory, debouncedSearch]);
+  }, [searchTerm, debouncedSearch]);
 
   const loadCategories = async () => {
     try {
@@ -165,13 +164,12 @@ export default function CreateFestiveBoardPage() {
     loadAvailableMonths(newYear);
   };
 
-  const searchMeals = async (search: string = searchTerm, category: string = selectedCategory) => {
+  const searchMeals = async (search: string = searchTerm) => {
     try {
       setSearchingMeals(true);
       const response = await apiClient.searchMeals({
         search: search,
-        categoryId: category,
-        limit: 20,
+        limit: 50, // Increased limit since we're not filtering by category
       });
       console.log('Search response:', response); // Debug log
       if (response.data) {
@@ -413,135 +411,83 @@ export default function CreateFestiveBoardPage() {
 
           <div className="col-12">
             <h3 className="text-lg font-bold mb-3">Select Meals</h3>
-            
-            <div className="grid mb-4">
-              <div className="col-12 md:col-6">
-                <label className="block font-bold mb-2">Search Meals</label>
-                <span className="p-input-icon-left w-full">
-                  <i className="pi pi-search" />
-                  <InputText
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search meals by title or description..."
-                    className="w-full"
-                  />
-                </span>
-                {searchTerm && (
-                  <small className="text-600">Searching for: "{searchTerm}"</small>
-                )}
-              </div>
-              
-              <div className="col-12 md:col-6">
-                <label className="block font-bold mb-2">Filter by Category</label>
-                <Dropdown
-                  value={selectedCategory}
-                  options={categoryOptions}
-                  onChange={(e) => setSelectedCategory(e.value)}
-                  placeholder="All Categories"
+            <div className="mb-4">
+              <label className="block font-bold mb-2">Search and Select Meals</label>
+              {searchingMeals ? (
+                <div className="flex justify-center p-4">
+                  <ProgressSpinner style={{ width: '50px', height: '50px' }} />
+                  <span className="ml-2">Searching meals...</span>
+                </div>
+              ) : (
+                <MultiSelect
+                  value={selectedMeals.map(meal => meal.id)}
+                  onChange={(e) => handleMealSelection(e.value)}
+                  options={availableMeals.map(meal => ({
+                    label: `${meal.title}${meal.category?.name ? ` (${meal.category.name})` : ''}`,
+                    value: meal.id
+                  }))}
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Search and select meals..."
                   className="w-full"
-                  disabled={categoriesLoading}
+                  showClear
+                  filter
+                  filterMatchMode="contains"
+                  maxSelectedLabels={3}
+                  selectedItemsLabel={`${selectedMeals.length} meals selected`}
+                  onFilter={(e) => {
+                    setSearchTerm(e.filter);
+                  }}
+                  filterPlaceholder="Search meals by name..."
+                  display="chip"
                 />
-              </div>
+              )}
+              <small className="text-600">
+                {useFallbackSelection && ' (using fallback selection)'}
+              </small>
             </div>
-
-            {searchingMeals && (
-              <div className="flex justify-center p-4">
-                <ProgressSpinner style={{ width: '50px', height: '50px' }} />
-                <span className="ml-2">Searching meals...</span>
-              </div>
-            )}
-
-            {!searchingMeals && availableMeals.length > 0 && (
-              <div className="mb-4">
-                <label className="block font-bold mb-2">
-                  Available Meals ({availableMeals.length} found)
-                </label>
-                
-                {!useFallbackSelection ? (
-                  <MultiSelect
-                    value={selectedMeals.map(meal => meal.id)}
-                    onChange={(e) => handleMealSelection(e.value)}
-                    options={availableMeals.map(meal => ({ label: meal.title, value: meal.id }))}
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select meals"
-                    className="w-full"
-                    showClear
-                    filter
-                    filterMatchMode="contains"
-                    maxSelectedLabels={3}
-                    selectedItemsLabel={`${selectedMeals.length} meals selected`}
-                  />
-                ) : (
-                  <div className="border-1 surface-border border-round p-3 max-h-20rem overflow-y-auto">
-                    {availableMeals.map((meal) => (
-                      <div key={meal.id} className="flex align-items-center mb-2">
-                        <Checkbox
-                          checked={selectedMeals.some(m => m.id === meal.id)}
-                          onChange={(e) => handleCheckboxSelection(meal, e.checked || false)}
-                          className="mr-2"
-                        />
-                        <div className="flex flex-column">
-                          <span className="font-medium">{meal.title || 'Untitled Meal'}</span>
-                          <span className="text-sm text-600">{meal.category?.name || 'No Category'}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Debug info */}
-                <small className="text-600">
-                  Debug: {availableMeals.length} meals loaded, {selectedMeals.length} selected
-                  {useFallbackSelection && ' (using fallback selection)'}
-                </small>
-              </div>
-            )}
-
-            {!searchingMeals && availableMeals.length === 0 && (searchTerm || selectedCategory) && (
+            {!searchingMeals && availableMeals.length === 0 && searchTerm && (
               <div className="text-center p-4 text-600">
                 <i className="pi pi-search text-2xl mb-2"></i>
                 <p>No meals found matching your search criteria</p>
-                <small>Try adjusting your search terms or category filter</small>
+                <small>Try adjusting your search terms</small>
               </div>
             )}
-
-            {!searchingMeals && availableMeals.length === 0 && !searchTerm && !selectedCategory && (
+            {!searchingMeals && availableMeals.length === 0 && !searchTerm && (
               <div className="text-center p-4 text-600">
                 <i className="pi pi-info-circle text-2xl mb-2"></i>
                 <p>Start typing to search for meals</p>
-                <small>Or select a category to filter meals</small>
+                <small>Search by meal name to find and select meals</small>
               </div>
             )}
-
             {selectedMeals.length > 0 && (
               <div className="mb-4">
                 <label className="block font-bold mb-2">Selected Meals ({selectedMeals.length})</label>
                 <div className="flex flex-wrap gap-2">
-                  {selectedMeals.map((meal) => {
-                    try {
-                      return (
-                        <div
-                          key={meal.id}
-                          className="p-2 border-round bg-primary-50 border-1 border-primary-200"
-                        >
-                          <div className="font-medium">{meal.title || 'Untitled Meal'}</div>
-                          <div className="text-sm text-600">{meal.category?.name || 'No Category'}</div>
-                        </div>
-                      );
-                    } catch (error) {
-                      console.error('Error rendering meal:', meal, error);
-                      return (
-                        <div
-                          key={meal.id}
-                          className="p-2 border-round bg-red-50 border-1 border-red-200"
-                        >
-                          <div className="font-medium text-red-600">Error displaying meal</div>
-                          <div className="text-sm text-red-500">ID: {meal.id}</div>
-                        </div>
-                      );
-                    }
-                  })}
+                  {selectedMeals.map((meal) => (
+                    <div
+                      key={meal.id}
+                      className="p-2 border-round bg-primary-50 border-1 border-primary-200 align-items-center gap-2 flex"
+                    >
+                      <div className="flex flex-column">
+                        <div className="font-medium">{meal.title || 'Untitled Meal'}</div>
+                        <div className="text-sm text-600">{meal.category?.name || 'No Category'}</div>
+                      </div>
+                      <Button
+                        icon="pi pi-times"
+                        className="p-button-rounded p-button-text p-button-sm"
+                        onClick={() => {
+                          const newSelectedMeals = selectedMeals.filter(m => m.id !== meal.id);
+                          setSelectedMeals(newSelectedMeals);
+                          setFormData({
+                            ...formData,
+                            mealIds: newSelectedMeals.map(m => m.id),
+                          });
+                        }}
+                        tooltip="Remove meal"
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

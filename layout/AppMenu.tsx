@@ -17,11 +17,11 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-clock",
                     to: "/admin/users/pending",
                 },
-                {
-                    label: "Membership Cards",
-                    icon: "pi pi-fw pi-id-card",
-                    to: "/admin/users/cards",
-                },
+                // {
+                //     label: "Membership Cards",
+                //     icon: "pi pi-fw pi-id-card",
+                //     to: "/admin/users/cards",
+                // },
             ],
         },
         {

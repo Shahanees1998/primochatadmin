@@ -13,6 +13,7 @@ import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { FilterMatchMode } from "primereact/api";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "primereact/skeleton";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface User {
     id: string;
@@ -47,9 +48,12 @@ export default function PendingUsersPage() {
     const [sortField, setSortField] = useState<string | undefined>(undefined);
     const [sortOrder, setSortOrder] = useState<1 | 0 | -1 | undefined>(undefined);
 
+    // Use debounce hook for search
+    const debouncedFilterValue = useDebounce(globalFilterValue, 500);
+
     useEffect(() => {
         loadPendingUsers();
-    }, [currentPage, rowsPerPage, globalFilterValue]);
+    }, [currentPage, rowsPerPage, debouncedFilterValue]);
 
     const loadPendingUsers = async () => {
         setLoading(true);
@@ -57,7 +61,7 @@ export default function PendingUsersPage() {
             const params = new URLSearchParams({
                 page: currentPage.toString(),
                 limit: rowsPerPage.toString(),
-                search: globalFilterValue,
+                search: debouncedFilterValue,
                 status: 'PENDING',
             });
             if (sortField) params.append('sortField', sortField);
@@ -278,15 +282,15 @@ export default function PendingUsersPage() {
                             sortField={sortField}
                             sortOrder={sortOrder as 1 | 0 | -1 | undefined}
                         >
-                            <Column field="firstName" header="Name" body={nameBodyTemplate} sortable style={{ minWidth: "200px" }} />
-                            <Column field="email" header="Email" sortable style={{ minWidth: "200px" }} />
+                            <Column field="firstName" header="Name" body={nameBodyTemplate} style={{ minWidth: "200px" }} />
+                            <Column field="email" header="Email" style={{ minWidth: "200px" }} />
                             <Column field="phone" header="Phone" style={{ minWidth: "150px" }} />
                             <Column field="role" header="Role" body={(rowData) => (
                                 <Tag value={rowData.role} severity="info" />
-                            )} sortable style={{ minWidth: "120px" }} />
+                            )} style={{ minWidth: "120px" }} />
                             <Column field="createdAt" header="Registration Date" body={(rowData) => (
                                 new Date(rowData.createdAt).toLocaleDateString()
-                            )} sortable style={{ minWidth: "150px" }} />
+                            )} style={{ minWidth: "150px" }} />
                             <Column body={actionBodyTemplate} style={{ width: "150px" }} />
                         </DataTable>
                     )}

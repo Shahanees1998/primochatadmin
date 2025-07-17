@@ -24,6 +24,21 @@ class ApiClient {
         this.baseURL = baseURL;
     }
 
+    // Global error handler for showing toast messages
+    private handleError(error: string, showToast: boolean = true) {
+        if (showToast && typeof window !== 'undefined') {
+            // Dispatch a custom event for global error handling
+            const event = new CustomEvent('api-error', {
+                detail: {
+                    error,
+                    type: error.includes('Session expired') ? 'auth' : 'general'
+                }
+            });
+            window.dispatchEvent(event);
+        }
+        return { error };
+    }
+
     private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
         const {
             method = 'GET',
@@ -66,6 +81,25 @@ class ApiClient {
 
             // Handle different response statuses
             if (!response.ok) {
+                // Handle authentication errors (401)
+                if (response.status === 401) {
+                    // Clear any existing auth state
+                    try {
+                        await fetch('/api/auth/logout', { method: 'POST' });
+                    } catch (e) {
+                        // Ignore logout errors
+                    }
+                    
+                    // Redirect to login page
+                    if (typeof window !== 'undefined') {
+                        const currentPath = window.location.pathname;
+                        const loginUrl = `/auth/login?callbackUrl=${encodeURIComponent(currentPath)}`;
+                        window.location.href = loginUrl;
+                    }
+                    
+                    return this.handleError('Session expired. Please log in again.', true);
+                }
+                
                 let errorMessage = 'An error occurred';
                 try {
                     const errorData = await response.json();
@@ -73,7 +107,7 @@ class ApiClient {
                 } catch {
                     errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                 }
-                return { error: errorMessage };
+                return this.handleError(errorMessage, true);
             }
 
             // Parse successful response
@@ -82,9 +116,10 @@ class ApiClient {
 
         } catch (error) {
             console.error('API request failed:', error);
-            return {
-                error: error instanceof Error ? error.message : 'Network error occurred'
-            };
+            return this.handleError(
+                error instanceof Error ? error.message : 'Network error occurred',
+                true
+            );
         }
     }
 
@@ -327,16 +362,17 @@ class ApiClient {
                 } catch {
                     errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                 }
-                return { error: errorMessage };
+                return this.handleError(errorMessage, true);
             }
 
             const data = await response.json();
             return { data };
         } catch (error) {
             console.error('Upload request failed:', error);
-            return {
-                error: error instanceof Error ? error.message : 'Network error occurred'
-            };
+            return this.handleError(
+                error instanceof Error ? error.message : 'Network error occurred',
+                true
+            );
         }
     }
 
@@ -359,16 +395,17 @@ class ApiClient {
                 } catch {
                     errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                 }
-                return { error: errorMessage };
+                return this.handleError(errorMessage, true);
             }
 
             const data = await response.json();
             return { data };
         } catch (error) {
             console.error('Profile image upload request failed:', error);
-            return {
-                error: error instanceof Error ? error.message : 'Network error occurred'
-            };
+            return this.handleError(
+                error instanceof Error ? error.message : 'Network error occurred',
+                true
+            );
         }
     }
 

@@ -423,7 +423,7 @@ export default function ModeratorsPage() {
                         )} style={{ minWidth: "100px" }} />
                         <Column field="createdAt" header="Added" body={(rowData) => (
                             new Date(rowData.createdAt).toLocaleDateString()
-                        )} sortable style={{ minWidth: "120px" }} />
+                        )} style={{ minWidth: "120px" }} />
                         <Column body={actionBodyTemplate} style={{ width: "120px" }} />
                     </DataTable>
                 </Card>

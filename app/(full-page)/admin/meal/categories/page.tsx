@@ -307,13 +307,13 @@ export default function MealCategoriesPage() {
           loading={loading}
           header={header}
         >
-          <Column field="name" header="Name" sortable />
+          <Column field="name" header="Name" />
           <Column field="description" header="Description" style={{ maxWidth: '300px' }} />
           <Column 
             field="createdAt" 
             header="Created At" 
             body={(rowData) => new Date(rowData.createdAt).toLocaleDateString()}
-            sortable 
+            
           />
           <Column header="Actions" body={actionsBodyTemplate} style={{ width: '120px' }} />
         </DataTable>
