@@ -35,7 +35,8 @@ model User {
 
   // Relations
   trestleBoards        TrestleBoardMember[]
-  calendarEvents       CalendarEvent[]
+  userCalendar         UserCalendar?
+  customEvents         CustomEvent[]
   notifications        Notification[]
   messages             Message[]
   chatParticipants     ChatParticipant[]
@@ -56,10 +57,8 @@ model TrestleBoard {
   id           String               @id @default(auto()) @map("_id") @db.ObjectId
   title        String
   description  String?
-  startDate    DateTime
-  endDate      DateTime?
-  startTime    String? // Time in HH:MM format
-  endTime      String? // Time in HH:MM format
+  date         DateTime
+  time         String? // Time in HH:MM format
   location     String?
   category     TrestleBoardCategory
   isRSVP       Boolean              @default(false)
@@ -71,9 +70,8 @@ model TrestleBoard {
   // Relations
   members        TrestleBoardMember[]
   createdBy      User                 @relation("CreatedTrestleBoards", fields: [createdById], references: [id], onDelete: Cascade)
-  calendarEvents CalendarEvent[]
 
-  @@map("trestleBoards")
+    @@map("trestleBoards")
 }
 
 model TrestleBoardMember {
@@ -90,31 +88,37 @@ model TrestleBoardMember {
   signedUpByUser User?        @relation("AdminSignups", fields: [signedUpBy], references: [id])
 
   @@unique([trestleBoardId, userId])
-  @@map("trestleBoard_members")
+  @@map("trestle_board_members")
 }
 
-model CalendarEvent {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String    @db.ObjectId
-  title          String
-  description    String?
-  startDate      DateTime
-  endDate        DateTime?
-  startTime      String? // Time in HH:MM format
-  endTime        String? // Time in HH:MM format
-  location       String?
-  eventType      EventType @default(PERSONAL)
-  trestleBoardId String?   @db.ObjectId // If linked to a main trestleBoard
-  color          String? // Calendar event color
-  isAllDay       Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+model UserCalendar {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @unique @db.ObjectId
+  isDeleted       Boolean  @default(false)
+  trestleBoardIds String[] @db.ObjectId // Array of trestle board IDs
+  customEventIds  String[] @db.ObjectId // Array of custom event IDs
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trestleBoard TrestleBoard? @relation(fields: [trestleBoardId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("calendar_events")
+  @@map("user_calendars")
+}
+
+model CustomEvent {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  userId    String   @db.ObjectId
+  date      DateTime
+  time      String? // Time in HH:MM format
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("custom_events")
 }
 
 model Notification {

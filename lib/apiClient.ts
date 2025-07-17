@@ -260,10 +260,8 @@ class ApiClient {
     async createTrestleBoard(trestleBoardData: {
         title: string;
         description?: string;
-        startDate: string;
-        endDate?: string;
-        startTime?: string;
-        endTime?: string;
+        date: string;
+        time?: string;
         location?: string;
         category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
         isRSVP?: boolean;
@@ -275,10 +273,8 @@ class ApiClient {
     async updateTrestleBoard(id: string, trestleBoardData: {
         title: string;
         description?: string;
-        startDate: string;
-        endDate?: string;
-        startTime?: string;
-        endTime?: string;
+        date: string;
+        time?: string;
         location?: string;
         category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
         isRSVP?: boolean;
@@ -857,6 +853,76 @@ class ApiClient {
         isCompleted: boolean;
     }) {
         return this.post<any>('/festive-board', data);
+    }
+
+    // Calendar methods
+    async getCalendarEvents(params?: {
+        page?: number;
+        limit?: number;
+        startDate?: string;
+        endDate?: string;
+        eventType?: string;
+        userId?: string;
+        trestleBoardId?: string;
+    }) {
+        return this.get<{
+            events: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                pages: number;
+            };
+        }>('/admin/calendar', params);
+    }
+
+    async addCalendarEvent(data: {
+        userId: string;
+        title: string;
+        description?: string;
+        startDate: string;
+        endDate?: string;
+        startTime?: string;
+        endTime?: string;
+        location?: string;
+        eventType?: string;
+        trestleBoardId?: string;
+    }) {
+        return this.post('/admin/calendar', data);
+    }
+
+    async deleteCalendarEvent(eventId: string, eventType: string, userId: string) {
+        return this.delete('/admin/calendar', { eventId, eventType, userId });
+    }
+
+    // User Calendar methods
+    async getUserCalendars(params: {
+        page?: number;
+        limit?: number;
+        search?: string;
+    }) {
+        const searchParams = new URLSearchParams();
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (params.search) searchParams.append('search', params.search);
+        
+        return this.get<any>(`/admin/user-calendars?${searchParams.toString()}`);
+    }
+
+    async getUserCalendarEvents(userId: string) {
+        return this.get<any>(`/admin/user-calendars/${userId}/events`);
+    }
+
+    async createUserCalendar(data: { userId: string }) {
+        return this.post<any>('/admin/user-calendars', data);
+    }
+
+    async removeTrestleBoardFromCalendar(userId: string, trestleBoardId: string) {
+        return this.delete<any>(`/admin/user-calendars/${userId}/trestle-boards/${trestleBoardId}`);
+    }
+
+    async removeCustomEventFromCalendar(userId: string, customEventId: string) {
+        return this.delete<any>(`/admin/user-calendars/${userId}/custom-events/${customEventId}`);
     }
 }
 

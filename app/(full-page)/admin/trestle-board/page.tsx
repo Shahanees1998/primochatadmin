@@ -18,19 +18,17 @@ import { useRouter } from "next/navigation";
 import { Skeleton } from "primereact/skeleton";
 import { apiClient } from "@/lib/apiClient";
 import { SortOrderType } from "@/types";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface TrestleBoard {
     id: string;
     title: string;
     description?: string;
-    startDate: string;
-    endDate?: string;
-    startTime?: string;
-    endTime?: string;
+    date: string;
+    time?: string;
     location?: string;
     category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
     isRSVP: boolean;
-    maxAttendees?: number;
     createdAt: string;
     updatedAt: string;
 }
@@ -38,14 +36,11 @@ interface TrestleBoard {
 interface TrestleBoardFormData {
     title: string;
     description: string;
-    startDate: Date | null;
-    endDate: Date | null;
-    startTime: string;
-    endTime: string;
+    date: Date | null;
+    time: string;
     location: string;
     category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
     isRSVP: boolean;
-    maxAttendees: number;
 }
 
 export default function TrestleBoardPage() {
@@ -63,23 +58,38 @@ export default function TrestleBoardPage() {
     });
     const [showTrestleBoardDialog, setShowTrestleBoardDialog] = useState(false);
     const [editingTrestleBoard, setEditingTrestleBoard] = useState<TrestleBoard | null>(null);
+    const [showUserCalendarDialog, setShowUserCalendarDialog] = useState(false);
+    const [selectedTrestleBoard, setSelectedTrestleBoard] = useState<TrestleBoard | null>(null);
+    const [users, setUsers] = useState<any[]>([]);
+    const [selectedUser, setSelectedUser] = useState<string>('');
+    const [userSearchQuery, setUserSearchQuery] = useState('');
+    const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+    const [searchingUsers, setSearchingUsers] = useState(false);
+    const [calendarLoading, setCalendarLoading] = useState(false);
     const [trestleBoardForm, setTrestleBoardForm] = useState<TrestleBoardFormData>({
         title: "",
         description: "",
-        startDate: null,
-        endDate: null,
-        startTime: "",
-        endTime: "",
+        date: null,
+        time: "",
         location: "",
         category: "REGULAR_MEETING",
         isRSVP: false,
-        maxAttendees: 0,
     });
     const [error, setError] = useState<string | null>(null);
     const [saveLoading, setSaveLoading] = useState(false);
     const [sortField, setSortField] = useState<string | undefined>(undefined);
     const [sortOrder, setSortOrder] = useState<SortOrderType | undefined>(undefined);
     const toast = useRef<Toast>(null);
+    const debouncedSearchTerm = useDebounce(userSearchQuery, 500);
+
+    // Effect to trigger search when debounced term changes
+    useEffect(() => {
+        if (debouncedSearchTerm) {
+            searchUsers(debouncedSearchTerm);
+        } else {
+            setFilteredUsers([]);
+        }
+    }, [debouncedSearchTerm]);
 
     const categoryOptions = [
         { label: "Regular Meeting", value: "REGULAR_MEETING" },
@@ -143,14 +153,11 @@ export default function TrestleBoardPage() {
         setTrestleBoardForm({
             title: "",
             description: "",
-            startDate: null,
-            endDate: null,
-            startTime: "",
-            endTime: "",
+            date: null,
+            time: "",
             location: "",
             category: "REGULAR_MEETING",
             isRSVP: false,
-            maxAttendees: 0,
         });
         setShowTrestleBoardDialog(true);
     };
@@ -160,14 +167,11 @@ export default function TrestleBoardPage() {
         setTrestleBoardForm({
             title: trestleBoard.title,
             description: trestleBoard.description || "",
-            startDate: new Date(trestleBoard.startDate),
-            endDate: trestleBoard.endDate ? new Date(trestleBoard.endDate) : null,
-            startTime: trestleBoard.startTime || "",
-            endTime: trestleBoard.endTime || "",
+            date: new Date(trestleBoard.date),
+            time: trestleBoard.time || "",
             location: trestleBoard.location || "",
             category: trestleBoard.category,
             isRSVP: trestleBoard.isRSVP,
-            maxAttendees: trestleBoard.maxAttendees || 0,
         });
         setShowTrestleBoardDialog(true);
     };
@@ -179,22 +183,21 @@ export default function TrestleBoardPage() {
             return;
         }
 
-        if (!trestleBoardForm.startDate) {
-            showToast("error", "Validation Error", "Start date is required");
-            return;
-        }
-
-        if (trestleBoardForm.endDate && trestleBoardForm.endDate < trestleBoardForm.startDate) {
-            showToast("error", "Validation Error", "End date cannot be before start date");
+        if (!trestleBoardForm.date) {
+            showToast("error", "Validation Error", "Date is required");
             return;
         }
 
         setSaveLoading(true);
         try {
             const trestleBoardData = {
-                ...trestleBoardForm,
-                startDate: trestleBoardForm.startDate.toISOString(),
-                endDate: trestleBoardForm.endDate?.toISOString(),
+                title: trestleBoardForm.title,
+                description: trestleBoardForm.description,
+                date: trestleBoardForm.date.toISOString(),
+                time: trestleBoardForm.time,
+                location: trestleBoardForm.location,
+                category: trestleBoardForm.category,
+                isRSVP: trestleBoardForm.isRSVP,
             };
 
             let response: any;
@@ -277,6 +280,14 @@ export default function TrestleBoardPage() {
                     onClick={() => router.push(`/admin/trestle-board/${rowData.id}`)}
                 />
                 <Button
+                    icon="pi pi-calendar-plus"
+                    size="small"
+                    text
+                    severity="info"
+                    tooltip="Add to User Calendar"
+                    onClick={() => openUserCalendarDialog(rowData)}
+                />
+                <Button
                     icon="pi pi-pencil"
                     size="small"
                     text
@@ -294,6 +305,79 @@ export default function TrestleBoardPage() {
                 />
             </div>
         );
+    };
+
+    const openUserCalendarDialog = async (trestleBoard: TrestleBoard) => {
+        setSelectedTrestleBoard(trestleBoard);
+        setSelectedUser('');
+        setUserSearchQuery('');
+        setFilteredUsers([]);
+        setShowUserCalendarDialog(true);
+        // Load initial users
+        await searchUsers('');
+    };
+
+    const searchUsers = async (query: string) => {
+        try {
+            setSearchingUsers(true);
+            const response = await apiClient.getUsers({ 
+                page: 1, 
+                limit: 20,
+                search: query.trim() || undefined
+            });
+            
+            if (response.data && response.data.users) {
+                setFilteredUsers(response.data.users);
+            } else {
+                setFilteredUsers([]);
+            }
+        } catch (error) {
+            console.error('Error searching users:', error);
+            showToast('error', 'Error', 'Failed to search users');
+            setFilteredUsers([]);
+        } finally {
+            setSearchingUsers(false);
+        }
+    };
+
+
+
+    const handleAddToUserCalendar = async () => {
+        if (!selectedUser || !selectedTrestleBoard) {
+            showToast('error', 'Error', 'Please select a user');
+            return;
+        }
+
+        setCalendarLoading(true);
+        try {
+            const response = await apiClient.addCalendarEvent({
+                userId: selectedUser,
+                title: selectedTrestleBoard.title,
+                description: selectedTrestleBoard.description || '',
+                startDate: selectedTrestleBoard.date,
+                endDate: undefined,
+                startTime: selectedTrestleBoard.time || undefined,
+                endTime: undefined,
+                location: selectedTrestleBoard.location || '',
+                eventType: 'TRESTLE_BOARD',
+                trestleBoardId: selectedTrestleBoard.id
+            });
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            showToast('success', 'Success', 'Trestle board added to user\'s calendar successfully');
+            setShowUserCalendarDialog(false);
+            setSelectedUser('');
+            setUserSearchQuery('');
+            setFilteredUsers([]);
+        } catch (error: any) {
+            console.error('Error adding to user calendar:', error);
+            showToast('error', 'Error', error.message || 'Failed to add trestle board to user calendar');
+        } finally {
+            setCalendarLoading(false);
+        }
     };
 
     const header = useMemo(() => (
@@ -353,8 +437,8 @@ export default function TrestleBoardPage() {
                                 style={{ minWidth: "200px" }}
                             />
                             <Column 
-                                field="startDate" 
-                                header="Start Date" 
+                                field="date" 
+                                header="Date" 
                                 body={() => <Skeleton width="100px" height="16px" />}
                                 style={{ minWidth: "120px" }}
                             />
@@ -413,8 +497,8 @@ export default function TrestleBoardPage() {
                             loadingIcon="pi pi-spinner"
                         >
                             <Column field="title" header="Title" style={{ minWidth: "200px" }} />
-                            <Column field="startDate" header="Start Date" body={(rowData) => (
-                                new Date(rowData.startDate).toLocaleDateString()
+                            <Column field="date" header="Date" body={(rowData) => (
+                                new Date(rowData.date).toLocaleDateString()
                             )} style={{ minWidth: "120px" }} />
                             <Column field="location" header="Location" style={{ minWidth: "150px" }} />
                             <Column field="category" header="Category" body={(rowData) => (
@@ -469,24 +553,12 @@ export default function TrestleBoardPage() {
                         />
                     </div>
                     <div className="col-12 md:col-6">
-                        <label htmlFor="startDate" className="font-bold">Start Date *</label>
+                        <label htmlFor="date" className="font-bold">Date *</label>
                         <Calendar
-                            id="startDate"
-                            value={trestleBoardForm.startDate}
-                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, startDate: e.value as Date })}
+                            id="date"
+                            value={trestleBoardForm.date}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, date: e.value as Date })}
                             showIcon
-                            showTime
-                            dateFormat="dd/mm/yy"
-                        />
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="endDate" className="font-bold">End Date</label>
-                        <Calendar
-                            id="endDate"
-                            value={trestleBoardForm.endDate}
-                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, endDate: e.value as Date })}
-                            showIcon
-                            showTime
                             dateFormat="dd/mm/yy"
                         />
                     </div>
@@ -509,30 +581,12 @@ export default function TrestleBoardPage() {
                         />
                     </div>
                     <div className="col-12 md:col-6">
-                        <label htmlFor="maxAttendees" className="font-bold">Max Attendees</label>
+                        <label htmlFor="time" className="font-bold">Time</label>
                         <InputText
-                            id="maxAttendees"
-                            type="number"
-                            value={trestleBoardForm.maxAttendees?.toString() || ''}
-                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, maxAttendees: parseInt(e.target.value) || 0 })}
-                        />
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="startTime" className="font-bold">Start Time</label>
-                        <InputText
-                            id="startTime"
+                            id="time"
                             type="time"
-                            value={trestleBoardForm.startTime}
-                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, startTime: e.target.value })}
-                        />
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="endTime" className="font-bold">End Time</label>
-                        <InputText
-                            id="endTime"
-                            type="time"
-                            value={trestleBoardForm.endTime}
-                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, endTime: e.target.value })}
+                            value={trestleBoardForm.time}
+                            onChange={(e) => setTrestleBoardForm({ ...trestleBoardForm, time: e.target.value })}
                         />
                     </div>
                     <div className="col-12 md:col-6">
@@ -548,6 +602,97 @@ export default function TrestleBoardPage() {
                             <label htmlFor="isRSVP">Enable RSVP for this trestleBoard</label>
                         </div>
                     </div>
+                </div>
+            </Dialog>
+
+            {/* User Calendar Dialog */}
+            <Dialog
+                visible={showUserCalendarDialog}
+                style={{ width: "700px" }}
+                header="Add Trestle Board to User Calendar"
+                modal
+                className="p-fluid"
+                onHide={() => setShowUserCalendarDialog(false)}
+                footer={
+                    <div className="flex gap-2 justify-content-end">
+                        <Button label="Cancel" icon="pi pi-times" text onClick={() => setShowUserCalendarDialog(false)} disabled={calendarLoading} />
+                        <Button
+                            label={calendarLoading ? "Adding..." : "Add to Calendar"}
+                            icon={calendarLoading ? "pi pi-spin pi-spinner" : "pi pi-calendar-plus"}
+                            onClick={handleAddToUserCalendar}
+                            disabled={calendarLoading || !selectedUser}
+                        />
+                    </div>
+                }
+            >
+                <div className="grid">
+                    <div className="col-12">
+                        <label htmlFor="userSearch" className="font-bold">Search Users</label>
+                        <InputText
+                            id="userSearch"
+                            value={userSearchQuery}
+                            onChange={(e) => {
+                                const query = e.target.value;
+                                setUserSearchQuery(query);
+                            }}
+                            placeholder="Type to search users (e.g., name, email, membership number)..."
+                            className="w-full"
+                        />
+                        {searchingUsers && (
+                            <div className="mt-2 text-sm text-gray-500">
+                                <i className="pi pi-spin pi-spinner mr-2"></i>
+                                Searching...
+                            </div>
+                        )}
+                    </div>
+                    <div className="col-12">
+                        <label className="font-bold mb-2 block">Select User</label>
+                        <div className="border-1 surface-border border-round max-h-40 overflow-y-auto">
+                            {searchingUsers ? (
+                                <div className="p-3 text-center text-600">
+                                    <i className="pi pi-spin pi-spinner mr-2"></i>
+                                    Searching users...
+                                </div>
+                            ) : userSearchQuery ? (
+                                filteredUsers.length === 0 ? (
+                                    <div className="p-3 text-center text-600">
+                                        No users found for "{userSearchQuery}"
+                                    </div>
+                                ) : (
+                                    filteredUsers.map((user) => (
+                                        <div
+                                            key={user.id}
+                                            className={`p-3 cursor-pointer hover:surface-100 border-bottom-1 surface-border last:border-bottom-none ${
+                                                selectedUser === user.id ? 'surface-100' : ''
+                                            }`}
+                                            onClick={() => {
+                                                setSelectedUser(user.id);
+                                                setUserSearchQuery(`${user.firstName} ${user.lastName} (${user.email})`);
+                                            }}
+                                        >
+                                            <div className="font-medium">{user.firstName} {user.lastName}</div>
+                                            <div className="text-sm text-gray-600">{user.email}</div>
+                                            <div className="text-sm text-gray-500">#{user.membershipNumber}</div>
+                                        </div>
+                                    ))
+                                )
+                            ) : (
+                                <div className="p-3 text-center text-600">
+                                    Start typing to search users (e.g., name, email, or membership number)
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {selectedUser && (
+                        <div className="col-12">
+                            <div className="p-3 bg-blue-50 border-round">
+                                <div className="font-medium text-blue-900">Selected User:</div>
+                                <div className="text-sm text-blue-700">
+                                    {filteredUsers.find(u => u.id === selectedUser)?.firstName} {filteredUsers.find(u => u.id === selectedUser)?.lastName} ({filteredUsers.find(u => u.id === selectedUser)?.email})
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </Dialog>
 

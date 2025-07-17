@@ -35,6 +35,26 @@ interface TrestleBoard {
     };
 }
 
+interface CalendarEvent {
+    id: string;
+    title: string;
+    description?: string;
+    startDate: string;
+    endDate?: string;
+    startTime?: string;
+    endTime?: string;
+    location?: string;
+    eventType: string;
+    user: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        membershipNumber: string;
+    };
+    createdAt: string;
+}
+
 interface TrestleBoardMember {
     id: string;
     status: 'PENDING' | 'CONFIRMED' | 'DECLINED' | 'MAYBE';
@@ -66,6 +86,9 @@ export default function TrestleBoardViewPage() {
         notes: ''
     });
     const [saveLoading, setSaveLoading] = useState(false);
+    const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+    const [calendarLoading, setCalendarLoading] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
     const toast = useRef<Toast>(null);
 
     const trestleBoardId = params.id as string;
@@ -73,6 +96,7 @@ export default function TrestleBoardViewPage() {
     useEffect(() => {
         if (trestleBoardId) {
             loadTrestleBoard();
+            loadCalendarEvents();
         }
     }, [trestleBoardId]);
 
@@ -92,6 +116,46 @@ export default function TrestleBoardViewPage() {
             showToast("error", "Error", "Failed to load Trestle Board");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadCalendarEvents = async () => {
+        setCalendarLoading(true);
+        try {
+            const response = await apiClient.getCalendarEvents({
+                trestleBoardId: trestleBoardId,
+                limit: 1000
+            });
+            
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            setCalendarEvents(response.data?.events || []);
+        } catch (error) {
+            console.error('Error loading calendar events:', error);
+            showToast("error", "Error", "Failed to load calendar events");
+        } finally {
+            setCalendarLoading(false);
+        }
+    };
+
+    const deleteCalendarEvent = async (eventId: string, userId: string) => {
+        setDeleteLoading(eventId);
+        try {
+            const response = await apiClient.deleteCalendarEvent(eventId, 'TRESTLE_BOARD', userId);
+            
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            showToast("success", "Success", "Trestle board removed from user's calendar");
+            await loadCalendarEvents(); // Reload the list
+        } catch (error: any) {
+            console.error('Error deleting calendar event:', error);
+            showToast("error", "Error", error.message || "Failed to remove trestle board from calendar");
+        } finally {
+            setDeleteLoading(null);
         }
     };
 
@@ -320,7 +384,7 @@ export default function TrestleBoardViewPage() {
 
                 <div className="grid">
                     {/* Trestle Board Details Card */}
-                    <div className="col-12 lg:col-8">
+                    <div className="col-12">
                         <Card>
                             <div className="grid">
                                 <div className="col-12 md:col-6">
@@ -392,7 +456,7 @@ export default function TrestleBoardViewPage() {
                     </div>
 
                     {/* Event Stats Card */}
-                    <div className="col-12 lg:col-4">
+                    {/* <div className="col-12 lg:col-4">
                         <Card>
                             <h3 className="text-lg font-semibold mb-3">Trestle Board Statistics</h3>
                             <div className="space-y-4">
@@ -424,7 +488,7 @@ export default function TrestleBoardViewPage() {
                                 </div>
                             </div>
                         </Card>
-                    </div>
+                    </div> */}
 
                     {/* Attendees List */}
                     {trestleBoard.isRSVP && trestleBoard.members && trestleBoard.members.length > 0 && (
@@ -464,6 +528,85 @@ export default function TrestleBoardViewPage() {
                             </Card>
                         </div>
                     )}
+
+                    {/* User Calendar Events */}
+                    <div className="col-12">
+                        <Card>
+                            <div className="flex justify-content-between align-items-center mb-3">
+                                <h3 className="text-lg font-semibold m-0">User Calendar Events</h3>
+                                <div className="text-sm text-600">
+                                    {calendarEvents.length} user{calendarEvents.length !== 1 ? 's' : ''} have this trestle board in their calendar
+                                </div>
+                            </div>
+                            {calendarLoading ? (
+                                <div className="p-3">
+                                    <Skeleton height="2rem" className="mb-2" />
+                                    <Skeleton height="2rem" className="mb-2" />
+                                    <Skeleton height="2rem" className="mb-2" />
+                                </div>
+                            ) : (
+                                <DataTable
+                                    value={calendarEvents}
+                                    paginator
+                                    rows={10}
+                                    responsiveLayout="scroll"
+                                    emptyMessage="No users have this trestle board in their calendar yet."
+                                >
+                                    <Column 
+                                        field="user.name" 
+                                        header="User" 
+                                        body={(rowData) => (
+                                            <div className="flex align-items-center gap-2">
+                                                <div>
+                                                    <div className="font-semibold">{rowData.user.name}</div>
+                                                    <div className="text-sm text-gray-600">{rowData.user.email}</div>
+                                                    <div className="text-sm text-gray-500">#{rowData.user.membershipNumber}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        style={{ minWidth: "200px" }}
+                                    />
+                                    <Column 
+                                        field="title" 
+                                        header="Trestle Board Title" 
+                                        style={{ minWidth: "150px" }}
+                                    />
+                                    <Column 
+                                        field="date" 
+                                        header="Event Date" 
+                                        body={(rowData) => new Date(rowData.date).toLocaleDateString()}
+                                        style={{ minWidth: "120px" }}
+                                    />
+                                    <Column 
+                                        field="location" 
+                                        header="Location" 
+                                        style={{ minWidth: "120px" }}
+                                    />
+                                    <Column 
+                                        field="createdAt" 
+                                        header="Added to Calendar" 
+                                        body={(rowData) => new Date(rowData.createdAt).toLocaleDateString()}
+                                        style={{ minWidth: "120px" }}
+                                    />
+                                    <Column 
+                                        header="Actions"
+                                        body={(rowData) => (
+                                            <Button
+                                                icon="pi pi-trash"
+                                                size="small"
+                                                severity="danger"
+                                                text
+                                                tooltip="Remove this trestle board from user's calendar"
+                                                loading={deleteLoading === rowData.id}
+                                                onClick={() => deleteCalendarEvent(rowData.id, rowData.user.id)}
+                                            />
+                                        )}
+                                        style={{ width: "100px" }}
+                                    />
+                                </DataTable>
+                            )}
+                        </Card>
+                    </div>
                 </div>
             </div>
 

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         prisma.user.count({ where: { status: 'PENDING' } }),
         prisma.trestleBoard.count({
           where: {
-            startDate: {
+            date: {
               gte: new Date(),
             },
           },

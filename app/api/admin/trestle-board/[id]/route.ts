@@ -57,10 +57,8 @@ export async function PUT(
     const {
       title,
       description,
-      startDate,
-      endDate,
-      startTime,
-      endTime,
+      date,
+      time,
       location,
       category,
       isRSVP,
@@ -84,10 +82,8 @@ export async function PUT(
     
     if (title) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    if (startDate) updateData.startDate = new Date(startDate);
-    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
-    if (startTime !== undefined) updateData.startTime = startTime;
-    if (endTime !== undefined) updateData.endTime = endTime;
+    if (date) updateData.date = new Date(date);
+    if (time !== undefined) updateData.time = time;
     if (location !== undefined) updateData.location = location;
     if (category) updateData.category = category;
     if (isRSVP !== undefined) updateData.isRSVP = isRSVP;
@@ -99,10 +95,8 @@ export async function PUT(
       data: {
         title,
         description,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        startTime,
-        endTime,
+        date: new Date(date),
+        time,
         location,
         category,
         isRSVP: isRSVP || false,
