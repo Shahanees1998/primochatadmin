@@ -46,7 +46,7 @@ export default function MealCategoriesPage() {
   const [totalRecords, setTotalRecords] = useState(0);
   
   const toast = React.useRef<Toast>(null);
-
+  console.log(totalRecords)
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
