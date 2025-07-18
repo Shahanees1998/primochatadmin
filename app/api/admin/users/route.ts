@@ -111,52 +111,81 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Generate membership number automatically
-        const membershipNumber = await AuthService.generateMembershipNumber();
+                // Generate membership number automatically with retry logic
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (attempts < maxAttempts) {
+            try {
+                const membershipNumber = await AuthService.generateMembershipNumber();
+                
+                // Hash the password (admin can set, or use default)
+                const plainPassword = password || 'defaultPassword123';
+                const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-        // Hash the password (admin can set, or use default)
-        const plainPassword = password || 'defaultPassword123';
-        const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
-        // Create new user with hashed password and phonebook entry
-        const user = await prisma.user.create({
-            data: {
-                firstName,
-                lastName,
-                email,
-                password: hashedPassword,
-                phone,
-                role: 'MEMBER',
-                status: status || 'PENDING',
-                membershipNumber,
-                joinDate: joinDate ? new Date(joinDate) : null,
-                paidDate: paidDate ? new Date(paidDate) : null,
-                phoneBookEntry: {
-                    create: {
+                // Create new user with hashed password and phonebook entry
+                const user = await prisma.user.create({
+                    data: {
+                        firstName,
+                        lastName,
                         email,
-                        phone: phone || null,
-                        isPublic: true,
+                        password: hashedPassword,
+                        phone,
+                        role: 'MEMBER',
+                        status: status || 'PENDING',
+                        membershipNumber,
+                        joinDate: joinDate ? new Date(joinDate) : null,
+                        paidDate: paidDate ? new Date(paidDate) : null,
+                        phoneBookEntry: {
+                            create: {
+                                email,
+                                phone: phone || null,
+                                isPublic: true,
+                            },
+                        },
                     },
-                },
-            },
-                            select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    email: true,
-                    phone: true,
-                    role: true,
-                    status: true,
-                    profileImage: true,
-                    membershipNumber: true,
-                    joinDate: true,
-                    paidDate: true,
-                    lastLogin: true,
-                    createdAt: true,
-                },
-        });
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phone: true,
+                        role: true,
+                        status: true,
+                        profileImage: true,
+                        membershipNumber: true,
+                        joinDate: true,
+                        paidDate: true,
+                        lastLogin: true,
+                        createdAt: true,
+                    },
+                });
 
-        return NextResponse.json(user, { status: 201 });
+                return NextResponse.json(user, { status: 201 });
+            } catch (error: any) {
+                // If it's a unique constraint error for membership number, retry
+                if (error.code === 'P2002' && error.meta?.target?.includes('membershipNumber')) {
+                    attempts++;
+                    if (attempts >= maxAttempts) {
+                        console.error('Failed to generate unique membership number after', maxAttempts, 'attempts');
+                        return NextResponse.json(
+                            { error: 'Failed to create user: Unable to generate unique membership number' },
+                            { status: 500 }
+                        );
+                    }
+                    // Continue to next attempt
+                    continue;
+                }
+                // For other errors, throw immediately
+                throw error;
+            }
+        }
+        
+        // This should never be reached, but TypeScript requires it
+        return NextResponse.json(
+            { error: 'Failed to create user after maximum attempts' },
+            { status: 500 }
+        );
     } catch (error) {
         console.error('Error creating user:', error);
         return NextResponse.json(

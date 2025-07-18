@@ -249,7 +249,29 @@ export class AuthService {
    * Generate membership number
    */
   static async generateMembershipNumber(): Promise<string> {
-    const userCount = await prisma.user.count();
-    return `primo${userCount + 1}`;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+      // Generate a random number between 1000 and 9999
+      const randomNum = Math.floor(Math.random() * 9000) + 1000;
+      const membershipNumber = `primo${randomNum}`;
+      
+      // Check if this membership number already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { membershipNumber },
+        select: { id: true }
+      });
+      
+      if (!existingUser) {
+        return membershipNumber;
+      }
+      
+      attempts++;
+    }
+    
+    // If we can't find a unique number after max attempts, use timestamp
+    const timestamp = Date.now().toString().slice(-6);
+    return `primo${timestamp}`;
   }
 } 
