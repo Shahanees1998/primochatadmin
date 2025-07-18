@@ -108,10 +108,6 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-
-      console.log('Original mealIds:', mealIds);
-      console.log('Valid mealIds:', validMealIds);
-
       // Check if board already exists for this month/year
       const existingBoard = await prisma.festiveBoard.findUnique({
         where: {

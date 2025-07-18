@@ -5,7 +5,6 @@ import { Card } from "primereact/card";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { Toast } from "primereact/toast";
-import { Avatar } from "primereact/avatar";
 import { Divider } from "primereact/divider";
 import { Skeleton } from "primereact/skeleton";
 import { apiClient } from "@/lib/apiClient";
@@ -301,47 +300,33 @@ export default function ProfilePage() {
                 <Card>
                     <div className="flex flex-column gap-4">
                         {/* Header */}
-                        <div className="flex align-items-center gap-3">
-                            <div className="relative">
-                                <Avatar
-                                    image={profile?.profileImagePublicId ? 
-                                        getProfileImageUrl(profile.profileImagePublicId, 'large') : 
-                                        profile?.profileImage
-                                    }
-                                    label={getUserInitials()}
-                                    size="xlarge"
-                                    shape="circle"
-                                    className="bg-primary"
+                        <div className="flex align-items-center gap-4">
+                            <div className="flex flex-column align-items-center gap-2">
+                                <ProfileImageUpload
+                                    currentImageUrl={profile?.profileImage}
+                                    currentImagePublicId={profile?.profileImagePublicId}
+                                    userId={profile?.id || ''}
+                                    onImageUploaded={async (imageUrl, publicId) => {
+                                        // Update local state
+                                        setProfile(prev => prev ? { 
+                                            ...prev, 
+                                            profileImage: imageUrl,
+                                            profileImagePublicId: publicId || prev.profileImagePublicId
+                                        } : null);
+                                        
+                                        // Refresh user data
+                                        await refreshUser();
+                                        
+                                        // Dispatch custom event to notify other components
+                                        window.dispatchEvent(new Event('profile-updated'));
+                                    }}
+                                    size="large"
                                 />
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold m-0">Profile Settings</h2>
                                 <p className="text-600 m-0">Manage your account information and preferences</p>
                             </div>
-                        </div>
-
-                        {/* Profile Image Upload Section */}
-                        <div className="flex justify-content-center">
-                            <ProfileImageUpload
-                                currentImageUrl={profile?.profileImage}
-                                currentImagePublicId={profile?.profileImagePublicId}
-                                userId={profile?.id || ''}
-                                onImageUploaded={async (imageUrl, publicId) => {
-                                    // Update local state
-                                    setProfile(prev => prev ? { 
-                                        ...prev, 
-                                        profileImage: imageUrl,
-                                        profileImagePublicId: publicId || prev.profileImagePublicId
-                                    } : null);
-                                    
-                                    // Refresh user data
-                                    await refreshUser();
-                                    
-                                        // Dispatch custom event to notify other components
-                                        window.dispatchEvent(new Event('profile-updated'));
-                                }}
-                                size="medium"
-                            />
                         </div>
 
                         <Divider />

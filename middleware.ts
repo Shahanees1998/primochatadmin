@@ -22,9 +22,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Check if user is authenticated
-  const token = AuthService.getTokenFromRequest(req);
-  console.log('Token>>>>>>>>>>>>>>>>>>>>>>>>>>>>>:', token);
-  
+  const token = AuthService.getTokenFromRequest(req);  
   // Protect admin routes (both frontend and API)
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     if (!token) {
@@ -45,7 +43,6 @@ export async function middleware(req: NextRequest) {
     try {
       // Verify the token
       const payload = await AuthService.verifyToken(token);
-      console.log('Payload>>>>>>>>>>>>>>>>>>>>>>>>>>>>>:', payload);
       
       // Check if user has admin role
       // if (payload.role !== 'ADMIN') {
@@ -61,9 +58,7 @@ export async function middleware(req: NextRequest) {
       //   return NextResponse.redirect(new URL('/auth/access', req.url));
       // }
     } catch (error) {
-      // Token is invalid or expired
-      console.log('Token verification failed:', error);
-      
+      // Token is invalid or expired      
       // Clear invalid tokens
       const response = pathname.startsWith('/api/')
         ? NextResponse.json(

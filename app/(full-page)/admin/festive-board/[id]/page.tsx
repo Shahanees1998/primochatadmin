@@ -34,12 +34,8 @@ export default function FestiveBoardViewPage() {
     try {
       setLoading(true);
       setError(null);
-      
-      console.log('Loading board with ID:', boardId);
-      
-      const response = await apiClient.getFestiveBoard(boardId);
-      console.log('API response:', response);
-      
+            
+      const response = await apiClient.getFestiveBoard(boardId);      
       if (response.error) {
         console.error('API error:', response.error);
         setError(response.error);
@@ -50,7 +46,6 @@ export default function FestiveBoardViewPage() {
       const boardData = (response.data as any)?.data || response.data;
       
       if (boardData) {
-        console.log('Board data:', boardData);
         setBoard(boardData);
       } else {
         console.error('No data in response');

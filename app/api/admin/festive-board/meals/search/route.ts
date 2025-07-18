@@ -6,8 +6,6 @@ import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
-      console.log('Auth check:', { hasUser: !!authenticatedReq.user, userId: authenticatedReq.user?.userId });
-
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const categoryId = searchParams.get('categoryId');
@@ -35,16 +33,6 @@ export async function GET(request: NextRequest) {
       ],
       take: limit,
     });
-
-    console.log('Meal search results:', {
-      searchTerm: search,
-      categoryId,
-      limit,
-      whereClause: where,
-      mealsFound: meals.length,
-      meals: meals.map(m => ({ id: m.id, title: m.title, category: m.category.name }))
-    });
-
     return NextResponse.json({
       data: meals,
     });

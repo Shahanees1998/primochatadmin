@@ -65,11 +65,11 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-calendar",
                     to: "/admin/trestle-board",
                 },
-                {
-                    label: "Calendar Management",
-                    icon: "pi pi-fw pi-calendar-plus",
-                    to: "/admin/calendar",
-                },
+                // {
+                //     label: "Calendar Management",
+                //     icon: "pi pi-fw pi-calendar-plus",
+                //     to: "/admin/calendar",
+                // },
                 {
                     label: "User Calendars",
                     icon: "pi pi-fw pi-users",

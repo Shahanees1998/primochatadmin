@@ -506,39 +506,91 @@ export default function UserCalendarsPage() {
                 }
             >
                 <div className="mb-4">
-                    <DataTable
-                        value={calendarEvents}
-                        loading={eventsLoading}
-                        emptyMessage="No events found in this calendar"
-                        responsiveLayout="scroll"
-                    >
-                        <Column field="title" header="Title" style={{ minWidth: "200px" }} />
-                        <Column 
-                            field="date" 
-                            header="Date" 
-                            body={(rowData) => new Date(rowData.date).toLocaleDateString()}
-                            style={{ minWidth: "120px" }} 
-                        />
-                        <Column 
-                            field="time" 
-                            header="Time" 
-                            body={(rowData) => rowData.time || '-'}
-                            style={{ minWidth: "100px" }} 
-                        />
-                        <Column field="location" header="Location" style={{ minWidth: "150px" }} />
-                        <Column 
-                            field="eventType" 
-                            header="Type" 
-                            body={(rowData) => (
-                                <Tag 
-                                    value={rowData.eventType === 'TRESTLE_BOARD' ? 'Trestle Board' : 'Custom'} 
-                                    severity={rowData.eventType === 'TRESTLE_BOARD' ? 'info' : 'warning'} 
-                                />
-                            )}
-                            style={{ minWidth: "120px" }} 
-                        />
-                        <Column body={eventActionBodyTemplate} style={{ width: "100px" }} />
-                    </DataTable>
+                    {eventsLoading ? (
+                        <div className="calendar-events-skeleton">
+                            {/* Table Header Skeleton */}
+                            <div className="flex border-bottom-1 surface-border p-3 font-semibold">
+                                <div className="flex-1" style={{ minWidth: "200px" }}>
+                                    <Skeleton height="1rem" width="60%" />
+                                </div>
+                                <div className="flex-1" style={{ minWidth: "120px" }}>
+                                    <Skeleton height="1rem" width="50%" />
+                                </div>
+                                <div className="flex-1" style={{ minWidth: "100px" }}>
+                                    <Skeleton height="1rem" width="40%" />
+                                </div>
+                                <div className="flex-1" style={{ minWidth: "150px" }}>
+                                    <Skeleton height="1rem" width="70%" />
+                                </div>
+                                <div className="flex-1" style={{ minWidth: "120px" }}>
+                                    <Skeleton height="1rem" width="45%" />
+                                </div>
+                                <div style={{ width: "100px" }}>
+                                    <Skeleton height="1rem" width="60%" />
+                                </div>
+                            </div>
+                            
+                            {/* Table Rows Skeleton */}
+                            {Array.from({ length: 5 }, (_, index) => (
+                                <div key={index} className="flex border-bottom-1 surface-border p-3 align-items-center">
+                                    <div className="flex-1" style={{ minWidth: "200px" }}>
+                                        <Skeleton height="1rem" width="80%" />
+                                    </div>
+                                    <div className="flex-1" style={{ minWidth: "120px" }}>
+                                        <Skeleton height="1rem" width="60%" />
+                                    </div>
+                                    <div className="flex-1" style={{ minWidth: "100px" }}>
+                                        <Skeleton height="1rem" width="40%" />
+                                    </div>
+                                    <div className="flex-1" style={{ minWidth: "150px" }}>
+                                        <Skeleton height="1rem" width="70%" />
+                                    </div>
+                                    <div className="flex-1" style={{ minWidth: "120px" }}>
+                                        <Skeleton height="1.5rem" width="60%" className="border-round" />
+                                    </div>
+                                    <div style={{ width: "100px" }}>
+                                        <div className="flex gap-1">
+                                            <Skeleton shape="circle" size="2rem" />
+                                            <Skeleton shape="circle" size="2rem" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <DataTable
+                            value={calendarEvents}
+                            emptyMessage="No events found in this calendar"
+                            responsiveLayout="scroll"
+                        >
+                            <Column field="title" header="Title" style={{ minWidth: "200px" }} />
+                            <Column 
+                                field="date" 
+                                header="Date" 
+                                body={(rowData) => new Date(rowData.date).toLocaleDateString()}
+                                style={{ minWidth: "120px" }} 
+                            />
+                            <Column 
+                                field="time" 
+                                header="Time" 
+                                body={(rowData) => rowData.time || '-'}
+                                style={{ minWidth: "100px" }} 
+                            />
+                            <Column field="location" header="Location" style={{ minWidth: "150px" }} />
+                            <Column 
+                                field="eventType" 
+                                header="Type" 
+                                body={(rowData) => (
+                                    <Tag 
+                                        value={rowData.eventType === 'TRESTLE_BOARD' ? 'Trestle Board' : 'Custom'} 
+                                        severity={rowData.eventType === 'TRESTLE_BOARD' ? 'info' : 'warning'} 
+                                    />
+                                )}
+                                style={{ minWidth: "120px" }} 
+                            />
+                            <Column body={eventActionBodyTemplate} style={{ width: "100px" }} />
+                        </DataTable>
+                    )}
                 </div>
             </Dialog>
 

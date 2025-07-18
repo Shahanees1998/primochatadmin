@@ -25,7 +25,7 @@ export async function POST(
       }
 
       // Check if user is already signed up
-      const existingSignup = await prisma.trestleBoardSignup.findFirst({
+      const existingSignup = await prisma.trestleBoardMember.findFirst({
         where: {
           trestleBoardId: params.id,
           userId: authenticatedReq.user.userId,
@@ -39,18 +39,18 @@ export async function POST(
         );
       }
 
-      const signup = await prisma.trestleBoardSignup.create({
+      const signup = await prisma.trestleBoardMember.create({
         data: {
           trestleBoardId: params.id,
           userId: authenticatedReq.user.userId,
           status: 'CONFIRMED',
-          adminId: null, // Will be set by admin when approved
         },
         include: {
           user: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               email: true,
               membershipNumber: true,
             },
@@ -79,7 +79,7 @@ export async function DELETE(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      const signup = await prisma.trestleBoardSignup.findFirst({
+      const signup = await prisma.trestleBoardMember.findFirst({
         where: {
           trestleBoardId: params.id,
           userId: authenticatedReq.user.userId,
@@ -93,7 +93,7 @@ export async function DELETE(
         );
       }
 
-      await prisma.trestleBoardSignup.delete({
+      await prisma.trestleBoardMember.delete({
         where: { id: signup.id },
       });
 

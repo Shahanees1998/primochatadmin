@@ -13,17 +13,17 @@ export async function PUT(
       }
 
       const body = await request.json();
-      const { title, description, date, eventType, location } = body;
+      const { title, date, time } = body;
 
-      if (!title || !date || !eventType) {
+      if (!title || !date) {
         return NextResponse.json(
-          { error: 'Title, date, and event type are required' },
+          { error: 'Title and date are required' },
           { status: 400 }
         );
       }
 
       // Check if event exists and belongs to user
-      const existingEvent = await prisma.calendarEvent.findFirst({
+      const existingEvent = await prisma.customEvent.findFirst({
         where: {
           id: params.id,
           userId: authenticatedReq.user.userId,
@@ -37,14 +37,12 @@ export async function PUT(
         );
       }
 
-      const event = await prisma.calendarEvent.update({
+      const event = await prisma.customEvent.update({
         where: { id: params.id },
         data: {
           title,
-          description,
           date: new Date(date),
-          eventType,
-          location,
+          time,
         },
       });
 
@@ -70,7 +68,7 @@ export async function DELETE(
       }
 
       // Check if event exists and belongs to user
-      const existingEvent = await prisma.calendarEvent.findFirst({
+      const existingEvent = await prisma.customEvent.findFirst({
         where: {
           id: params.id,
           userId: authenticatedReq.user.userId,
@@ -84,7 +82,7 @@ export async function DELETE(
         );
       }
 
-      await prisma.calendarEvent.delete({
+      await prisma.customEvent.delete({
         where: { id: params.id },
       });
 

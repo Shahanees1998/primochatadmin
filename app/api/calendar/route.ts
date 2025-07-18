@@ -25,11 +25,7 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      if (eventType) {
-        where.eventType = eventType;
-      }
-
-      const events = await prisma.calendarEvent.findMany({
+      const events = await prisma.customEvent.findMany({
         where,
         orderBy: { date: 'asc' },
       });
@@ -53,22 +49,20 @@ export async function POST(request: NextRequest) {
       }
 
       const body = await request.json();
-      const { title, description, date, eventType, location } = body;
+      const { title, date, time } = body;
 
-      if (!title || !date || !eventType) {
+      if (!title || !date) {
         return NextResponse.json(
-          { error: 'Title, date, and event type are required' },
+          { error: 'Title and date are required' },
           { status: 400 }
         );
       }
 
-      const event = await prisma.calendarEvent.create({
+      const event = await prisma.customEvent.create({
         data: {
           title,
-          description,
           date: new Date(date),
-          eventType,
-          location,
+          time,
           userId: authenticatedReq.user.userId,
         },
       });

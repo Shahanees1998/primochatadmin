@@ -97,7 +97,6 @@ export default function ChatPage() {
     // Real-time: receive new messages
     useEffect(() => {
         socket.onNewMessage(({ chatRoomId, message }) => {
-            console.log('Received new message:', { chatRoomId, message });
                 setMessages((prev) => [...prev, message]);
         });
         return () => socket.offNewMessage();
@@ -227,7 +226,6 @@ export default function ChatPage() {
 
     const createNewChat = async () => {
         if (selectedUsers.length === 0) return;
-        console.log('LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL', selectedUsers)
         try {
             const response = await apiClient.createChatRoom({
                 participantIds: selectedUsers.map(u => u.id),

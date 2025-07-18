@@ -115,8 +115,6 @@ export async function POST(request: NextRequest) {
 
             // Use authenticated user
             const currentUserId = authenticatedReq.user?.userId;
-            console.log(body,'LLllllllllllllllllllll');
-            console.log(authenticatedReq,'LLllllllllllllllllllll current');
             if (!currentUserId) {
                 return NextResponse.json(
                     { error: 'Authentication required' },

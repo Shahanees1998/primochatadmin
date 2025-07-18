@@ -128,20 +128,15 @@ export default function CreateFestiveBoardPage() {
 
   const loadAvailableMonths = async (year?: number) => {
     try {
-      const targetYear = year || currentYear;
-      console.log('Loading available months for year:', targetYear); // Debug log
-      
+      const targetYear = year || currentYear;      
       // Get existing boards to determine available months
       const response = await apiClient.getFestiveBoards({ year: targetYear });
-      console.log('Festive boards response:', response); // Debug log
       
       if (response.data?.data?.boards && Array.isArray(response.data.data.boards)) {
         const existingMonths = response.data.data.boards.map((board: any) => board.month);
-        console.log('Existing months:', existingMonths); // Debug log
         
         // Filter out months that already have boards
         const available = monthOptions.filter(month => !existingMonths.includes(month.value));
-        console.log('Available months:', available); // Debug log
         
         if (available.length === 0) {
           console.log('No available months - all months are taken for this year'); // Debug log
@@ -149,7 +144,6 @@ export default function CreateFestiveBoardPage() {
         
         setAvailableMonths(available);
       } else {
-        console.log('No existing boards found or invalid response structure, all months available'); // Debug log
         setAvailableMonths(monthOptions);
       }
     } catch (error) {
@@ -171,13 +165,9 @@ export default function CreateFestiveBoardPage() {
         search: search,
         limit: 50, // Increased limit since we're not filtering by category
       });
-      console.log('Search response:', response); // Debug log
       if (response.data) {
         // The API returns data.data, not data.meals
         const meals = response.data.data || [];
-        console.log('Available meals:', meals); // Debug log
-        console.log('First meal structure:', meals[0]); // Debug first meal structure
-        
         // Validate meal structure and ensure category exists
         const validatedMeals = meals.map((meal: any) => ({
           id: meal.id,
@@ -186,7 +176,6 @@ export default function CreateFestiveBoardPage() {
           category: meal.category || { id: '', name: 'No Category' }
         }));
         
-        console.log('Validated meals:', validatedMeals);
         setAvailableMeals(validatedMeals);
       } else {
         setAvailableMeals([]);
@@ -226,8 +215,6 @@ export default function CreateFestiveBoardPage() {
       return;
     }
 
-    console.log('Submitting form with mealIds:', validMealIds);
-
     try {
       setLoading(true);
       const response = await apiClient.createFestiveBoard({
@@ -263,17 +250,11 @@ export default function CreateFestiveBoardPage() {
 
   const handleMealSelection = (selectedItems: string[] | null) => {
     try {
-      const selectedMealIds = selectedItems || [];
-      console.log('Selected meal IDs:', selectedMealIds); // Debug log
-      
+      const selectedMealIds = selectedItems || [];      
       // Filter out any invalid IDs
-      const validMealIds = selectedMealIds.filter(id => id && typeof id === 'string');
-      console.log('Valid meal IDs:', validMealIds); // Debug log
-      
+      const validMealIds = selectedMealIds.filter(id => id && typeof id === 'string');      
       // Find the full meal objects for the selected IDs
-      const validMeals = availableMeals.filter(meal => validMealIds.includes(meal.id));
-      console.log('Valid meals:', validMeals); // Debug log
-      
+      const validMeals = availableMeals.filter(meal => validMealIds.includes(meal.id));      
       setSelectedMeals(validMeals);
       setFormData({
         ...formData,

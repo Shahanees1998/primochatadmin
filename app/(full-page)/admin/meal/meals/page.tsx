@@ -99,7 +99,6 @@ export default function MealsPage() {
       };
       if (debouncedSearchTerm) params.search = debouncedSearchTerm;
       if (selectedCategory && selectedCategory !== '') params.categoryId = selectedCategory?.value ?? selectedCategory;
-      console.log(params);
       const response = await apiClient.getMeals(params);
       if (response.data) {
         setMeals(response.data.meals || []);

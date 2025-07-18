@@ -339,7 +339,7 @@ class ApiClient {
         return this.delete(`/admin/documents/${id}`);
     }
 
-    async uploadDocument(formData: FormData) {
+    async uploadDocument(formData: FormData): Promise<ApiResponse<any>> {
         // For FormData, we need to override the default headers
         const url = `${this.baseURL}/admin/documents`;
         
@@ -372,7 +372,7 @@ class ApiClient {
         }
     }
 
-    async uploadProfileImage(formData: FormData) {
+    async uploadProfileImage(formData: FormData): Promise<ApiResponse<any>> {
         // For FormData, we need to override the default headers
         const url = `${this.baseURL}/users/profile-image`;
         

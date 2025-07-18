@@ -9,9 +9,6 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const categoryId = searchParams.get('categoryId');
-
-    console.log('API received params:', { page, limit, search, categoryId });
-
     const skip = (page - 1) * limit;
 
     // Build where clause
@@ -25,8 +22,6 @@ export async function GET(request: NextRequest) {
     if (categoryId && categoryId.trim() !== '') {
       where.categoryId = categoryId;
     }
-    console.log('Final where clause:', where);
-
     const [meals, total] = await Promise.all([
       prisma.meal.findMany({
         where,

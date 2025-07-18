@@ -16,14 +16,6 @@ export async function GET(request: NextRequest) {
     const categories = await prisma.mealCategory.findMany({
       take: 10,
     });
-
-    console.log('Test endpoint results:', {
-      totalMeals: allMeals.length,
-      totalCategories: categories.length,
-      meals: allMeals.map(m => ({ id: m.id, title: m.title, category: m.category.name })),
-      categories: categories.map(c => ({ id: c.id, name: c.name }))
-    });
-
     return NextResponse.json({
       data: {
         meals: allMeals,
