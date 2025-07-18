@@ -30,6 +30,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
+  // Set up automatic token refresh
+  useEffect(() => {
+    if (!user) return;
+
+    // Refresh token every 6 hours (before the 7-day expiry)
+    const refreshInterval = setInterval(async () => {
+      try {
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          console.warn('Token refresh failed, user may need to re-login');
+          // Don't logout immediately, let the next API call handle it
+        }
+      } catch (error) {
+        console.error('Token refresh error:', error);
+      }
+    }, 6 * 60 * 60 * 1000); // 6 hours
+
+    // Refresh token when user returns to the tab
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          const response = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'include',
+          });
+
+          if (!response.ok) {
+            console.warn('Token refresh on visibility change failed');
+          }
+        } catch (error) {
+          console.error('Token refresh on visibility change error:', error);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(refreshInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user]);
+
   const checkAuth = async () => {
     try {
       const response = await fetch('/api/auth/me');

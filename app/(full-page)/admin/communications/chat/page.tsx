@@ -59,6 +59,7 @@ export default function ChatPage() {
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
     const [usersLoading, setUsersLoading] = useState(false);
+    const [chatRoomsLoading, setChatRoomsLoading] = useState(true);
     const [messagesLoading, setMessagesLoading] = useState(false);
     const [showNewChatDialog, setShowNewChatDialog] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
@@ -70,6 +71,16 @@ export default function ChatPage() {
     const currentUserId = user?.id; // Replace with real user ID from auth context in production
     const socket = useSocket({ userId: currentUserId });
     const [typingUsers, setTypingUsers] = useState<{ [chatId: string]: string[] }>({});
+
+    // Filter chat rooms based on search term
+    const filteredChatRooms = chatRooms.filter(chat => {
+        if (!chatSearchTerm) return true;
+        const searchLower = chatSearchTerm.toLowerCase();
+        return chat.participants.some(user => 
+            `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchLower) ||
+            user.email.toLowerCase().includes(searchLower)
+        ) || (chat.name && chat.name.toLowerCase().includes(searchLower));
+    });
 
     useEffect(() => {
         loadUsers();
@@ -146,11 +157,11 @@ export default function ChatPage() {
             showToast("error", "Error", "Failed to load users");
         } finally {
             setUsersLoading(false);
-            setLoading(false);
         }
     };
 
     const loadChatRooms = async () => {
+        setChatRoomsLoading(true);
         try {
             const response = await apiClient.getChatRooms();
             if (response.error) {
@@ -159,6 +170,9 @@ export default function ChatPage() {
             setChatRooms(response.data?.chatRooms || []);
         } catch (error) {
             showToast("error", "Error", "Failed to load chat rooms");
+        } finally {
+            setChatRoomsLoading(false);
+            setLoading(false);
         }
     };
 
@@ -264,16 +278,7 @@ export default function ChatPage() {
         toast.current?.show({ severity, summary, detail, life: 3000 });
     };
 
-    const filteredChatRooms = chatRooms.filter(room => {
-        const searchLower = chatSearchTerm.toLowerCase();
-        if (room.isGroup && room.name) {
-            return room.name.toLowerCase().includes(searchLower);
-        }
-        return room.participants.some(user =>
-            `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchLower) ||
-            user.email.toLowerCase().includes(searchLower)
-        );
-    });
+
 
     const getChatDisplayName = (chat: ChatRoom) => {
         if (chat.isGroup && chat.name) {
@@ -333,10 +338,10 @@ export default function ChatPage() {
                             </div>
 
                             <ScrollPanel className="h-20rem">
-                                {loading ? (
+                                {chatRoomsLoading ? (
                                     <div className="p-3">
-                                        {[1, 2, 3].map(i => (
-                                            <div key={i} className="flex align-items-center gap-3 mb-3">
+                                        {[1, 2, 3, 4, 5].map(i => (
+                                            <div key={i} className="flex align-items-center gap-3 mb-3 p-2">
                                                 <Skeleton shape="circle" size="3rem" />
                                                 <div className="flex-1">
                                                     <Skeleton height="1rem" className="mb-2" />
@@ -348,10 +353,13 @@ export default function ChatPage() {
                                 ) : filteredChatRooms.length === 0 ? (
                                     <div className="p-3 text-center text-600">
                                         <i className="pi pi-comments text-3xl mb-2 block"></i>
-                                        <p>No chats yet</p>
+                                        <p className="mb-2">No chat rooms found</p>
+                                        <p className="text-sm mb-3">Start a conversation with other members</p>
                                         <Button
                                             label="Start a chat"
+                                            icon="pi pi-plus"
                                             size="small"
+                                            severity="success"
                                             onClick={() => setShowNewChatDialog(true)}
                                         />
                                     </div>

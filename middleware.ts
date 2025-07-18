@@ -42,7 +42,7 @@ export async function middleware(req: NextRequest) {
 
     try {
       // Verify the token
-      const payload = await AuthService.verifyToken(token);
+      await AuthService.verifyToken(token);
       
       // Check if user has admin role
       // if (payload.role !== 'ADMIN') {
@@ -60,6 +60,7 @@ export async function middleware(req: NextRequest) {
     } catch (error) {
       // Token is invalid or expired      
       // Clear invalid tokens
+      console.log('>>>>> error')
       const response = pathname.startsWith('/api/')
         ? NextResponse.json(
             { error: 'Invalid or expired token' },

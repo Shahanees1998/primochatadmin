@@ -335,70 +335,74 @@ export default function AdminMealSelectionManager({
   if (loading) {
     return (
       <Card className="w-full">
-        <div className="space-y-6">
-          {/* Festive Board Header skeleton */}
-          <div className="space-y-2 mb-6">
-            <Skeleton height="2rem" width="60%" />
-            <Skeleton height="1rem" width="40%" />
-            <Skeleton height="1rem" width="30%" />
+        {/* Festive Board Header skeleton */}
+        <div className="mb-6">
+          <Skeleton height="2rem" width="60%" className="mb-2" />
+          <Skeleton height="1rem" width="40%" className="mb-2" />
+          <Skeleton height="1rem" width="30%" />
+        </div>
+        
+        {/* Page Title skeleton */}
+        <div className="mb-4">
+          <Skeleton height="1.5rem" width="50%" className="mb-2" />
+          <Skeleton height="1rem" width="70%" />
+        </div>
+        
+        {/* Summary Section skeleton */}
+        <div className="mb-4 p-4 bg-blue-50 border-1 border-blue-200 border-round">
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <Skeleton height="1.5rem" width="40%" />
+              <Skeleton height="1rem" width="80%" />
+            </div>
+            <Skeleton height="2.5rem" width="220px" />
           </div>
-          
-          {/* Page Title skeleton */}
-          <div className="space-y-2 mb-4">
-            <Skeleton height="1.5rem" width="50%" />
-            <Skeleton height="1rem" width="70%" />
-          </div>
-          
-          {/* Summary Section skeleton */}
-          <div className="p-4 bg-blue-50 border-1 border-blue-200 border-round mb-4">
+        </div>
+        
+        {/* DataTable skeleton */}
+        <div className="border-1 surface-border border-round">
+          {/* Table header skeleton */}
+          <div className="p-4 border-bottom-1 surface-border">
             <div className="flex justify-between items-center">
-              <div className="space-y-2">
-                <Skeleton height="1.5rem" width="40%" />
-                <Skeleton height="1rem" width="80%" />
+              <div className="flex gap-8">
+                <Skeleton height="1.5rem" width="200px" />
+                <Skeleton height="1.5rem" width="120px" />
               </div>
-              <Skeleton height="2.5rem" width="220px" />
+              <Skeleton height="1.5rem" width="100px" />
             </div>
           </div>
           
-          {/* DataTable skeleton */}
-          <div className="border-1 surface-border border-round">
-            {/* Table header skeleton */}
-            <div className="p-4 border-bottom-1 surface-border">
-              <div className="grid grid-cols-3 gap-4">
-                <Skeleton height="1.5rem" width="100%" />
-                <Skeleton height="1.5rem" width="100%" />
-                <Skeleton height="1.5rem" width="100%" />
-              </div>
-            </div>
-            
-            {/* Table rows skeleton */}
-            <div>
-              {[1, 2, 3, 4].map((index) => (
-                <div key={index} className="p-4 border-bottom-1 surface-border last:border-bottom-none">
-                  <div className="grid grid-cols-3 gap-4 items-center">
-                    {/* Meal column */}
+          {/* Table rows skeleton */}
+          <div>
+            {[1, 2, 3, 4].map((index) => (
+              <div key={index} className="p-4 border-bottom-1 surface-border last:border-bottom-none">
+                <div className="flex justify-between items-center">
+                  {/* Meal column */}
+                  <div className="flex-1">
                     <div className="space-y-2">
                       <Skeleton height="1.2rem" width="80%" />
-                      <Skeleton height="1.5rem" width="60px" />
-                      <Skeleton height="1rem" width="50%" />
-                    </div>
-                    
-                    {/* Selections column */}
-                    <div className="flex justify-center">
-                      <div className="text-center space-y-1">
-                        <Skeleton height="1rem" width="80px" />
-                        <Skeleton height="0.8rem" width="60px" />
+                      <div className="flex gap-2">
+                        <Skeleton height="1.5rem" width="60px" />
+                        <Skeleton height="1rem" width="50%" />
                       </div>
                     </div>
-                    
-                    {/* Actions column */}
-                    <div className="flex justify-end">
-                      <Skeleton height="2rem" width="100px" />
+                  </div>
+                  
+                  {/* Selections column */}
+                  <div className="flex justify-center w-32">
+                    <div className="text-center space-y-1">
+                      <Skeleton height="1rem" width="80px" />
+                      <Skeleton height="0.8rem" width="60px" />
                     </div>
                   </div>
+                  
+                  {/* Actions column */}
+                  <div className="flex justify-end w-32">
+                    <Skeleton height="2rem" width="100px" />
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       </Card>
