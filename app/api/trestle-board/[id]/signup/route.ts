@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
+import { NotificationService } from '@/lib/notificationService';
 
 export async function POST(
   request: NextRequest,
@@ -12,7 +13,7 @@ export async function POST(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      // Check if trestle board exists
+      // Get trestle board
       const trestleBoard = await prisma.trestleBoard.findUnique({
         where: { id: params.id },
       });
@@ -34,11 +35,12 @@ export async function POST(
 
       if (existingSignup) {
         return NextResponse.json(
-          { error: 'Already signed up for this event' },
+          { error: 'You are already signed up for this trestle board' },
           { status: 400 }
         );
       }
 
+      // Create signup
       const signup = await prisma.trestleBoardMember.create({
         data: {
           trestleBoardId: params.id,
@@ -55,14 +57,39 @@ export async function POST(
               membershipNumber: true,
             },
           },
+          trestleBoard: {
+            select: {
+              id: true,
+              title: true,
+              date: true,
+              time: true,
+              location: true,
+            },
+          },
         },
       });
 
-      return NextResponse.json(signup, { status: 201 });
+      // Create notification for trestle board addition
+      try {
+        await NotificationService.createTrestleBoardAddedNotification(
+          authenticatedReq.user.userId,
+          params.id,
+          trestleBoard.title
+        );
+      } catch (notificationError) {
+        console.error('Error creating trestle board notification:', notificationError);
+        // Don't fail the request if notification creation fails
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Successfully signed up for trestle board',
+        signup,
+      }, { status: 201 });
     } catch (error) {
-      console.error('Error signing up for trestle board:', error);
+      console.error('Trestle board signup error:', error);
       return NextResponse.json(
-        { error: 'Failed to sign up for event' },
+        { error: 'Failed to sign up for trestle board' },
         { status: 500 }
       );
     }

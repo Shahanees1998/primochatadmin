@@ -43,4 +43,11 @@ export interface SocketEvents {
     'message-sent': (data: { chatRoomId: string; message: ChatMessage }) => void;
     'user-typing': (data: { chatRoomId: string; userId: string; isTyping: boolean }) => void;
     'message-read': (data: { chatRoomId: string; messageId: string; userId: string }) => void;
+    
+    // Notification events
+    'new-notification': (notification: any) => void;
+    'meal-selection': (data: any) => void;
+    'trestle-board-added': (data: any) => void;
+    'user-created': (data: any) => void;
+    'user-joined': (data: any) => void;
 } 

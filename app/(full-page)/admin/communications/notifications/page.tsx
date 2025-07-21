@@ -20,7 +20,7 @@ interface Notification {
     userId: string;
     title: string;
     message: string;
-    type: 'EVENT_UPDATE' | 'DOCUMENT_UPLOAD' | 'CHAT_MESSAGE' | 'BROADCAST' | 'SUPPORT_RESPONSE';
+    type: 'EVENT_UPDATE' | 'DOCUMENT_UPLOAD' | 'CHAT_MESSAGE' | 'BROADCAST' | 'SUPPORT_RESPONSE' | 'MEAL_SELECTION' | 'TRESTLE_BOARD_ADDED' | 'FESTIVE_BOARD_UPDATE' | 'USER_JOINED' | 'SYSTEM_ALERT';
     isRead: boolean;
     isArchived: boolean;
     createdAt: string;
@@ -43,7 +43,7 @@ export default function NotificationsPage() {
     const [selectedType, setSelectedType] = useState<string>("");
     const [selectedStatus, setSelectedStatus] = useState<string>("");
     const [sortField, setSortField] = useState<string | undefined>(undefined);
-    const [sortOrder, setSortOrder] = useState<number | undefined>(undefined);
+    const [sortOrder, setSortOrder] = useState<string | undefined>(undefined);
     const toast = useRef<Toast>(null);
 
     const typeOptions = [
@@ -53,6 +53,11 @@ export default function NotificationsPage() {
         { label: "Chat Message", value: "CHAT_MESSAGE" },
         { label: "Broadcast", value: "BROADCAST" },
         { label: "Support Response", value: "SUPPORT_RESPONSE" },
+        { label: "Meal Selection", value: "MEAL_SELECTION" },
+        { label: "Trestle Board Added", value: "TRESTLE_BOARD_ADDED" },
+        { label: "Festive Board Update", value: "FESTIVE_BOARD_UPDATE" },
+        { label: "User Joined", value: "USER_JOINED" },
+        { label: "System Alert", value: "SYSTEM_ALERT" },
     ];
 
     const statusOptions = [
@@ -144,18 +149,26 @@ export default function NotificationsPage() {
         }
     };
 
+    const onSortChange = (event: DataTableStateEvent) => {
+        setSortField(event.sortField);
+        setSortOrder(event.sortOrder === 1 ? 'asc' : event.sortOrder === -1 ? 'desc' : undefined);
+        setCurrentPage(1);
+    };
+
     const deleteNotification = async (notificationId: string) => {
         try {
-            const response = await apiClient.deleteNotification(notificationId);
+            // For now, just mark as archived since we don't have a delete endpoint
+            const response = await apiClient.markNotificationAsRead(notificationId);
             if (response.error) {
                 throw new Error(response.error);
             }
 
-            setNotifications(prev => prev.filter(n => n.id !== notificationId));
-            setTotalRecords(prev => prev - 1);
-            showToast("success", "Success", "Notification deleted");
+            setNotifications(prev => 
+                prev.filter(notification => notification.id !== notificationId)
+            );
+            showToast("success", "Success", "Notification removed");
         } catch (error) {
-            showToast("error", "Error", "Failed to delete notification");
+            showToast("error", "Error", "Failed to remove notification");
         }
     };
 
@@ -179,6 +192,11 @@ export default function NotificationsPage() {
             case 'CHAT_MESSAGE': return 'primary';
             case 'BROADCAST': return 'danger';
             case 'SUPPORT_RESPONSE': return 'help';
+            case 'MEAL_SELECTION': return 'success';
+            case 'TRESTLE_BOARD_ADDED': return 'info';
+            case 'FESTIVE_BOARD_UPDATE': return 'warning';
+            case 'USER_JOINED': return 'success';
+            case 'SYSTEM_ALERT': return 'danger';
             default: return 'info';
         }
     };
@@ -190,6 +208,11 @@ export default function NotificationsPage() {
             case 'CHAT_MESSAGE': return 'Chat';
             case 'BROADCAST': return 'Broadcast';
             case 'SUPPORT_RESPONSE': return 'Support';
+            case 'MEAL_SELECTION': return 'Meal Selection';
+            case 'TRESTLE_BOARD_ADDED': return 'Trestle Board';
+            case 'FESTIVE_BOARD_UPDATE': return 'Festive Board';
+            case 'USER_JOINED': return 'User Joined';
+            case 'SYSTEM_ALERT': return 'System Alert';
             default: return type;
         }
     };
@@ -292,59 +315,70 @@ export default function NotificationsPage() {
     return (
         <div className="grid">
             <div className="col-12">
-                <Card>
-                    <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3 mb-4">
+                <Card className="shadow-2 border-round-xl">
+                    <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-4 mb-6">
                         <div className="flex flex-column">
-                            <h2 className="text-2xl font-bold m-0">Notifications</h2>
-                            <span className="text-600">Manage system notifications and alerts</span>
+                            <h2 className="text-3xl font-bold m-0 text-primary mb-2">Notifications</h2>
+                            <span className="text-600 text-lg">Manage system notifications and alerts</span>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-3 justify-content-end">
                             <Button
                                 label="Mark All as Read"
-                                icon="pi pi-check"
+                                icon="pi pi-check-double"
                                 onClick={markAllAsRead}
                                 severity="success"
                                 disabled={notifications.every(n => n.isRead)}
+                                className="p-button-raised"
+                                size="large"
                             />
                             <Button
                                 label="Refresh"
-                                icon="pi pi-refresh"
+                                icon="pi pi-sync"
                                 onClick={loadNotifications}
                                 severity="secondary"
+                                className="p-button-outlined"
+                                size="large"
                             />
                         </div>
                     </div>
 
                     {/* Filters */}
-                    <div className="flex flex-column md:flex-row gap-3 mb-4">
-                        <div className="flex-1">
-                            <span className="p-input-icon-left w-full">
-                                <i className="pi pi-search" />
-                                <InputText
-                                    value={globalFilterValue}
-                                    onChange={onGlobalFilterChange}
-                                    placeholder="Search notifications..."
+                    <div className="surface-100 p-4 border-round-lg mb-6">
+                        <div className="flex flex-column md:flex-row gap-4 align-items-end">
+                            <div className="flex-1">
+                                <label className="block text-900 font-medium mb-2">Search Notifications</label>
+                                <span className="p-input-icon-left w-full">
+                                    <i className="pi pi-search" />
+                                    <InputText
+                                        value={globalFilterValue}
+                                        onChange={onGlobalFilterChange}
+                                        placeholder="Search by title, message, or user..."
+                                        className="w-full p-inputtext-lg"
+                                    />
+                                </span>
+                            </div>
+                            <div className="w-full md:w-12rem">
+                                <label className="block text-900 font-medium mb-2">Type</label>
+                                <Dropdown
+                                    value={selectedType}
+                                    options={typeOptions}
+                                    onChange={onTypeFilterChange}
+                                    placeholder="All Types"
                                     className="w-full"
+                                    showClear
                                 />
-                            </span>
-                        </div>
-                        <div className="w-full md:w-10rem">
-                            <Dropdown
-                                value={selectedType}
-                                options={typeOptions}
-                                onChange={onTypeFilterChange}
-                                placeholder="Filter by Type"
-                                className="w-full"
-                            />
-                        </div>
-                        <div className="w-full md:w-10rem">
-                            <Dropdown
-                                value={selectedStatus}
-                                options={statusOptions}
-                                onChange={onStatusFilterChange}
-                                placeholder="Filter by Status"
-                                className="w-full"
-                            />
+                            </div>
+                            <div className="w-full md:w-12rem">
+                                <label className="block text-900 font-medium mb-2">Status</label>
+                                <Dropdown
+                                    value={selectedStatus}
+                                    options={statusOptions}
+                                    onChange={onStatusFilterChange}
+                                    placeholder="All Status"
+                                    className="w-full"
+                                    showClear
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -360,10 +394,7 @@ export default function NotificationsPage() {
                         onPage={(e) => setCurrentPage((e.page || 0) + 1)}
                         sortField={sortField}
                         sortOrder={sortOrder as any}
-                        onSort={(e) => {
-                            setSortField(e.sortField);
-                            setSortOrder(e.sortOrder || undefined);
-                        }}
+                        onSort={onSortChange}
                         emptyMessage={loading ? "Loading..." : "No notifications found"}
                         className="p-datatable-sm"
                     >

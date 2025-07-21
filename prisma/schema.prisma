@@ -129,6 +129,9 @@ model Notification {
   type       NotificationType
   isRead     Boolean          @default(false)
   isArchived Boolean          @default(false)
+  relatedId  String?          // ID of related entity (message, event, etc.)
+  relatedType String?         // Type of related entity
+  metadata   String?          // JSON string for additional data
   createdAt  DateTime         @default(now())
 
   // Relations
@@ -313,6 +316,11 @@ enum NotificationType {
   CHAT_MESSAGE
   BROADCAST
   SUPPORT_RESPONSE
+  MEAL_SELECTION
+  TRESTLE_BOARD_ADDED
+  FESTIVE_BOARD_UPDATE
+  USER_JOINED
+  SYSTEM_ALERT
 }
 
 enum DocumentPermission {

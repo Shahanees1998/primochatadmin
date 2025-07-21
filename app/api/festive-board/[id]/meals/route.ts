@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
+import { NotificationService } from '@/lib/notificationService';
 
 export async function GET(
   request: NextRequest,
@@ -62,17 +63,11 @@ export async function GET(
       }));
 
       return NextResponse.json({
-        festiveBoard: {
-          id: festiveBoard.id,
-          title: festiveBoard.title,
-          description: festiveBoard.description,
-          month: festiveBoard.month,
-          year: festiveBoard.year,
-        },
+        festiveBoard,
         meals: mealsWithSelections,
       });
     } catch (error) {
-      console.error('Error fetching festive board meals:', error);
+      console.error('Get festive board meals error:', error);
       return NextResponse.json(
         { error: 'Failed to fetch festive board meals' },
         { status: 500 }
@@ -91,8 +86,7 @@ export async function POST(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      const body = await request.json();
-      const { mealId, action } = body; // action: 'select' or 'deselect'
+      const { mealId, action } = await request.json();
 
       if (!mealId || !action) {
         return NextResponse.json(
@@ -101,29 +95,21 @@ export async function POST(
         );
       }
 
-      // Check if festive board exists
-      const festiveBoard = await prisma.festiveBoard.findUnique({
-        where: { id: params.id },
-      });
-
-      if (!festiveBoard) {
-        return NextResponse.json(
-          { error: 'Festive board not found' },
-          { status: 404 }
-        );
-      }
-
-      // Check if meal exists in this festive board
+      // Get festive board meal
       const festiveBoardMeal = await prisma.festiveBoardMeal.findFirst({
         where: {
           festiveBoardId: params.id,
-          mealId: mealId,
+          mealId,
+        },
+        include: {
+          meal: true,
+          festiveBoard: true,
         },
       });
 
       if (!festiveBoardMeal) {
         return NextResponse.json(
-          { error: 'Meal not found in this festive board' },
+          { error: 'Festive board meal not found' },
           { status: 404 }
         );
       }
@@ -163,6 +149,19 @@ export async function POST(
             },
           },
         });
+
+        // Create notification for meal selection
+        try {
+          await NotificationService.createMealSelectionNotification(
+            authenticatedReq.user.userId,
+            params.id,
+            festiveBoardMeal.festiveBoard.title,
+            festiveBoardMeal.meal.title
+          );
+        } catch (notificationError) {
+          console.error('Error creating meal selection notification:', notificationError);
+          // Don't fail the request if notification creation fails
+        }
 
         return NextResponse.json(selection, { status: 201 });
       } else if (action === 'deselect') {

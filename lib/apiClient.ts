@@ -406,45 +406,53 @@ class ApiClient {
     }
 
     // Notification methods
-    async getNotifications(params?: {
+    async getNotifications(params: {
         page?: number;
         limit?: number;
         search?: string;
         type?: string;
         status?: string;
         sortField?: string;
-        sortOrder?: number;
-    }) {
+        sortOrder?: string;
+    } = {}): Promise<ApiResponse<any>> {
         const searchParams = new URLSearchParams();
-        if (params?.page) searchParams.append('page', params.page.toString());
-        if (params?.limit) searchParams.append('limit', params.limit.toString());
-        if (params?.search) searchParams.append('search', params.search);
-        if (params?.type) searchParams.append('type', params.type);
-        if (params?.status) searchParams.append('status', params.status);
-        if (params?.sortField) searchParams.append('sortField', params.sortField);
-        if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder.toString());
         
-        return this.get<{
-            notifications: any[];
-            pagination: {
-                page: number;
-                limit: number;
-                total: number;
-                totalPages: number;
-            };
-        }>(`/admin/notifications?${searchParams.toString()}`);
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (params.search) searchParams.append('search', params.search);
+        if (params.type) searchParams.append('type', params.type);
+        if (params.status) searchParams.append('status', params.status);
+        if (params.sortField) searchParams.append('sortField', params.sortField);
+        if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder);
+        
+        return this.request(`/admin/notifications?${searchParams.toString()}`);
     }
 
-    async markNotificationAsRead(id: string) {
-        return this.patch(`/admin/notifications/${id}?action=read`, {});
+    async markNotificationAsRead(notificationId: string): Promise<ApiResponse<any>> {
+        return this.request(`/admin/notifications/${notificationId}?action=read`, {
+            method: 'PATCH',
+        });
     }
 
-    async markAllNotificationsAsRead() {
-        return this.patch('/admin/notifications/mark-all-read', {});
+    async markAllNotificationsAsRead(): Promise<ApiResponse<any>> {
+        return this.request('/admin/notifications?action=mark-all-read', {
+            method: 'PATCH',
+        });
     }
 
-    async deleteNotification(id: string) {
-        return this.delete(`/admin/notifications/${id}`);
+    async createNotification(data: {
+        userId: string;
+        title: string;
+        message: string;
+        type: string;
+        relatedId?: string;
+        relatedType?: string;
+        metadata?: any;
+    }): Promise<ApiResponse<any>> {
+        return this.request('/api/notifications', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
     }
 
     // Support methods

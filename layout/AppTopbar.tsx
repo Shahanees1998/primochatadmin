@@ -11,6 +11,7 @@ import { Toast } from "primereact/toast";
 import { apiClient } from "@/lib/apiClient";
 import { getProfileImageUrl } from "@/lib/cloudinary-client";
 import { Avatar } from "primereact/avatar";
+import NotificationBell from "@/components/NotificationBell";
 
 const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
     const { onMenuToggle, showProfileSidebar, showConfigSidebar } =
@@ -41,14 +42,12 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
         };
     }, [user?.id]);
 
-
     const getUserInitials = () => {
         if (profile?.firstName && profile?.lastName) {
             return `${profile.firstName[0]}${profile.lastName[0]}`;
         }
         return 'U';
     };
-
 
     const loadProfile = async () => {
         if (!user?.id) return;
@@ -94,27 +93,13 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
 
             <div className="topbar-end">
                 <ul className="topbar-menu">
-                    {/* <li className="topbar-search">
-                        <span className="p-input-icon-left">
-                            <i className="pi pi-search"></i>
-                            <InputText
-                                type="text"
-                                placeholder="Search"
-                                className="w-12rem sm:w-full"
-                            />
-                        </span>
-                    </li>
+                    {/* Notification Bell */}
                     <li className="ml-3">
-                        <Button
-                            type="button"
-                            icon="pi pi-cog"
-                            text
-                            rounded
-                            severity="secondary"
-                            className="flex-shrink-0"
-                            onClick={onConfigButtonClick}
-                        ></Button>
-                    </li> */}
+                        <NotificationBell />
+                    </li>
+
+                    {/* Profile Button */}
+                    <li className="ml-3">
                         <button
                             type="button"
                             style={{border : 'none', cursor:'pointer'}}
@@ -131,8 +116,11 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                                     className="bg-primary"
                                 />
                         </button>
+                    </li>
                 </ul>
             </div>
+
+            <Toast ref={toast} />
         </div>
     );
 });

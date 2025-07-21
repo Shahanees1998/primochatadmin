@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { AuthService } from '@/lib/auth';
+import { NotificationService } from '@/lib/notificationService';
 
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
@@ -160,6 +161,43 @@ export async function POST(request: NextRequest) {
                         createdAt: true,
                     },
                 });
+
+                // Send notification to all admin users about the new user
+                try {
+                    // Get all admin users
+                    const adminUsers = await prisma.user.findMany({
+                        where: { role: 'ADMIN' },
+                        select: { id: true, firstName: true, lastName: true },
+                    });
+
+                    // Create notifications for each admin user
+                    const notificationPromises = adminUsers.map(adminUser => 
+                        NotificationService.createUserJoinedNotification(
+                            adminUser.id,
+                            `${user.firstName} ${user.lastName}`
+                        )
+                    );
+
+                    // Also send a specific notification to the admin who created the user
+                    if (authenticatedReq.user?.userId) {
+                        const creatorNotification = NotificationService.createUserAddedByAdminNotification(
+                            authenticatedReq.user.userId,
+                            `${user.firstName} ${user.lastName}`,
+                            user.email
+                        );
+
+                        // Send all notifications in parallel
+                        await Promise.all([...notificationPromises, creatorNotification]);
+                    } else {
+                        // Send notifications to other admins only
+                        await Promise.all(notificationPromises);
+                    }
+
+                    console.log(`Sent notifications to ${adminUsers.length} admin users about new user: ${user.firstName} ${user.lastName}`);
+                } catch (notificationError) {
+                    console.error('Error sending notifications:', notificationError);
+                    // Don't fail the user creation if notification fails
+                }
 
                 return NextResponse.json(user, { status: 201 });
             } catch (error: any) {
