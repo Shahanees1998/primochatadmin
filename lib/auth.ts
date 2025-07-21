@@ -21,6 +21,13 @@ export interface JWTPayload {
   status: string;
   membershipNumber?: string;
   profileImage?: string;
+  profileImagePublicId?: string;
+  phone?: string;
+  joinDate?: Date;
+  paidDate?: Date;
+  lastLogin?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
   iat?: number;
   exp?: number;
 }
@@ -96,10 +103,17 @@ export class AuthService {
         password: true,
         firstName: true,
         lastName: true,
+        phone: true,
         role: true,
         status: true,
         membershipNumber: true,
         profileImage: true,
+        profileImagePublicId: true,
+        joinDate: true,
+        paidDate: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
@@ -137,6 +151,13 @@ export class AuthService {
       status: user.status,
       membershipNumber: user.membershipNumber || undefined,
       profileImage: user.profileImage || undefined,
+      profileImagePublicId: user.profileImagePublicId || undefined,
+      phone: user.phone || undefined,
+      joinDate: user.joinDate || undefined,
+      paidDate: user.paidDate || undefined,
+      lastLogin: user.lastLogin || undefined,
+      createdAt: user.createdAt || undefined,
+      updatedAt: user.updatedAt || undefined,
     };
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -164,6 +185,13 @@ export class AuthService {
         status: payload.status,
         membershipNumber: payload.membershipNumber,
         profileImage: payload.profileImage,
+        profileImagePublicId: payload.profileImagePublicId,
+        phone: payload.phone,
+        joinDate: payload.joinDate,
+        paidDate: payload.paidDate,
+        lastLogin: payload.lastLogin,
+        createdAt: payload.createdAt,
+        updatedAt: payload.updatedAt,
       };
 
       return await this.generateAccessToken(newPayload);

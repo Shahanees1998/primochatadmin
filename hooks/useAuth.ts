@@ -5,10 +5,17 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   role: string;
   status: string;
   membershipNumber?: string;
   profileImage?: string;
+  profileImagePublicId?: string;
+  joinDate?: string;
+  paidDate?: string;
+  lastLogin?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AuthContextType {
@@ -82,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch('/api/auth/me');
       if (response.ok) {
         const data = await response.json();
+        console.log('*************************************', data)
         setUser(data.user);
       } else {
         setUser(null);
@@ -103,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         body: JSON.stringify({ email, password }),
       });
-
+      console.log(response,'KĶ............................................');
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Login failed');

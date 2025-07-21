@@ -19,10 +19,17 @@ export async function GET(request: NextRequest) {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        phone: user.phone,
         role: user.role,
         status: user.status,
         membershipNumber: user.membershipNumber,
         profileImage: user.profileImage,
+        profileImagePublicId: user.profileImagePublicId,
+        joinDate: user.joinDate,
+        paidDate: user.paidDate,
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
     });
   });

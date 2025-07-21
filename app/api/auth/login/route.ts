@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,17 +21,54 @@ export async function POST(request: NextRequest) {
       password,
     });
 
-    // Create response
-    const response = NextResponse.json({
-      success: true,
-      message: 'Login successful',
-      user: {
-        email,
-        // Don't include sensitive data in response
+    // Get user details for response
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        status: true,
+        membershipNumber: true,
+        profileImage: true,
+        profileImagePublicId: true,
+        joinDate: true,
+        paidDate: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
-    // Set authentication cookies
+    // Create response with token for mobile apps
+    const response = NextResponse.json({
+      success: true,
+      message: 'Login successful',
+      accessToken, // Include token for mobile apps
+      refreshToken, // Include refresh token for mobile apps
+      user: {
+        id: user?.id,
+        email: user?.email,
+        firstName: user?.firstName,
+        lastName: user?.lastName,
+        phone: user?.phone,
+        role: user?.role,
+        status: user?.status,
+        membershipNumber: user?.membershipNumber,
+        profileImage: user?.profileImage,
+        profileImagePublicId: user?.profileImagePublicId,
+        joinDate: user?.joinDate,
+        paidDate: user?.paidDate,
+        lastLogin: user?.lastLogin,
+        createdAt: user?.createdAt,
+        updatedAt: user?.updatedAt,
+      },
+    });
+
+    // Set authentication cookies for web apps
     response.cookies.set('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
