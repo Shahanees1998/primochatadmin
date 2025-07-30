@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         updatedAt: true,
       },
     });
-
+console.log('user', user);
     // Create response with token for mobile apps
     const response = NextResponse.json({
       success: true,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         updatedAt: user?.updatedAt,
       },
     });
-
+   console.log('response', response);
     // Set authentication cookies for web apps
     response.cookies.set('access_token', accessToken, {
       httpOnly: true,

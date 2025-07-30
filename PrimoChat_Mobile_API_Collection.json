@@ -195,6 +195,26 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Select Meal for Festive Board",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"mealId\": \"{{meal_id}}\",\n  \"action\": \"select\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}/selections",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "festive-board", "{{festive_board_id}}", "selections"]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -233,6 +253,41 @@
                   "value": ""
                 }
               ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trestle Board Signups",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trestle-board/{{trestle_board_id}}/signups",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "trestle-board", "{{trestle_board_id}}", "signups"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Signup for Trestle Board",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/trestle-board/{{trestle_board_id}}/signups",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "trestle-board", "{{trestle_board_id}}", "signups"]
             }
           },
           "response": []
@@ -345,6 +400,66 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Create Chat Room",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"participantIds\": [\"{{user_id_1}}\", \"{{user_id_2}}\"],\n  \"isGroup\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/chat/rooms",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "chat", "rooms"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Chat Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatRoomId\": \"{{room_id}}\",\n  \"content\": \"Hello!\",\n  \"type\": \"TEXT\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/chat/messages",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "chat", "messages"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Chat Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/chat/rooms/{{room_id}}/messages?page=1&limit=30&sortOrder=asc",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "chat", "rooms", "{{room_id}}", "messages"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "30" },
+                { "key": "sortOrder", "value": "asc" }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -383,6 +498,26 @@
                   "value": ""
                 }
               ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Post Support Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Issue Title\",\n  \"message\": \"Describe your issue here.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/support",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "support"]
             }
           },
           "response": []
