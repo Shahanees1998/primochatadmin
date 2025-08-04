@@ -294,30 +294,30 @@ export async function GET(request: NextRequest) {
 
       // Combine and filter events
       let allEvents = [
-        ...trestleBoardEvents.filter(Boolean),
-        ...customEvents.filter(Boolean),
+        ...trestleBoardEvents.filter((event): event is NonNullable<typeof event> => event !== null),
+        ...customEvents.filter((event): event is NonNullable<typeof event> => event !== null),
       ];
 
       // Filter by date range if provided
-      // if (startDate) {
-      //   allEvents = allEvents.filter(event => 
-      //     new Date(event.date) >= new Date(startDate)
-      //   );
-      // }
+      if (startDate) {
+        allEvents = allEvents.filter(event => 
+          new Date(event.date) >= new Date(startDate)
+        );
+      }
 
-      // if (endDate) {
-      //   allEvents = allEvents.filter(event => 
-      //     new Date(event.date) <= new Date(endDate)
-      //   );
-      // }
+      if (endDate) {
+        allEvents = allEvents.filter(event => 
+          new Date(event.date) <= new Date(endDate)
+        );
+      }
 
       // Filter by event type if provided
-      // if (eventType) {
-      //   allEvents = allEvents.filter(event => event.eventType === eventType);
-      // }
+      if (eventType) {
+        allEvents = allEvents.filter(event => event.eventType === eventType);
+      }
 
       // Sort by date
-      // allEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      allEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       return NextResponse.json({
         events: allEvents,
