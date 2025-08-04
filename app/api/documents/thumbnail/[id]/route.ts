@@ -13,11 +13,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Extract public_id from Cloudinary URL
-    const urlParts = document.fileUrl.split('/');
-    const publicId = urlParts[urlParts.length - 1].split('.')[0]; // Remove file extension
+    const urlParts = document?.fileUrl?.split('/');
+    const publicId = urlParts?.[urlParts.length - 1].split('.')[0]; // Remove file extension
     
     // Generate thumbnail URL
-    const thumbnailUrl = getDocumentThumbnailUrl(publicId, document.fileType);
+    const thumbnailUrl = getDocumentThumbnailUrl(publicId ?? '', document.fileType ?? '');
 
     return NextResponse.json({
       thumbnailUrl,

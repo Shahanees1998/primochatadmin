@@ -64,12 +64,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // Extract public_id from Cloudinary URL
-    const urlParts = document.fileUrl.split('/');
-    const publicId = urlParts[urlParts.length - 1].split('.')[0]; // Remove file extension
+    const urlParts = document?.fileUrl?.split('/');
+    const publicId = urlParts?.[urlParts.length - 1].split('.')[0]; // Remove file extension
     
     // Delete file from Cloudinary
     try {
-      await deleteFromCloudinary(publicId);
+      await deleteFromCloudinary(publicId ?? '');
     } catch (cloudinaryError) {
       console.warn('Failed to delete file from Cloudinary:', cloudinaryError);
       // Continue with database deletion even if Cloudinary deletion fails
