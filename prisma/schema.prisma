@@ -144,11 +144,11 @@ model Document {
   id           String             @id @default(auto()) @map("_id") @db.ObjectId
   title        String
   description  String?
-  fileName     String
-  fileUrl      String
-  filePublicId String // Cloudinary public_id for download
-  fileType     String
-  fileSize     Int
+  fileName     String?
+  fileUrl      String?
+  filePublicId String? // Cloudinary public_id for download
+  fileType     String?
+  fileSize     Int?
   category     String?
   tags         String[]
   permissions  DocumentPermission @default(MEMBER_ONLY)

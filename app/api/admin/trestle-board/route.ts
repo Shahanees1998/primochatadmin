@@ -7,9 +7,9 @@ export async function GET(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       // Check if user is admin
-      if (authenticatedReq.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      // if (authenticatedReq.user?.role !== 'ADMIN') {
+      //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      // }
 
       const { searchParams } = new URL(request.url);
       const page = parseInt(searchParams.get('page') || '1');
@@ -97,9 +97,9 @@ export async function POST(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       // Check if user is admin
-      if (authenticatedReq.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      // if (authenticatedReq.user?.role !== 'ADMIN') {
+      //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      // }
 
       const {
         title,
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
           category,
           isRSVP: isRSVP || false,
           maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
-          createdById: authenticatedReq.user.userId,
+          createdById: authenticatedReq?.user?.userId ?? '',
         },
         include: {
           members: {

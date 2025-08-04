@@ -38,7 +38,7 @@ export default function ProfilePage() {
     const [saving, setSaving] = useState(false);
     const [changingPassword, setChangingPassword] = useState(false);
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-    
+
     const [profileForm, setProfileForm] = useState({
         firstName: "",
         lastName: "",
@@ -67,7 +67,7 @@ export default function ProfilePage() {
 
     const loadProfile = async () => {
         if (!user?.id) return;
-        
+
         setLoading(true);
         try {
             const response = await apiClient.getUser(user.id);
@@ -117,7 +117,7 @@ export default function ProfilePage() {
 
             // Update local state
             setProfile(prev => prev ? { ...prev, ...profileForm } as UserProfile : null);
-            
+
             // Refresh user data
             await refreshUser();
 
@@ -146,7 +146,6 @@ export default function ProfilePage() {
                 throw new Error('User not found');
             }
             const response = await apiClient.changePassword(
-                user.id,
                 passwordForm.currentPassword,
                 passwordForm.newPassword
             );
@@ -154,7 +153,7 @@ export default function ProfilePage() {
             if (response.error) {
                 throw new Error(response.error);
             }
-            
+
             showToast("success", "Success", "Password changed successfully");
             setShowPasswordDialog(false);
             setPasswordForm({
@@ -185,7 +184,7 @@ export default function ProfilePage() {
         const date = new Date(dateString);
         const now = new Date();
         const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-        
+
         if (diffInMinutes < 1) return 'Just now';
         if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
         if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
@@ -219,7 +218,7 @@ export default function ProfilePage() {
                         <div className="grid">
                             <div className="col-12 lg:col-8">
                                 <Skeleton height="1.5rem" width="150px" className="mb-3" />
-                                
+
                                 <div className="grid">
                                     <div className="col-12 md:col-6">
                                         <Skeleton height="1rem" className="mb-2" />
@@ -251,7 +250,7 @@ export default function ProfilePage() {
 
                             <div className="col-12 lg:col-4">
                                 <Skeleton height="1.5rem" width="150px" className="mb-3" />
-                                
+
                                 <div className="flex flex-column gap-3">
                                     {[1, 2, 3, 4, 5, 6].map((i) => (
                                         <div key={i} className="p-3 surface-100 border-round">
@@ -281,9 +280,9 @@ export default function ProfilePage() {
                             <i className="pi pi-user text-4xl text-400 mb-3"></i>
                             <h3 className="text-xl font-semibold mb-2">Profile Not Found</h3>
                             <p className="text-600">Unable to load your profile information.</p>
-                            <Button 
-                                label="Retry" 
-                                icon="pi pi-refresh" 
+                            <Button
+                                label="Retry"
+                                icon="pi pi-refresh"
                                 onClick={loadProfile}
                                 className="mt-3"
                             />
@@ -308,15 +307,15 @@ export default function ProfilePage() {
                                     userId={profile?.id || ''}
                                     onImageUploaded={async (imageUrl, publicId) => {
                                         // Update local state
-                                        setProfile(prev => prev ? { 
-                                            ...prev, 
+                                        setProfile(prev => prev ? {
+                                            ...prev,
                                             profileImage: imageUrl,
                                             profileImagePublicId: publicId || prev.profileImagePublicId
                                         } : null);
-                                        
+
                                         // Refresh user data
                                         await refreshUser();
-                                        
+
                                         // Dispatch custom event to notify other components
                                         window.dispatchEvent(new Event('profile-updated'));
                                     }}
@@ -335,7 +334,7 @@ export default function ProfilePage() {
                         <div className="grid">
                             <div className="col-12 lg:col-8">
                                 <h3 className="text-xl font-semibold mb-3">Personal Information</h3>
-                                
+
                                 <div className="grid">
                                     <div className="col-12 md:col-6">
                                         <label className="block text-sm font-medium mb-2">First Name *</label>
@@ -405,13 +404,13 @@ export default function ProfilePage() {
 
                             <div className="col-12 lg:col-4">
                                 <h3 className="text-xl font-semibold mb-3">Account Information</h3>
-                                
+
                                 <div className="flex flex-column gap-3">
                                     <div className="p-3 surface-100 border-round">
                                         <div className="text-sm text-600">Role</div>
                                         <div className="flex align-items-center gap-2">
-                                            <Tag 
-                                                value={profile?.role} 
+                                            <Tag
+                                                value={profile?.role}
                                                 severity={profile?.role === 'ADMIN' ? 'danger' : 'info'}
                                             />
                                         </div>
@@ -419,12 +418,12 @@ export default function ProfilePage() {
                                     <div className="p-3 surface-100 border-round">
                                         <div className="text-sm text-600">Status</div>
                                         <div className="flex align-items-center gap-2">
-                                            <Tag 
-                                                value={profile?.status} 
+                                            <Tag
+                                                value={profile?.status}
                                                 severity={
-                                                    profile?.status === 'ACTIVE' ? 'success' : 
-                                                    profile?.status === 'PENDING' ? 'warning' : 
-                                                    profile?.status === 'SUSPENDED' ? 'danger' : 'secondary'
+                                                    profile?.status === 'ACTIVE' ? 'success' :
+                                                        profile?.status === 'PENDING' ? 'warning' :
+                                                            profile?.status === 'SUSPENDED' ? 'danger' : 'secondary'
                                                 }
                                             />
                                         </div>

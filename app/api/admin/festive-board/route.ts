@@ -47,9 +47,20 @@ export async function GET(request: NextRequest) {
                 },
               },
             },
-            _count: {
-              select: {
-                userSelections: true,
+            userSelections: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+                festiveBoardMeal: {
+                  include: {
+                    meal: true,
+                  },
+                },
               },
             },
           },

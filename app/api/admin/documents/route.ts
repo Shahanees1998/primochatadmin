@@ -95,43 +95,26 @@ export async function POST(request: NextRequest) {
 
         const fileData = formData.get('file');
         const file = fileData as File;
+        const url = formData.get('url') as string;
         const title = formData.get('title') as string;
         const description = formData.get('description') as string;
         const category = formData.get('category') as string;
         const tags = formData.get('tags') as string;
         const permissions = formData.get('permissions') as string;
         const uploadedBy = formData.get('uploadedBy') as string;
+
         // Validate required fields
-        if (!file || !title || !category || !permissions) {
+        if (!title || !permissions) {
             return NextResponse.json(
-                { error: 'File, title, category, and permissions are required' },
+                { error: 'Title and permissions are required' },
                 { status: 400 }
             );
         }
 
-        // Validate file
-        const allowedTypes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.ms-powerpoint',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'text/plain',
-            'image/jpeg',
-            'image/png',
-            'image/gif',
-            'image/webp'
-        ];
-
-        const validation = validateFile(file, {
-            allowedTypes,
-            maxSize: 50 * 1024 * 1024 // 50MB
-        });
-        if (!validation.isValid) {
+        // Check if either file or URL is provided
+        if (!file && !url) {
             return NextResponse.json(
-                { error: validation.error },
+                { error: 'Either file or URL is required' },
                 { status: 400 }
             );
         }
@@ -155,29 +138,117 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Upload file to Cloudinary
-        const cloudinaryResult = await uploadToCloudinary(file, {
-            folder: 'primochat/documents',
-            resource_type: 'auto',
-            max_bytes: 50 * 1024 * 1024 // 50MB
-        });
-        // Parse tags
-        const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
-        const data = {
+        let documentData: any = {
             title,
             description,
-            fileName: file.name,
-            fileUrl: cloudinaryResult.secure_url,
-            filePublicId: cloudinaryResult.public_id, // Store the full public_id
-            fileType: file.type,
-            fileSize: file.size,
-            category,
-            tags: tagsArray,
+            category: category || 'GENERAL',
+            tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
             permissions: permissions as 'PUBLIC' | 'MEMBER_ONLY' | 'ADMIN_ONLY',
-            uploadedBy: uploadedBy || adminUser.id,
+        };
+
+        // Handle file upload
+        if (file) {
+            // Validate file
+            const allowedTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain',
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/webp'
+            ];
+
+            const validation = validateFile(file, {
+                allowedTypes,
+                maxSize: 50 * 1024 * 1024 // 50MB
+            });
+            if (!validation.isValid) {
+                return NextResponse.json(
+                    { error: validation.error },
+                    { status: 400 }
+                );
+            }
+
+            // Upload file to Cloudinary
+            const cloudinaryResult = await uploadToCloudinary(file, {
+                folder: 'primochat/documents',
+                resource_type: 'auto',
+                max_bytes: 50 * 1024 * 1024 // 50MB
+            });
+
+            // Auto-determine category based on file type
+            let autoCategory = category;
+            if (!category) {
+                if (file.type === 'application/pdf') {
+                    autoCategory = 'PDF';
+                } else if (file.type.startsWith('image/')) {
+                    autoCategory = 'IMAGE';
+                } else {
+                    autoCategory = 'DOCUMENT';
+                }
+            }
+
+            documentData = {
+                ...documentData,
+                fileName: file.name,
+                fileUrl: cloudinaryResult.secure_url,
+                filePublicId: cloudinaryResult.public_id,
+                fileType: file.type,
+                fileSize: file.size,
+                category: autoCategory,
+            };
         }
+
+        // Handle URL input
+        if (url) {
+            // Validate URL
+            try {
+                new URL(url);
+            } catch {
+                return NextResponse.json(
+                    { error: 'Invalid URL format' },
+                    { status: 400 }
+                );
+            }
+
+            // Auto-determine category based on URL
+            let autoCategory = category;
+            if (!category) {
+                if (url.toLowerCase().includes('.pdf')) {
+                    autoCategory = 'PDF';
+                } else if (url.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
+                    autoCategory = 'IMAGE';
+                } else {
+                    autoCategory = 'LINK';
+                }
+            }
+
+            documentData = {
+                ...documentData,
+                fileName: url.split('/').pop() || 'External Link',
+                fileUrl: url,
+                filePublicId: null,
+                fileType: 'url',
+                fileSize: 0,
+                category: autoCategory,
+            };
+        }
+
         const document = await prisma.document.create({
-            data,
+            data: {
+                ...documentData,
+                user: {
+                    connect: {
+                        id: adminUser.id
+                    }
+                }
+            },
             include: {
                 user: {
                     select: {

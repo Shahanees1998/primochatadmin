@@ -8,7 +8,7 @@ export async function GET(
 ) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
-      if (!authenticatedReq.user || authenticatedReq.user.role !== 'ADMIN') {
+      if (!authenticatedReq.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
@@ -74,15 +74,16 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  console.log('=========================', params)
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
-      if (!authenticatedReq.user || authenticatedReq.user.role !== 'ADMIN') {
+      if (!authenticatedReq.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
       const body = await request.json();
       const { signupId, status } = body;
-
+      console.log('=========================body', signupId, status)
       if (!signupId || !status) {
         return NextResponse.json(
           { error: 'Signup ID and status are required' },

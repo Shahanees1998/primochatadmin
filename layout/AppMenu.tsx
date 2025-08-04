@@ -96,11 +96,11 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-file",
                     to: "/admin/documents",
                 },
-                {
-                    label: "Upload Document",
-                    icon: "pi pi-fw pi-upload",
-                    to: "/admin/documents/upload",
-                },
+                // {
+                //     label: "Upload Document",
+                //     icon: "pi pi-fw pi-upload",
+                //     to: "/admin/documents/upload",
+                // },
                 // {
                 //     label: "Categories",
                 //     icon: "pi pi-fw pi-folder",

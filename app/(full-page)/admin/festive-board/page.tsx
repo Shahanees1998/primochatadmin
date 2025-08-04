@@ -92,7 +92,7 @@ export default function FestiveBoardPage() {
         });
         return;
       }
-      
+      console.log('=========================', response)
       if (response.data?.data) {
         setBoards(response.data.data.boards || []);
         setTotalRecords(response.data.data.pagination?.total || 0);

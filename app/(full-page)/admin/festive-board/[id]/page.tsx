@@ -44,7 +44,7 @@ export default function FestiveBoardViewPage() {
       
       // Handle double nesting: response.data.data
       const boardData = (response.data as any)?.data || response.data;
-      
+      console.log(boardData,'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
       if (boardData) {
         setBoard(boardData);
       } else {

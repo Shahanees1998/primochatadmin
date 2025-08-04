@@ -46,6 +46,7 @@ interface DocumentFormData {
     category: string;
     permissions: string;
     tags: string;
+    url: string;
 }
 
 export default function DocumentsPage() {
@@ -67,11 +68,13 @@ export default function DocumentsPage() {
     const [documentForm, setDocumentForm] = useState<DocumentFormData>({
         title: "",
         description: "",
-        category: "GENERAL",
+        category: "DOCUMENT",
         permissions: "MEMBER_ONLY",
         tags: "",
+        url: "",
     });
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [inputType, setInputType] = useState<'file' | 'url'>('file');
     const [sortField, setSortField] = useState<string>('');
     const [sortOrder, setSortOrder] = useState<SortOrderType>(-1);
     const [error, setError] = useState<string | null>(null);
@@ -80,6 +83,11 @@ export default function DocumentsPage() {
     const fileUploadRef = useRef<FileUpload>(null);
 
     const categoryOptions = [
+        { label: "All", value: "" },
+        { label: "PDF", value: "PDF" },
+        { label: "Image", value: "IMAGE" },
+        { label: "Link", value: "LINK" },
+        { label: "Document", value: "DOCUMENT" },
         { label: "General", value: "GENERAL" },
         { label: "Meeting Minutes", value: "MEETING_MINUTES" },
         { label: "Policies", value: "POLICIES" },
@@ -96,21 +104,22 @@ export default function DocumentsPage() {
         { label: "Admin Only", value: "ADMIN_ONLY" },
     ];
 
-    useEffect(() => {
-        loadDocuments();
-    }, [currentPage, rowsPerPage, globalFilterValue, sortField, sortOrder]);
+         useEffect(() => {
+         loadDocuments();
+     }, [currentPage, rowsPerPage, globalFilterValue, sortField, sortOrder, filters.category.value]);
 
     const loadDocuments = async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await apiClient.getDocuments({
-                page: currentPage,
-                limit: rowsPerPage,
-                search: globalFilterValue,
-                sortField,
-                sortOrder,
-            });
+                         const response = await apiClient.getDocuments({
+                 page: currentPage,
+                 limit: rowsPerPage,
+                 search: globalFilterValue,
+                 category: filters.category.value || '',
+                 sortField,
+                 sortOrder,
+             });
 
             if (response.error) {
                 throw new Error(response.error);
@@ -149,11 +158,13 @@ export default function DocumentsPage() {
         setDocumentForm({
             title: "",
             description: "",
-            category: "GENERAL",
+            category: "DOCUMENT",
             permissions: "MEMBER_ONLY",
             tags: "",
+            url: "",
         });
         setUploadedFile(null);
+        setInputType('file');
         setShowDocumentDialog(true);
     };
 
@@ -165,19 +176,54 @@ export default function DocumentsPage() {
             category: document.category,
             permissions: document.permissions,
             tags: document.tags.join(", "),
+            url: document.fileUrl, // Assuming fileUrl is the URL for editing
         });
+        setInputType('url');
         setShowDocumentDialog(true);
     };
 
     const onFileSelect = (event: any) => {
         const file = event.files[0];
         setUploadedFile(file);
+        
+        // Auto-determine category based on file type
+        if (file) {
+            let autoCategory = 'DOCUMENT';
+            if (file.type === 'application/pdf') {
+                autoCategory = 'PDF';
+                         } else if (file.type.startsWith('image/')) {
+                 autoCategory = 'IMAGE';
+             }
+            setDocumentForm(prev => ({ ...prev, category: autoCategory }));
+        }
+    };
+
+    // Function to auto-determine category from URL
+    const determineCategoryFromUrl = (url: string) => {
+        if (url.toLowerCase().includes('.pdf')) {
+            return 'PDF';
+        } else if (url.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
+            return 'IMAGE';
+        } else {
+            return 'LINK';
+        }
     };
 
     const saveDocument = async () => {
-        if (!documentForm.title || (!editingDocument && !uploadedFile)) {
-            showToast("error", "Validation Error", "Please fill in all required fields and select a file");
+        if (!documentForm.title) {
+            showToast("error", "Validation Error", "Please provide a title for the document");
             return;
+        }
+        
+        if (!editingDocument) {
+            if (inputType === 'file' && !uploadedFile) {
+                showToast("error", "Validation Error", "Please select a file to upload");
+                return;
+            }
+            if (inputType === 'url' && !documentForm.url) {
+                showToast("error", "Validation Error", "Please provide a URL");
+                return;
+            }
         }
 
         setSaveLoading(true);
@@ -198,14 +244,19 @@ export default function DocumentsPage() {
 
                 showToast("success", "Success", "Document updated successfully");
             } else {
-                // Create new document with file upload
+                // Create new document with file upload or URL
                 const formData = new FormData();
-                formData.append('file', uploadedFile!);
+                if (inputType === 'file' && uploadedFile) {
+                    formData.append('file', uploadedFile);
+                }
+                if (inputType === 'url' && documentForm.url) {
+                    formData.append('url', documentForm.url);
+                }
                 formData.append('title', documentForm.title);
                 formData.append('description', documentForm.description);
-                formData.append('category', documentForm.category);
                 formData.append('tags', documentForm.tags);
                 formData.append('permissions', documentForm.permissions);
+                // Category will be auto-determined by the API
 
                 const response = await apiClient.uploadDocument(formData);
 
@@ -271,6 +322,10 @@ export default function DocumentsPage() {
 
     const getCategorySeverity = (category: string) => {
         switch (category) {
+            case "PDF": return "danger";
+            case "IMAGE": return "success";
+            case "LINK": return "info";
+            case "DOCUMENT": return "warning";
             case "GENERAL": return "info";
             case "MEETING_MINUTES": return "success";
             case "POLICIES": return "warning";
@@ -344,23 +399,36 @@ export default function DocumentsPage() {
                 <h2 className="text-2xl font-bold m-0">Document Management</h2>
                 <span className="text-600">Upload, organize, and manage documents</span>
             </div>
-            <div className="flex gap-2">
-                <span className="p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText
-                        value={globalFilterValue}
-                        onChange={onGlobalFilterChange}
-                        placeholder="Search documents..."
-                        className="w-full"
-                    />
-                </span>
-                <Button
-                    label="Upload Document"
-                    icon="pi pi-upload"
-                    onClick={openNewDocumentDialog}
-                    severity="success"
-                />
-            </div>
+                         <div className="flex gap-2">
+                 <span className="p-input-icon-left">
+                     <i className="pi pi-search" />
+                     <InputText
+                         value={globalFilterValue}
+                         onChange={onGlobalFilterChange}
+                         placeholder="Search documents..."
+                         className="w-full"
+                     />
+                 </span>
+                 <Dropdown
+                     value={filters.category.value}
+                     options={categoryOptions}
+                     onChange={(e) => {
+                         let _filters = { ...filters };
+                         (_filters["category"] as any).value = e.value;
+                         setFilters(_filters);
+                         setCurrentPage(1);
+                     }}
+                     placeholder="Filter by Category"
+                     className="w-full md:w-10rem"
+                     showClear
+                 />
+                 <Button
+                     label="Upload Document"
+                     icon="pi pi-upload"
+                     onClick={openNewDocumentDialog}
+                     severity="success"
+                 />
+             </div>
         </div>
     );
 
@@ -464,9 +532,6 @@ export default function DocumentsPage() {
                         <Column field="category" header="Category" body={(rowData) => (
                             <Tag value={rowData.category.replace("_", " ")} severity={getCategorySeverity(rowData.category)} />
                         )} style={{ minWidth: "120px" }} />
-                        <Column field="permissions" header="Permissions" body={(rowData) => (
-                            <Tag value={rowData.permissions.replace("_", " ")} severity={getPermissionSeverity(rowData.permissions)} />
-                        )} style={{ minWidth: "120px" }} />
                         <Column field="user" header="Uploaded By" body={(rowData) => (
                             rowData.user ? `${rowData.user.firstName} ${rowData.user.lastName}` : "Unknown"
                         )} style={{ minWidth: "150px" }} />
@@ -507,23 +572,89 @@ export default function DocumentsPage() {
             >
                 <div className="grid">
                     {!editingDocument && (
-                        <div className="col-12">
-                            <label className="font-bold mb-2 block">Upload File *</label>
-                            <FileUpload
-                                ref={fileUploadRef}
-                                name="document"
-                                url="/api/upload"
-                                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
-                                maxFileSize={10000000}
-                                onSelect={onFileSelect}
-                                auto
-                                chooseLabel="Choose File"
-                                uploadLabel="Upload"
-                                cancelLabel="Cancel"
-                                emptyTemplate={<p className="m-0">Drag and drop files here to upload.</p>}
-                                disabled={saveLoading}
-                            />
-                        </div>
+                        <>
+                            <div className="col-12">
+                                <div className="flex align-items-center gap-3 mb-3">
+                                    <div className="flex align-items-center">
+                                        <input
+                                            type="radio"
+                                            id="file-upload"
+                                            name="input-type"
+                                            value="file"
+                                            checked={inputType === 'file'}
+                                            onChange={(e) => {
+                                                setInputType('file');
+                                                setUploadedFile(null);
+                                                setDocumentForm(prev => ({ ...prev, url: '' }));
+                                                if (fileUploadRef.current) {
+                                                    fileUploadRef.current.clear();
+                                                }
+                                            }}
+                                            className="mr-2"
+                                        />
+                                        <label htmlFor="file-upload" className="font-medium">Upload Document</label>
+                                    </div>
+                                    <div className="flex align-items-center">
+                                        <input
+                                            type="radio"
+                                            id="url-input"
+                                            name="input-type"
+                                            value="url"
+                                            checked={inputType === 'url'}
+                                            onChange={(e) => {
+                                                setInputType('url');
+                                                setUploadedFile(null);
+                                                setDocumentForm(prev => ({ ...prev, url: '' }));
+                                                if (fileUploadRef.current) {
+                                                    fileUploadRef.current.clear();
+                                                }
+                                            }}
+                                            className="mr-2"
+                                        />
+                                        <label htmlFor="url-input" className="font-medium">Paste Link</label>
+                                    </div>
+                                </div>
+                                
+                                {inputType === 'file' && (
+                                    <div>
+                                        <label className="font-bold mb-2 block">Upload File *</label>
+                                        <FileUpload
+                                            ref={fileUploadRef}
+                                            name="document"
+                                            url="/api/upload"
+                                            accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                                            maxFileSize={10000000}
+                                            onSelect={onFileSelect}
+                                            auto
+                                            chooseLabel="Choose File"
+                                            uploadLabel="Upload"
+                                            cancelLabel="Cancel"
+                                            emptyTemplate={<p className="m-0">Drag and drop files here to upload.</p>}
+                                            disabled={saveLoading}
+                                        />
+                                    </div>
+                                )}
+                                
+                                {inputType === 'url' && (
+                                    <div>
+                                        <label className="font-bold mb-2 block">Provide URL *</label>
+                                        <InputText
+                                            value={documentForm.url}
+                                                                                         onChange={(e) => {
+                                                 const url = e.target.value;
+                                                 setDocumentForm({ 
+                                                     ...documentForm, 
+                                                     url,
+                                                     category: determineCategoryFromUrl(url)
+                                                 });
+                                             }}
+                                            placeholder="https://example.com/document.pdf"
+                                            disabled={saveLoading}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </>
                     )}
                     <div className="col-12">
                         <label htmlFor="title" className="font-bold">Title *</label>
@@ -542,28 +673,6 @@ export default function DocumentsPage() {
                             value={documentForm.description}
                             onChange={(e) => setDocumentForm({ ...documentForm, description: e.target.value })}
                             rows={3}
-                            disabled={saveLoading}
-                        />
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="category" className="font-bold">Category *</label>
-                        <Dropdown
-                            id="category"
-                            value={documentForm.category}
-                            options={categoryOptions}
-                            onChange={(e) => setDocumentForm({ ...documentForm, category: e.value })}
-                            placeholder="Select Category"
-                            disabled={saveLoading}
-                        />
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <label htmlFor="permissions" className="font-bold">Permissions *</label>
-                        <Dropdown
-                            id="permissions"
-                            value={documentForm.permissions}
-                            options={permissionOptions}
-                            onChange={(e) => setDocumentForm({ ...documentForm, permissions: e.value })}
-                            placeholder="Select Permissions"
                             disabled={saveLoading}
                         />
                     </div>

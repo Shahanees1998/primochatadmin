@@ -95,6 +95,46 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "forgot-password"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -282,12 +322,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{user_id}}\"\n}"
+              "raw": "{\n  \"userId\": \"6870ec4831a6be82b4cccbe1\",\n  \"trestleBoardId\": \"6879216632a53988f8f45b04\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/trestle-board/{{trestle_board_id}}/signups",
+              "raw": "{{base_url}}/admin/calendar",
               "host": ["{{base_url}}"],
-              "path": ["admin", "trestle-board", "{{trestle_board_id}}", "signups"]
+              "path": ["admin", "calendar"]
             }
           },
           "response": []
@@ -298,7 +338,7 @@
       "name": "Calendar",
       "item": [
         {
-          "name": "Get User Calendar",
+          "name": "Get User Calendar (Admin)",
           "request": {
             "method": "GET",
             "header": [
@@ -329,6 +369,90 @@
                   "value": "{{user_id}}"
                 }
               ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Calendar Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/calendar?startDate=2024-01-01&endDate=2024-12-31&eventType=",
+              "host": ["{{base_url}}"],
+              "path": ["calendar"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-12-31"
+                },
+                {
+                  "key": "eventType",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Custom Event to My Calendar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My Custom Event\",\n  \"description\": \"Event description\",\n  \"startDate\": \"2024-12-25\",\n  \"startTime\": \"14:00\",\n  \"location\": \"Event Location\",\n  \"eventType\": \"CUSTOM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/calendar",
+              "host": ["{{base_url}}"],
+              "path": ["calendar"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Trestle Board to My Calendar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trestleBoardId\": \"{{trestle_board_id}}\",\n  \"eventType\": \"TRESTLE_BOARD\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/calendar",
+              "host": ["{{base_url}}"],
+              "path": ["calendar"]
             }
           },
           "response": []

@@ -9,9 +9,9 @@ export async function GET(
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       // Check if user is admin
-      if (authenticatedReq.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      // if (authenticatedReq.user?.role !== 'ADMIN') {
+      //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      // }
 
       // Get festive board with all meals and user selections
       const festiveBoard = await prisma.festiveBoard.findUnique({
@@ -87,9 +87,9 @@ export async function POST(
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       // Check if user is admin
-      if (authenticatedReq.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      // if (authenticatedReq.user?.role !== 'ADMIN') {
+      //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      // }
 
       const body = await request.json();
       const { userId, mealId, action } = body; // action: 'select' or 'deselect'

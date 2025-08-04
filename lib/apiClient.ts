@@ -229,8 +229,8 @@ class ApiClient {
         return this.post('/auth/reset-password', { token, password });
     }
 
-    async changePassword(userId: string, currentPassword: string, newPassword: string) {
-        return this.post('/users/change-password', { userId, currentPassword, newPassword });
+    async changePassword(currentPassword: string, newPassword: string) {
+        return this.post('/users/change-password', { currentPassword, newPassword });
     }
 
     // TrestleBoard methods
@@ -886,17 +886,48 @@ class ApiClient {
 
     async addCalendarEvent(data: {
         userId: string;
-        title: string;
+        trestleBoardId?: string;
+        title?: string;
         description?: string;
-        startDate: string;
+        startDate?: string;
         endDate?: string;
         startTime?: string;
         endTime?: string;
         location?: string;
         eventType?: string;
-        trestleBoardId?: string;
     }) {
         return this.post('/admin/calendar', data);
+    }
+
+    // User Calendar methods (for mobile app)
+    async getUserOwnCalendarEvents(params?: {
+        startDate?: string;
+        endDate?: string;
+        eventType?: string;
+    }) {
+        return this.get<{
+            events: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                pages: number;
+            };
+        }>('/calendar', params);
+    }
+
+    async addUserOwnCalendarEvent(data: {
+        trestleBoardId?: string;
+        title?: string;
+        description?: string;
+        startDate?: string;
+        endDate?: string;
+        startTime?: string;
+        endTime?: string;
+        location?: string;
+        eventType?: string;
+    }) {
+        return this.post('/calendar', data);
     }
 
     async deleteCalendarEvent(eventId: string, eventType: string, userId: string) {

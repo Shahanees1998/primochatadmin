@@ -6,9 +6,9 @@ export async function GET(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       // Check if user is admin
-      if (authenticatedReq.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      // if (authenticatedReq.user?.role !== 'ADMIN') {
+      //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      // }
 
       const { searchParams } = new URL(request.url);
       const startDate = searchParams.get('startDate');
@@ -57,13 +57,13 @@ export async function GET(request: NextRequest) {
         }
 
         // Transform the data to match frontend expectations
-                 const transformedEvents = userCalendars.map(userCalendar => ({
-           id: userCalendar.id,
-           title: trestleBoard.title,
-           description: trestleBoard.description,
-           date: trestleBoard.date.toISOString(),
-           eventType: 'TRESTLE_BOARD',
-           location: trestleBoard.location,
+        const transformedEvents = userCalendars.map(userCalendar => ({
+          id: userCalendar.id,
+          title: trestleBoard.title,
+          description: trestleBoard.description,
+          date: trestleBoard.date.toISOString(),
+          eventType: 'TRESTLE_BOARD',
+          location: trestleBoard.location,
           user: {
             id: userCalendar.user.id,
             name: `${userCalendar.user.firstName} ${userCalendar.user.lastName}`,
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
             },
           },
         });
-
+        console.log('=========================', userCalendar)
         if (!userCalendar) {
           return NextResponse.json({
             events: [],
@@ -134,13 +134,13 @@ export async function GET(request: NextRequest) {
 
         // Combine and transform events
         const allEvents = [
-                     ...trestleBoards.map(tb => ({
-             id: tb.id,
-             title: tb.title,
-             description: tb.description,
-             date: tb.date.toISOString(),
-             eventType: 'TRESTLE_BOARD',
-             location: tb.location,
+          ...trestleBoards.map(tb => ({
+            id: tb.id,
+            title: tb.title,
+            description: tb.description,
+            date: tb.date.toISOString(),
+            eventType: 'TRESTLE_BOARD',
+            location: tb.location,
             user: {
               id: userCalendar.user.id,
               name: `${userCalendar.user.firstName} ${userCalendar.user.lastName}`,
@@ -221,11 +221,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
-      // Check if user is admin
-      if (authenticatedReq.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
       const body = await request.json();
       const {
         userId,
@@ -240,16 +235,32 @@ export async function POST(request: NextRequest) {
         trestleBoardId,
       } = body;
 
-      if (!userId) {
-        return NextResponse.json(
-          { error: 'User ID is required' },
-          { status: 400 }
-        );
+      // Determine the target user ID
+      let targetUserId = userId;
+      
+      // If no userId provided, use the authenticated user from token
+      if (!targetUserId) {
+        targetUserId = authenticatedReq.user?.userId;
+        
+        if (!targetUserId) {
+          return NextResponse.json(
+            { error: 'User ID is required or user must be authenticated' },
+            { status: 400 }
+          );
+        }
+      } else {
+        // If userId is provided, check if the authenticated user is admin
+        // if (authenticatedReq.user?.role !== 'ADMIN') {
+        //   return NextResponse.json(
+        //     { error: 'Only admins can add events to other users\' calendars' },
+        //     { status: 403 }
+        //   );
+        // }
       }
 
       // Verify user exists
       const user = await prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: targetUserId },
       });
 
       if (!user) {
@@ -261,13 +272,13 @@ export async function POST(request: NextRequest) {
 
       // Get or create user calendar
       let userCalendar = await prisma.userCalendar.findUnique({
-        where: { userId },
+        where: { userId: targetUserId },
       });
 
       if (!userCalendar) {
         userCalendar = await prisma.userCalendar.create({
           data: {
-            userId,
+            userId: targetUserId,
             trestleBoardIds: [],
             customEventIds: [],
           },
@@ -298,7 +309,7 @@ export async function POST(request: NextRequest) {
 
         // Add trestle board to user's calendar
         const updatedUserCalendar = await prisma.userCalendar.update({
-          where: { userId },
+          where: { userId: targetUserId },
           data: {
             trestleBoardIds: {
               push: trestleBoardId
@@ -317,16 +328,16 @@ export async function POST(request: NextRequest) {
           },
         });
 
-                 return NextResponse.json({
-           id: updatedUserCalendar.id,
-           title: trestleBoard.title,
-           description: trestleBoard.description,
-           startDate: trestleBoard.date.toISOString(),
-           endDate: null,
-           startTime: trestleBoard.time,
-           endTime: null,
-           location: trestleBoard.location,
-           eventType: 'TRESTLE_BOARD',
+        return NextResponse.json({
+          id: updatedUserCalendar.id,
+          title: trestleBoard.title,
+          description: trestleBoard.description,
+          startDate: trestleBoard.date.toISOString(),
+          endDate: null,
+          startTime: trestleBoard.time,
+          endTime: null,
+          location: trestleBoard.location,
+          eventType: 'TRESTLE_BOARD',
           user: {
             id: updatedUserCalendar.user.id,
             name: `${updatedUserCalendar.user.firstName} ${updatedUserCalendar.user.lastName}`,
@@ -350,7 +361,7 @@ export async function POST(request: NextRequest) {
       const customEvent = await prisma.customEvent.create({
         data: {
           title,
-          userId,
+          userId: targetUserId,
           date: new Date(startDate),
           time: startTime,
         },
@@ -358,7 +369,7 @@ export async function POST(request: NextRequest) {
 
       // Add custom event to user's calendar
       const updatedUserCalendar = await prisma.userCalendar.update({
-        where: { userId },
+        where: { userId: targetUserId },
         data: {
           customEventIds: {
             push: customEvent.id
@@ -410,9 +421,9 @@ export async function DELETE(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       // Check if user is admin
-      if (authenticatedReq.user?.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      // if (authenticatedReq.user?.role !== 'ADMIN') {
+      //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      // }
 
       const { searchParams } = new URL(request.url);
       const eventId = searchParams.get('eventId');
@@ -440,7 +451,7 @@ export async function DELETE(request: NextRequest) {
       if (eventType === 'TRESTLE_BOARD') {
         // Remove trestle board from user's calendar
         const updatedTrestleBoardIds = userCalendar.trestleBoardIds.filter(id => id !== eventId);
-        
+
         await prisma.userCalendar.update({
           where: { userId },
           data: {
@@ -454,7 +465,7 @@ export async function DELETE(request: NextRequest) {
         });
 
         const updatedCustomEventIds = userCalendar.customEventIds.filter(id => id !== eventId);
-        
+
         await prisma.userCalendar.update({
           where: { userId },
           data: {
