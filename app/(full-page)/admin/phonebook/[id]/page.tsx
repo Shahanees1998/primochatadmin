@@ -190,11 +190,11 @@ export default function PhoneBookDetailPage() {
                             </div>
                             <div className="col-12 md:col-6">
                                 <div className="flex flex-column gap-3">
-                                    <div>
+                                    {/* <div>
                                         <label className="font-bold text-600">Address</label>
                                         <div className="text-lg">{entry.address || 'Not provided'}</div>
-                                    </div>
-                                    <div>
+                                    </div> */}
+                                    {/* <div>
                                         <label className="font-bold text-600">Public Contact</label>
                                         <div>
                                             <Tag 
@@ -202,7 +202,7 @@ export default function PhoneBookDetailPage() {
                                                 severity={entry.isPublic ? "success" : "secondary"} 
                                             />
                                         </div>
-                                    </div>
+                                    </div> */}
                                     <div>
                                         <label className="font-bold text-600">User Role</label>
                                         <div>

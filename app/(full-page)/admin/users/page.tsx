@@ -16,6 +16,8 @@ import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { FilterMatchMode, FilterOperator } from "primereact/api";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "primereact/skeleton";
+import { FileUpload } from "primereact/fileupload";
+import { ProgressBar } from "primereact/progressbar";
 import { apiClient } from "@/lib/apiClient";
 import { getProfileImageUrl } from "@/lib/cloudinary-client";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -43,9 +45,21 @@ interface UserFormData {
     email: string;
     phone: string;
     status: string;
+    membershipNumber: string;
     joinDate: Date | null;
     paidDate: Date | null;
     password?: string;
+}
+
+interface CSVUserData {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    status?: string;
+    membershipNumber?: string;
+    joinDate?: string;
+    paidDate?: string;
 }
 
 export default function MembersPage() {
@@ -64,6 +78,7 @@ export default function MembersPage() {
         status: { value: null, matchMode: FilterMatchMode.EQUALS },
     });
     const [showUserDialog, setShowUserDialog] = useState(false);
+    const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [userForm, setUserForm] = useState<UserFormData>({
         firstName: "",
@@ -71,11 +86,17 @@ export default function MembersPage() {
         email: "",
         phone: "",
         status: "PENDING",
+        membershipNumber: "",
         joinDate: null,
         paidDate: null,
         password: "",
     });
     const [showPassword, setShowPassword] = useState(false);
+    const [bulkUploadProgress, setBulkUploadProgress] = useState(0);
+    const [bulkUploadStatus, setBulkUploadStatus] = useState<string>("");
+    const [csvData, setCsvData] = useState<CSVUserData[]>([]);
+    const [csvErrors, setCsvErrors] = useState<string[]>([]);
+    const [bulkUploadLoading, setBulkUploadLoading] = useState(false);
     const toast = useRef<Toast>(null);
     const [error, setError] = useState<string | null>(null);
     const [saveLoading, setSaveLoading] = useState(false);
@@ -144,6 +165,7 @@ export default function MembersPage() {
             email: "",
             phone: "",
             status: "PENDING",
+            membershipNumber: "",
             joinDate: null,
             paidDate: null,
             password: "",
@@ -160,6 +182,7 @@ export default function MembersPage() {
             email: user.email,
             phone: user.phone || "",
             status: user.status,
+            membershipNumber: user.membershipNumber || "",
             joinDate: user.joinDate ? new Date(user.joinDate) : null,
             paidDate: user.paidDate ? new Date(user.paidDate) : null,
         });
@@ -170,13 +193,16 @@ export default function MembersPage() {
     const saveUser = async () => {
         setSaveLoading(true);
         try {
-            const userData = {
+            const userData: any = {
                 ...userForm,
                 joinDate: userForm.joinDate?.toISOString(),
                 paidDate: userForm.paidDate?.toISOString(),
             };
             if (!editingUser && !userForm.password) {
                 delete userData.password;
+            }
+            if (!userForm.membershipNumber) {
+                delete userData.membershipNumber;
             }
             let response: any;
             if (editingUser) {
@@ -245,7 +271,150 @@ export default function MembersPage() {
         }
     };
 
+    // CSV Upload Functions
+    const parseCSV = (csvText: string): CSVUserData[] => {
+        const lines = csvText.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const data: CSVUserData[] = [];
+        const errors: string[] = [];
 
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            const values = line.split(',').map(v => v.trim());
+            if (values.length !== headers.length) {
+                errors.push(`Row ${i + 1}: Column count mismatch`);
+                continue;
+            }
+
+            const row: any = {};
+            headers.forEach((header, index) => {
+                row[header] = values[index];
+            });
+
+            // Validate required fields
+            if (!row.firstname || !row.lastname || !row.email) {
+                errors.push(`Row ${i + 1}: Missing required fields (firstName, lastName, email)`);
+                continue;
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(row.email)) {
+                errors.push(`Row ${i + 1}: Invalid email format`);
+                continue;
+            }
+
+            data.push({
+                firstName: row.firstname,
+                lastName: row.lastname,
+                email: row.email,
+                phone: row.phone || undefined,
+                status: row.status || "PENDING",
+                membershipNumber: row.membershipnumber || undefined,
+                joinDate: row.joindate || undefined,
+                paidDate: row.paiddate || undefined,
+            });
+        }
+
+        setCsvErrors(errors);
+        return data;
+    };
+
+    const handleCSVUpload = (event: any) => {
+        const file = event.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const csvText = e.target?.result as string;
+            const parsedData = parseCSV(csvText);
+            setCsvData(parsedData);
+        };
+        reader.readAsText(file);
+    };
+
+    const downloadCSVTemplate = () => {
+        const template = `firstname,lastname,email,phone,status,membershipnumber,joindate,paiddate
+John,Doe,john.doe@example.com,+1234567890,PENDING,primo1234,2024-01-15,2024-01-15
+Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-01-16`;
+        
+        const blob = new Blob([template], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'member_upload_template.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
+    const processBulkUpload = async () => {
+        if (csvData.length === 0) {
+            showToast("error", "Error", "No valid data to upload");
+            return;
+        }
+
+        setBulkUploadLoading(true);
+        setBulkUploadProgress(0);
+        setBulkUploadStatus("Starting bulk upload...");
+        
+        let successCount = 0;
+        let errorCount = 0;
+        const errors: string[] = [];
+
+        for (let i = 0; i < csvData.length; i++) {
+            const userData = csvData[i];
+            setBulkUploadStatus(`Processing ${userData.firstName} ${userData.lastName} (${i + 1}/${csvData.length})`);
+            
+            try {
+                const response = await apiClient.createUser({
+                    firstName: userData.firstName,
+                    lastName: userData.lastName,
+                    email: userData.email,
+                    phone: userData.phone,
+                    status: userData.status,
+                    membershipNumber: userData.membershipNumber,
+                    joinDate: userData.joinDate,
+                    paidDate: userData.paidDate,
+                });
+
+                if (response.error) {
+                    errorCount++;
+                    errors.push(`${userData.email}: ${response.error}`);
+                } else {
+                    successCount++;
+                }
+            } catch (error) {
+                errorCount++;
+                errors.push(`${userData.email}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+
+            setBulkUploadProgress(((i + 1) / csvData.length) * 100);
+        }
+
+        setBulkUploadStatus(`Upload completed. ${successCount} successful, ${errorCount} failed.`);
+        
+        if (successCount > 0) {
+            showToast("success", "Bulk Upload Complete", `${successCount} members added successfully`);
+            loadMembers(); // Refresh the list
+        }
+        
+        if (errorCount > 0) {
+            showToast("warn", "Bulk Upload Issues", `${errorCount} members failed to upload. Check the console for details.`);
+            console.error("Bulk upload errors:", errors);
+        }
+
+        // Reset after 3 seconds
+        setTimeout(() => {
+            setShowBulkUploadDialog(false);
+            setCsvData([]);
+            setCsvErrors([]);
+            setBulkUploadProgress(0);
+            setBulkUploadStatus("");
+            setBulkUploadLoading(false);
+        }, 3000);
+    };
 
     const nameBodyTemplate = (rowData: User) => {
         return (
@@ -282,7 +451,7 @@ export default function MembersPage() {
                     size="small"
                     text
                     severity="secondary"
-                                            tooltip="Edit Member"
+                    tooltip="Edit Member"
                     onClick={() => openEditUserDialog(rowData)}
                 />
                 <Button
@@ -290,7 +459,7 @@ export default function MembersPage() {
                     size="small"
                     text
                     severity="danger"
-                                            tooltip="Delete Member"
+                    tooltip="Delete Member"
                     onClick={() => confirmDeleteUser(rowData)}
                 />
             </div>
@@ -314,9 +483,15 @@ export default function MembersPage() {
                     />
                 </span>
                 <Button
+                    label="Bulk Upload"
+                    icon="pi pi-upload"
+                    onClick={() => setShowBulkUploadDialog(true)}
+                    severity="info"
+                />
+                <Button
                     label="Add Member"
                     icon="pi pi-plus"
-                                            onClick={openNewMemberDialog}
+                    onClick={openNewMemberDialog}
                     severity="success"
                 />
             </div>
@@ -497,7 +672,16 @@ export default function MembersPage() {
                             className="w-full"
                         />
                     </div>
-
+                    <div className="col-12 md:col-6">
+                        <label htmlFor="membershipNumber" className="block font-bold mb-2">Member ID</label>
+                        <InputText
+                            id="membershipNumber"
+                            value={userForm.membershipNumber}
+                            onChange={(e) => setUserForm({ ...userForm, membershipNumber: e.target.value })}
+                            placeholder="Enter member ID (leave blank for auto-generation)"
+                            className="w-full"
+                        />
+                    </div>
                     <div className="col-12 md:col-6">
                         <label htmlFor="status" className="block font-bold mb-2">Status *</label>
                         <Dropdown
@@ -557,6 +741,93 @@ export default function MembersPage() {
                                     style={{ cursor: 'pointer' }}
                                 />
                             </div>
+                        </div>
+                    )}
+                </div>
+            </Dialog>
+
+            {/* Bulk Upload Dialog */}
+            <Dialog
+                visible={showBulkUploadDialog}
+                style={{ width: "600px", maxWidth: "95vw", zIndex: 2000, borderRadius: 12 }}
+                header="Bulk Upload Members"
+                modal
+                className=""
+                onHide={() => setShowBulkUploadDialog(false)}
+                footer={
+                    <div className="flex gap-2 justify-content-end">
+                        <Button 
+                            label="Download Template" 
+                            icon="pi pi-download" 
+                            text 
+                            onClick={downloadCSVTemplate}
+                        />
+                        <Button 
+                            label="Cancel" 
+                            icon="pi pi-times" 
+                            text 
+                            onClick={() => setShowBulkUploadDialog(false)} 
+                        />
+                        <Button
+                            label={bulkUploadLoading ? "Uploading..." : "Upload Members"}
+                            icon={bulkUploadLoading ? "pi pi-spin pi-spinner" : "pi pi-upload"}
+                            onClick={processBulkUpload}
+                            disabled={csvData.length === 0 || csvErrors.length > 0 || bulkUploadLoading}
+                        />
+                    </div>
+                }
+            >
+                <div className="flex flex-column gap-4">
+                    <div>
+                        <h3 className="text-lg font-semibold mb-2">Upload CSV File</h3>
+                        <p className="text-600 mb-3">
+                            Upload a CSV file with member data. The file should include the following columns:
+                            firstname, lastname, email, phone (optional), status (optional), membershipnumber (optional), joindate (optional), paiddate (optional)
+                        </p>
+                        <FileUpload
+                            mode="basic"
+                            name="csv"
+                            accept=".csv"
+                            maxFileSize={1000000}
+                            customUpload
+                            uploadHandler={handleCSVUpload}
+                            auto
+                            chooseLabel="Choose CSV File"
+                        />
+                    </div>
+
+                    {csvData.length > 0 && (
+                        <div>
+                            <h4 className="font-semibold mb-2">Preview ({csvData.length} members)</h4>
+                            <div className="max-h-40 overflow-y-auto border-1 border-round p-3">
+                                {csvData.slice(0, 5).map((user, index) => (
+                                    <div key={index} className="text-sm mb-1">
+                                        {user.firstName} {user.lastName} - {user.email}
+                                    </div>
+                                ))}
+                                {csvData.length > 5 && (
+                                    <div className="text-sm text-600">... and {csvData.length - 5} more</div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {csvErrors.length > 0 && (
+                        <div>
+                            <h4 className="font-semibold text-red-600 mb-2">Validation Errors ({csvErrors.length})</h4>
+                            <div className="max-h-32 overflow-y-auto border-1 border-round p-3 bg-red-50">
+                                {csvErrors.map((error, index) => (
+                                    <div key={index} className="text-sm text-red-600 mb-1">{error}</div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {bulkUploadStatus && (
+                        <div>
+                            <h4 className="font-semibold mb-2">Upload Progress</h4>
+                            <ProgressBar value={bulkUploadProgress} />
+                            <p className="text-sm mt-2">{bulkUploadStatus}</p>
                         </div>
                     )}
                 </div>

@@ -1,0 +1,5 @@
+firstname,lastname,email,phone,status,membershipnumber,joindate,paiddate
+John,Doe,john.doe@example.com,+1234567890,PENDING,primo1234,2024-01-15,2024-01-15
+Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-01-16
+Mike,Johnson,mike.johnson@example.com,+1234567892,PENDING,,2024-01-17,
+Sarah,Williams,sarah.williams@example.com,+1234567893,ACTIVE,primo1237,2024-01-18,2024-01-18 

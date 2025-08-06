@@ -12,11 +12,11 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-users",
                     to: "/admin/users",
                 },
-                {
-                    label: "Pending Approvals",
-                    icon: "pi pi-fw pi-clock",
-                    to: "/admin/users/pending",
-                },
+                // {
+                //     label: "Pending Approvals",
+                //     icon: "pi pi-fw pi-clock",
+                //     to: "/admin/users/pending",
+                // },
                 // {
                 //     label: "Membership Cards",
                 //     icon: "pi pi-fw pi-id-card",
@@ -61,7 +61,7 @@ const AppMenu = () => {
             icon: "pi pi-calendar",
             items: [
                 {
-                    label: "All Boards",
+                    label: "Events",
                     icon: "pi pi-fw pi-calendar",
                     to: "/admin/trestle-board",
                 },
@@ -117,11 +117,11 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-megaphone",
                     to: "/admin/communications/announcements",
                 },
-                {
-                    label: "Send Announcement",
-                    icon: "pi pi-fw pi-send",
-                    to: "/admin/communications/announcement",
-                },
+                // {
+                //     label: "Send Announcement",
+                //     icon: "pi pi-fw pi-send",
+                //     to: "/admin/communications/announcement",
+                // },
                 {
                     label: "Messages",
                     icon: "pi pi-fw pi-comment",
@@ -147,17 +147,17 @@ const AppMenu = () => {
                     label: "Support Requests",
                     icon: "pi pi-fw pi-question-circle",
                     to: "/admin/support",
-                },
-                {
-                    label: "Chat Moderation",
-                    icon: "pi pi-fw pi-comments",
-                    to: "/admin/moderation",
-                },
-                {
-                    label: "Moderators",
-                    icon: "pi pi-fw pi-user-plus",
-                    to: "/admin/moderators",
-                },
+                }
+                // {
+                //     label: "Chat Moderation",
+                //     icon: "pi pi-fw pi-comments",
+                //     to: "/admin/moderation",
+                // },
+                // {
+                //     label: "Moderators",
+                //     icon: "pi pi-fw pi-user-plus",
+                //     to: "/admin/moderators",
+                // },
             ],
         },
 

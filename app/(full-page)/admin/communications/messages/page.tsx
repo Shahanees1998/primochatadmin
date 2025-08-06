@@ -796,7 +796,7 @@ export default function MessagesPage() {
                                                 }
                                             </p>
                                         </div>
-                                        <div className="flex gap-2">
+                                        {/* <div className="flex gap-2">
                                             <Button
                                                 icon="pi pi-search"
                                                 size="small"
@@ -809,7 +809,7 @@ export default function MessagesPage() {
                                                 text
                                                 tooltip="More options"
                                             />
-                                        </div>
+                                        </div> */}
                                     </div>
                                 </div>
 
@@ -881,12 +881,12 @@ export default function MessagesPage() {
                                 {/* Message Input */}
                                 <div className="p-3 border-top-1 surface-border bg-white">
                                     <div className="flex align-items-center gap-3">
-                                        <Button
+                                        {/* <Button
                                             icon="pi pi-paperclip"
                                             size="small"
                                             text
                                             tooltip="Attach file"
-                                        />
+                                        /> */}
                                         <div className="flex-1">
                                             <InputText
                                                 value={newMessage}

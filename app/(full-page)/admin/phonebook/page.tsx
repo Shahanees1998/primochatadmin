@@ -181,7 +181,9 @@ export default function PhoneBookPage() {
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to update phone book entry');
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error || 'Failed to update phone book entry';
+                    throw new Error(errorMessage);
                 }
 
                 const updatedEntry = await response.json();
@@ -199,7 +201,9 @@ export default function PhoneBookPage() {
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to create phone book entry');
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error || 'Failed to create phone book entry';
+                    throw new Error(errorMessage);
                 }
 
                 // Reload the phone book entries to get the complete data with user information
@@ -208,7 +212,21 @@ export default function PhoneBookPage() {
             }
             setShowEntryDialog(false);
         } catch (error) {
-            showToast("error", "Error", "Failed to save phone book entry");
+            let errorMessage = "Failed to save phone book entry";
+            
+            // Try to get more specific error message from the response
+            if (error instanceof Error) {
+                // Check if it's a fetch error with response
+                if (error.message.includes('Failed to create phone book entry')) {
+                    errorMessage = "Contact already exists for this user";
+                } else if (error.message.includes('Failed to update phone book entry')) {
+                    errorMessage = "Failed to update contact";
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            showToast("error", "Error", errorMessage);
         } finally {
             setSaveLoading(false);
         }
@@ -306,11 +324,18 @@ export default function PhoneBookPage() {
         );
     };
 
+    const emailBodyTemplate = (rowData: PhoneBookEntry) => {
+        return (
+            <div>
+                <div className="text-sm text-600">{rowData.email}</div>
+            </div>
+        );
+    };
+
     const nameBodyTemplate = (rowData: PhoneBookEntry) => {
         return (
             <div>
                 <div className="font-semibold">{`${rowData.user?.firstName} ${rowData.user?.lastName}`}</div>
-                <div className="text-sm text-600">{rowData.email}</div>
             </div>
         );
     };
@@ -452,11 +477,8 @@ export default function PhoneBookPage() {
                         responsiveLayout="scroll"
                     >
                         <Column field="user.firstName" header="Name" body={nameBodyTemplate} style={{ minWidth: "200px" }} />
+                        <Column field="user.email" header="Email" body={emailBodyTemplate} style={{ minWidth: "200px" }} />
                         <Column field="phone" header="Contact" body={contactBodyTemplate} style={{ minWidth: "150px" }} />
-                        <Column field="address" header="Address" body={addressBodyTemplate} style={{ minWidth: "200px" }} />
-                        <Column field="isPublic" header="Public" body={(rowData) => (
-                            <Tag value={rowData.isPublic ? "Yes" : "No"} severity={rowData.isPublic ? "success" : "secondary"} />
-                        )} style={{ minWidth: "100px" }} />
                         <Column field="createdAt" header="Added" body={(rowData) => (
                             new Date(rowData.createdAt).toLocaleDateString()
                         )} style={{ minWidth: "120px" }} />
@@ -533,15 +555,15 @@ export default function PhoneBookPage() {
                             onChange={(e) => setEntryForm({ ...entryForm, phone: e.target.value })}
                         />
                     </div>
-                    <div className="col-12">
+                    {/* <div className="col-12">
                         <label htmlFor="address" className="font-bold">Address</label>
                         <InputText
                             id="address"
                             value={entryForm.address}
                             onChange={(e) => setEntryForm({ ...entryForm, address: e.target.value })}
                         />
-                    </div>
-                    <div className="col-12">
+                    </div> */}
+                    {/* <div className="col-12">
                         <label className="font-bold">Public Contact</label>
                         <div className="flex align-items-center mt-2">
                             <input
@@ -553,7 +575,7 @@ export default function PhoneBookPage() {
                             />
                             <label htmlFor="isPublic">Make this contact public to other members</label>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </Dialog>
 

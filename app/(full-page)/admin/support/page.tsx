@@ -272,7 +272,7 @@ export default function SupportPage() {
                     tooltip="Respond"
                     onClick={() => openResponseDialog(rowData)}
                 />
-                <Button
+                {/* <Button
                     icon="pi pi-envelope"
                     size="small"
                     text
@@ -281,7 +281,7 @@ export default function SupportPage() {
                     onClick={() => {
                         showToast("info", "Info", "Email functionality would be implemented here");
                     }}
-                />
+                /> */}
                 <Button
                     icon="pi pi-trash"
                     size="small"
