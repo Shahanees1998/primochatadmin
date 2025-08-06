@@ -7,7 +7,7 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:3000/api",
+      "value": "https://primoochat.vercel.app/api",
       "type": "string"
     },
     {
@@ -229,7 +229,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}/meals",
+              "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}",
               "host": ["{{base_url}}"],
               "path": ["admin", "festive-board", "{{festive_board_id}}", "meals"]
             }
@@ -247,6 +247,26 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"mealId\": \"{{meal_id}}\",\n  \"action\": \"select\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}/selections",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "festive-board", "{{festive_board_id}}", "selections"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deselect Meal for Festive Board",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"mealId\": \"{{meal_id}}\",\n  \"action\": \"deselect\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}/selections",
@@ -293,21 +313,6 @@
                   "value": ""
                 }
               ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Trestle Board Signups",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/trestle-board/{{trestle_board_id}}/signups",
-              "host": ["{{base_url}}"],
-              "path": ["admin", "trestle-board", "{{trestle_board_id}}", "signups"]
             }
           },
           "response": []
@@ -422,32 +427,6 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"My Custom Event\",\n  \"description\": \"Event description\",\n  \"startDate\": \"2024-12-25\",\n  \"startTime\": \"14:00\",\n  \"location\": \"Event Location\",\n  \"eventType\": \"CUSTOM\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/calendar",
-              "host": ["{{base_url}}"],
-              "path": ["calendar"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Add Trestle Board to My Calendar",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"trestleBoardId\": \"{{trestle_board_id}}\",\n  \"eventType\": \"TRESTLE_BOARD\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/calendar",
@@ -792,6 +771,61 @@
                   "value": ""
                 }
               ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Meal Categories",
+      "item": [
+        {
+          "name": "Get All Meal Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/meal/categories?page=1&limit=20&search=",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "meal", "categories"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Meal Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/meal/categories/{{category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "meal", "categories", "{{category_id}}"]
             }
           },
           "response": []

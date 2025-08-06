@@ -141,28 +141,47 @@ export async function POST(
       }
 
       if (action === 'select') {
-        // Check if already selected
-        const existingSelection = await prisma.userMealSelection.findFirst({
+        // Check if this meal is already selected by any user
+        const existingMealSelection = await prisma.userMealSelection.findFirst({
           where: {
-            userId: userId,
             festiveBoardMealId: festiveBoardMeal.id,
           },
-        });
-
-        if (existingSelection) {
-          return NextResponse.json(
-            { error: 'Meal already selected for this user' },
-            { status: 400 }
-          );
-        }
-
-        // Remove any existing meal selections for this user in this festive board
-        await prisma.userMealSelection.deleteMany({
-          where: {
-            userId: userId,
-            festiveBoardId: params.id,
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                membershipNumber: true,
+              },
+            },
           },
         });
+
+        if (existingMealSelection) {
+          // Check if it's the same user trying to select again
+          if (existingMealSelection.userId === userId) {
+            return NextResponse.json(
+              { error: 'You have already selected this meal' },
+              { status: 400 }
+            );
+          } else {
+            // Another user has already selected this meal
+            return NextResponse.json(
+              { 
+                error: 'This meal is already selected by another user',
+                selectedBy: {
+                  userId: existingMealSelection.user.id,
+                  name: `${existingMealSelection.user.firstName} ${existingMealSelection.user.lastName}`,
+                  email: existingMealSelection.user.email,
+                  membershipNumber: existingMealSelection.user.membershipNumber
+                }
+              },
+              { status: 409 }
+            );
+          }
+        }
 
         // Create selection
         const selection = await prisma.userMealSelection.create({
@@ -186,6 +205,21 @@ export async function POST(
 
         return NextResponse.json(selection, { status: 201 });
       } else if (action === 'deselect') {
+        // Check if this user has selected this meal
+        const existingSelection = await prisma.userMealSelection.findFirst({
+          where: {
+            userId: userId,
+            festiveBoardMealId: festiveBoardMeal.id,
+          },
+        });
+
+        if (!existingSelection) {
+          return NextResponse.json(
+            { error: 'You have not selected this meal' },
+            { status: 400 }
+          );
+        }
+
         // Remove selection
         const deletedSelection = await prisma.userMealSelection.deleteMany({
           where: {
