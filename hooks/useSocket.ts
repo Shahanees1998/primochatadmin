@@ -19,7 +19,10 @@ export const useSocket = (options: UseSocketOptions = {}) => {
             setIsConnecting(true);
             
             // Initialize socket connection
-            const socketUrl = 'https://primoochat.vercel.app';
+            const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
+                (process.env.NODE_ENV === 'production' 
+                    ? 'https://your-websocket-server-url.com' // Replace with your deployed WebSocket server URL
+                    : 'http://localhost:3001');
             console.log('Connecting to socket server:', socketUrl);
             
             socketRef.current = io(socketUrl, {

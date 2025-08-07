@@ -353,11 +353,15 @@ export default function NotificationBell() {
 
         // Add event listeners using the socket methods from useSocket hook
         socket.onNewMessage(handleNewMessage);
-        socket.socket?.on('new-notification', handleNewNotification);
-        socket.socket?.on('meal-selection', handleMealSelection);
-        socket.socket?.on('trestle-board-added', handleTrestleBoardAdded);
-        socket.socket?.on('user-created', handleUserCreated);
-        socket.socket?.on('user-joined', handleUserCreated);
+        
+        // Listen for notification events directly on the socket
+        if (socket.socket) {
+            socket.socket.on('new-notification', handleNewNotification);
+            socket.socket.on('meal-selection', handleMealSelection);
+            socket.socket.on('trestle-board-added', handleTrestleBoardAdded);
+            socket.socket.on('user-created', handleUserCreated);
+            socket.socket.on('user-joined', handleUserCreated);
+        }
 
         console.log('Real-time notification listeners set up successfully');
 
@@ -510,6 +514,24 @@ export default function NotificationBell() {
         setShowDetailDialog(false);
     };
 
+    // Mark all rendered notifications as read when panel opens
+    const handlePanelToggle = (event: React.MouseEvent) => {
+        notificationPanelRef.current?.toggle(event);
+        
+        // Mark all unread notifications as read when panel opens
+        const unreadNotifications = notifications.filter(n => !n.isRead);
+        if (unreadNotifications.length > 0) {
+            // Update local state immediately for better UX
+            setNotifications(prev => 
+                prev.map(notification => ({ ...notification, isRead: true }))
+            );
+            setUnreadCount(0);
+            
+            // Mark all as read in the database
+            markAllAsRead();
+        }
+    };
+
     const formatRelativeTime = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -580,7 +602,7 @@ export default function NotificationBell() {
                         alignItems: 'center',
                         justifyContent: 'center'
                     }}
-                    onClick={(e) => notificationPanelRef.current?.toggle(e)}
+                    onClick={handlePanelToggle}
                 />
                 {unreadCount > 0 && (
                     <div

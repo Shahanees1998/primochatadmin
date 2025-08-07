@@ -21,13 +21,7 @@ export async function GET(request: NextRequest) {
       ] = await Promise.all([
         prisma.user.count(),
         prisma.user.count({ where: { status: 'PENDING' } }),
-        prisma.trestleBoard.count({
-          where: {
-            date: {
-              gte: new Date(),
-            },
-          },
-        }),
+        prisma.trestleBoard.count(),
         prisma.festiveBoard.count({
           where: {
             year: new Date().getFullYear(),
