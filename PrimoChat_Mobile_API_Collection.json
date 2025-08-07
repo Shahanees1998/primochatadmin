@@ -480,6 +480,124 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/notifications/{{notification_id}}?action=read",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "notifications", "{{notification_id}}"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "read"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/notifications?action=mark-all-read",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "notifications"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "mark-all-read"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Archive Notification",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isArchived\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/notifications/{{notification_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "notifications", "{{notification_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unarchive Notification",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isArchived\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/notifications/{{notification_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "notifications", "{{notification_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/notifications/{{notification_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "notifications", "{{notification_id}}"]
+            }
+          },
+          "response": []
         }
       ]
     },
