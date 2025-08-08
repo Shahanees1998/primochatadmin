@@ -2,6 +2,7 @@
 import { LayoutProvider } from "../layout/context/layoutcontext";
 import { Providers } from "./providers";
 import ClientOnly from "@/components/ClientOnly";
+import SocketTest from "@/components/SocketTest";
 
 import "primeflex/primeflex.css";
 import "primeicons/primeicons.css";
@@ -32,7 +33,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
                 <Providers>
                     <PrimeReactProvider>
                         <ClientOnly>
-                            <LayoutProvider>{children}</LayoutProvider>
+                            <LayoutProvider>
+                                {children}
+                                <SocketTest />
+                            </LayoutProvider>
                         </ClientOnly>
                     </PrimeReactProvider>
                 </Providers>

@@ -21,8 +21,8 @@ export const useSocket = (options: UseSocketOptions = {}) => {
             // Initialize socket connection
             const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
                 (process.env.NODE_ENV === 'production' 
-                    ? 'https://your-websocket-server-url.com' // Replace with your deployed WebSocket server URL
-                    : 'http://localhost:3001');
+                    ? window.location.origin // Use the same origin in production
+                    : 'http://localhost:3000');
             console.log('Connecting to socket server:', socketUrl);
             
             socketRef.current = io(socketUrl, {
@@ -32,6 +32,7 @@ export const useSocket = (options: UseSocketOptions = {}) => {
                 reconnectionAttempts: 5,
                 transports: ['polling', 'websocket'],
                 timeout: 20000,
+                forceNew: true,
             });
 
             const socket = socketRef.current;

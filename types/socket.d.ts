@@ -37,6 +37,7 @@ export interface SocketEvents {
     'typing-start': (data: { chatRoomId: string; userId: string }) => void;
     'typing-stop': (data: { chatRoomId: string; userId: string }) => void;
     'mark-read': (data: { chatRoomId: string; messageId: string; userId: string }) => void;
+    'test-event': (data: { message: string }) => void;
 
     // Server to Client
     'new-message': (data: { chatRoomId: string; message: ChatMessage }) => void;

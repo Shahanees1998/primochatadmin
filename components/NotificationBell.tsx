@@ -45,6 +45,9 @@ export default function NotificationBell() {
         },
         onDisconnect: () => {
             console.log('Socket disconnected from notifications');
+        },
+        onError: (error) => {
+            console.error('Socket connection error:', error);
         }
     });
 
@@ -140,9 +143,27 @@ export default function NotificationBell() {
         }
     }, [user?.id]);
 
+    // Polling fallback when socket is not connected
+    useEffect(() => {
+        if (socket.isConnected || !user?.id) return;
+
+        const pollInterval = setInterval(() => {
+            loadNotifications();
+        }, 10000); // Poll every 10 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [socket.isConnected, user?.id]);
+
     // Real-time notification handling
     useEffect(() => {
-        if (!socket.isConnected || !user?.id) return;
+        if (!user?.id) return;
+
+        console.log('Socket connection status:', socket.isConnected, 'User ID:', user.id);
+        
+        if (!socket.isConnected) {
+            console.log('Socket not connected, will retry when connected');
+            return;
+        }
 
         console.log('Setting up real-time notification listeners for user:', user.id);
 
