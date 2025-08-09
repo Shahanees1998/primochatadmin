@@ -14,6 +14,11 @@
       "key": "access_token",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "socket_url",
+      "value": "https://primoochat.vercel.app",
+      "type": "string"
     }
   ],
   "auth": {
@@ -27,6 +32,154 @@
     ]
   },
   "item": [
+    {
+      "name": "Real-time Communication",
+      "description": "Socket.IO endpoints for real-time notifications and chat",
+      "item": [
+        {
+          "name": "Socket.IO Connection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "Socket.IO connection endpoint. Use this URL to establish WebSocket connection for real-time features.\n\n**Connection Details:**\n- URL: {{socket_url}}\n- Transport: WebSocket + Polling\n- Auto-reconnection: Enabled\n\n**Required Setup:**\n1. Install socket.io-client\n2. Connect to the socket URL\n3. Join user room with user ID\n4. Listen for real-time events"
+          },
+          "response": []
+        },
+        {
+          "name": "Join User Room",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"join-user\",\n  \"data\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "Emit this event when user logs in to receive personalized notifications.\n\n**Event:** join-user\n**Data:** User ID (string)\n\n**Example:**\n```javascript\nsocket.emit('join-user', userId);\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Join Chat Room",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"join-chat\",\n  \"data\": \"{{chat_room_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "Emit this event to join a specific chat room for real-time messages.\n\n**Event:** join-chat\n**Data:** Chat Room ID (string)\n\n**Example:**\n```javascript\nsocket.emit('join-chat', chatRoomId);\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Leave Chat Room",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"leave-chat\",\n  \"data\": \"{{chat_room_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "Emit this event to leave a chat room.\n\n**Event:** leave-chat\n**Data:** Chat Room ID (string)\n\n**Example:**\n```javascript\nsocket.emit('leave-chat', chatRoomId);\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Listen: New Notification",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "Listen for real-time notifications.\n\n**Event:** new-notification\n**Data Structure:**\n```json\n{\n  \"id\": \"string\",\n  \"title\": \"string\",\n  \"message\": \"string\",\n  \"type\": \"CHAT_MESSAGE | MEAL_SELECTION | TRESTLE_BOARD_ADDED | USER_JOINED\",\n  \"isRead\": false,\n  \"createdAt\": \"2024-01-01T00:00:00.000Z\",\n  \"relatedId\": \"string\",\n  \"relatedType\": \"string\",\n  \"metadata\": {}\n}\n```\n\n**Example:**\n```javascript\nsocket.on('new-notification', (notification) => {\n  console.log('New notification:', notification);\n  // Handle notification in mobile app\n});\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Listen: New Chat Message",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "Listen for real-time chat messages.\n\n**Event:** new-message\n**Data Structure:**\n```json\n{\n  \"chatRoomId\": \"string\",\n  \"message\": {\n    \"id\": \"string\",\n    \"content\": \"string\",\n    \"senderId\": \"string\",\n    \"sender\": {\n      \"firstName\": \"string\",\n      \"lastName\": \"string\",\n      \"email\": \"string\"\n    },\n    \"createdAt\": \"2024-01-01T00:00:00.000Z\"\n  }\n}\n```\n\n**Example:**\n```javascript\nsocket.on('new-message', (data) => {\n  console.log('New message in chat:', data.chatRoomId);\n  // Update chat UI with new message\n});\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Listen: Meal Selection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "Listen for meal selection updates.\n\n**Event:** meal-selection\n**Data Structure:**\n```json\n{\n  \"festiveBoardId\": \"string\",\n  \"festiveBoardTitle\": \"string\",\n  \"mealData\": {}\n}\n```\n\n**Example:**\n```javascript\nsocket.on('meal-selection', (data) => {\n  console.log('New meal selection:', data);\n  // Update meal selection UI\n});\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Listen: Trestle Board Added",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "Listen for new trestle board events.\n\n**Event:** trestle-board-added\n**Data Structure:**\n```json\n{\n  \"id\": \"string\",\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"date\": \"2024-01-01T00:00:00.000Z\"\n}\n```\n\n**Example:**\n```javascript\nsocket.on('trestle-board-added', (data) => {\n  console.log('New trestle board:', data);\n  // Update calendar/events UI\n});\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Listen: User Created",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "Listen for new user creation events.\n\n**Event:** user-created\n**Data Structure:**\n```json\n{\n  \"userId\": \"string\",\n  \"firstName\": \"string\",\n  \"lastName\": \"string\",\n  \"email\": \"string\"\n}\n```\n\n**Example:**\n```javascript\nsocket.on('user-created', (data) => {\n  console.log('New user created:', data);\n  // Update user list or show notification\n});\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Mobile Implementation Guide",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{socket_url}}",
+              "host": ["{{socket_url}}"]
+            },
+            "description": "**Complete Mobile Implementation Guide**\n\n**1. Install Dependencies:**\n```bash\nnpm install socket.io-client\n```\n\n**2. Basic Setup:**\n```javascript\nimport io from 'socket.io-client';\n\nconst socket = io('{{socket_url}}', {\n  transports: ['websocket', 'polling'],\n  autoConnect: true,\n  reconnection: true,\n});\n```\n\n**3. Join User Room:**\n```javascript\n// When user logs in\nsocket.emit('join-user', userId);\n```\n\n**4. Listen for Events:**\n```javascript\n// Notifications\nsocket.on('new-notification', (notification) => {\n  // Show notification in mobile app\n});\n\n// Chat messages\nsocket.on('new-message', (data) => {\n  // Update chat UI\n});\n\n// Join chat rooms\nsocket.emit('join-chat', chatRoomId);\n```\n\n**5. Error Handling:**\n```javascript\nsocket.on('connect_error', (error) => {\n  console.error('Connection error:', error);\n});\n\nsocket.on('disconnect', () => {\n  console.log('Disconnected from server');\n});\n```\n\n**That's it! Your mobile app will now receive real-time updates.**"
+          },
+          "response": []
+        }
+      ]
+    },
     {
       "name": "Authentication",
       "item": [
@@ -433,6 +586,22 @@
               "host": ["{{base_url}}"],
               "path": ["calendar"]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Calendar Event Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/calendar/{{event_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["calendar", "{{event_id}}"]
+            },
+            "description": "Fetch details for a specific calendar event (trestle board or custom) belonging to the authenticated user. One of 'trestleBoard' or 'customEvent' is populated; the other is null."
           },
           "response": []
         }
