@@ -69,13 +69,19 @@ export async function POST(request: NextRequest) {
             // Emit socket event for real-time message
             try {
                 const io = getIO();
-                io.to(`chat-${chatRoomId}`).emit('new-message', {
+                const roomName = `chat-${chatRoomId}`;
+                console.log(`Emitting new-message to room: ${roomName}`);
+                console.log(`Message data:`, { chatRoomId, message: { ...message, createdAt: message.createdAt.toISOString() } });
+                
+                io.to(roomName).emit('new-message', {
                     chatRoomId,
                     message: {
                         ...message,
                         createdAt: message.createdAt.toISOString(),
                     },
                 });
+                
+                console.log(`Message emitted successfully to room: ${roomName}`);
             } catch (error) {
                 console.error('Error emitting socket event:', error);
             }

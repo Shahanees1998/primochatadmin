@@ -71,10 +71,12 @@ export async function POST(
 
       // Create notification for trestle board addition
       try {
-        await NotificationService.createTrestleBoardAddedNotification(
+        await NotificationService.createTrestleBoardNotification(
           authenticatedReq.user.userId,
-          params.id,
-          trestleBoard.title
+          {
+            id: params.id,
+            title: trestleBoard.title
+          }
         );
       } catch (notificationError) {
         console.error('Error creating trestle board notification:', notificationError);

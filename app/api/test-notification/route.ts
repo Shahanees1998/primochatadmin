@@ -14,17 +14,13 @@ export async function POST(request: NextRequest) {
                 );
             }
 
-            const notification = await NotificationService.createNotification({
+            const notification = await NotificationService.createTrestleBoardNotification(
                 userId,
-                title,
-                message,
-                type: 'TEST_NOTIFICATION',
-                metadata: {
-                    test: true,
-                    timestamp: new Date().toISOString()
+                {
+                    id: '1',
+                    title: 'Test Trestle Board'
                 }
-            });
-
+            );
             return NextResponse.json({
                 success: true,
                 notification: {

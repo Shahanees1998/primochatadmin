@@ -13,6 +13,7 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const socketRef = useRef<Socket<SocketEvents> | null>(null);
+    const pendingCallbacks = useRef<Array<() => void>>([]);
 
     useEffect(() => {
         if (!socketRef.current) {
@@ -42,6 +43,11 @@ export const useSocket = (options: UseSocketOptions = {}) => {
                 console.log('Socket connected successfully');
                 setIsConnected(true);
                 setIsConnecting(false);
+                
+                // Set up all pending callbacks
+                pendingCallbacks.current.forEach(callback => callback());
+                pendingCallbacks.current = [];
+                
                 options.onConnect?.();
 
                 // Join user room if userId is provided
@@ -49,6 +55,10 @@ export const useSocket = (options: UseSocketOptions = {}) => {
                     console.log('Joining user room:', options.userId);
                     socket.emit('join-user', options.userId);
                 }
+                
+                // Log all available rooms for debugging
+                console.log('Socket connected with ID:', socket.id);
+                console.log('Socket transport:', socket.io.engine.transport.name);
             });
 
             socket.on('disconnect', () => {
@@ -109,26 +119,60 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     };
 
     const onNewMessage = (callback: (data: { chatRoomId: string; message: ChatMessage }) => void) => {
-        if (socketRef.current) {
-            socketRef.current.on('new-message', callback);
+        if (socketRef.current && isConnected) {
+            console.log('Setting up new-message listener on socket:', socketRef.current.id);
+            socketRef.current.on('new-message', (data) => {
+                console.log('Received new-message event:', data);
+                callback(data);
+            });
+        } else {
+            console.log('Socket not available or not connected for onNewMessage, will set up when connected');
+            // Store the callback to set up when socket connects
+            pendingCallbacks.current.push(() => {
+                if (socketRef.current) {
+                    console.log('Setting up new-message listener after connection');
+                    socketRef.current.on('new-message', (data) => {
+                        console.log('Received new-message event:', data);
+                        callback(data);
+                    });
+                }
+            });
         }
     };
 
     const onMessageSent = (callback: (data: { chatRoomId: string; message: ChatMessage }) => void) => {
-        if (socketRef.current) {
+        if (socketRef.current && isConnected) {
             socketRef.current.on('message-sent', callback);
+        } else {
+            pendingCallbacks.current.push(() => {
+                if (socketRef.current) {
+                    socketRef.current.on('message-sent', callback);
+                }
+            });
         }
     };
 
     const onUserTyping = (callback: (data: { chatRoomId: string; userId: string; isTyping: boolean }) => void) => {
-        if (socketRef.current) {
+        if (socketRef.current && isConnected) {
             socketRef.current.on('user-typing', callback);
+        } else {
+            pendingCallbacks.current.push(() => {
+                if (socketRef.current) {
+                    socketRef.current.on('user-typing', callback);
+                }
+            });
         }
     };
 
     const onMessageRead = (callback: (data: { chatRoomId: string; messageId: string; userId: string }) => void) => {
-        if (socketRef.current) {
+        if (socketRef.current && isConnected) {
             socketRef.current.on('message-read', callback);
+        } else {
+            pendingCallbacks.current.push(() => {
+                if (socketRef.current) {
+                    socketRef.current.on('message-read', callback);
+                }
+            });
         }
     };
 

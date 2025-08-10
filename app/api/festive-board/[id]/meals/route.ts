@@ -154,9 +154,11 @@ export async function POST(
         try {
           await NotificationService.createMealSelectionNotification(
             authenticatedReq.user.userId,
-            params.id,
-            festiveBoardMeal.festiveBoard.title,
-            festiveBoardMeal.meal.title
+            {
+              festiveBoardId: params.id,
+              festiveBoardTitle: festiveBoardMeal.festiveBoard.title,
+              mealTitle: festiveBoardMeal.meal.title
+            }
           );
         } catch (notificationError) {
           console.error('Error creating meal selection notification:', notificationError);

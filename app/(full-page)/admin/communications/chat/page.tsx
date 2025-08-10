@@ -72,6 +72,91 @@ export default function ChatPage() {
     const socket = useSocket({ userId: currentUserId });
     const [typingUsers, setTypingUsers] = useState<{ [chatId: string]: string[] }>({});
 
+    // Audio context for notification sounds
+    const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+
+    // Debug: Log socket status changes
+    useEffect(() => {
+        console.log('Socket status changed:', { 
+            isConnected: socket.isConnected, 
+            isConnecting: socket.isConnecting,
+            socketId: socket.socket?.id 
+        });
+    }, [socket.isConnected, socket.isConnecting, socket.socket?.id]);
+
+    // Initialize audio context
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+            setAudioContext(context);
+            
+            // Try to resume audio context on user interaction
+            const resumeAudioContext = async () => {
+                try {
+                    if (context.state === 'suspended') {
+                        await context.resume();
+                        console.log('Audio context resumed successfully');
+                    }
+                } catch (error) {
+                    console.log('Could not resume audio context:', error);
+                }
+            };
+
+            // Add event listeners for user interaction to resume audio context
+            const events = ['click', 'touchstart', 'keydown', 'scroll'];
+            events.forEach(event => {
+                document.addEventListener(event, resumeAudioContext, { once: true });
+            });
+            
+            return () => {
+                events.forEach(event => {
+                    document.removeEventListener(event, resumeAudioContext);
+                });
+                context.close();
+            };
+        }
+    }, []);
+
+    // Sound notification function
+    const playNotificationSound = async () => {
+        try {
+            if (!audioContext) {
+                console.log('Audio context not available');
+                return;
+            }
+            
+            // Resume audio context if suspended (required for autoplay policy)
+            if (audioContext.state === 'suspended') {
+                console.log('Audio context suspended, attempting to resume...');
+                await audioContext.resume();
+            }
+
+            if (audioContext.state !== 'running') {
+                console.log('Audio context not running, cannot play sound');
+                return;
+            }
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+
+            console.log('Notification sound played successfully');
+        } catch (error) {
+            console.log('Could not play notification sound:', error);
+        }
+    };
+
     // Filter chat rooms based on search term
     const filteredChatRooms = chatRooms.filter(chat => {
         if (!chatSearchTerm) return true;
@@ -107,11 +192,67 @@ export default function ChatPage() {
 
     // Real-time: receive new messages
     useEffect(() => {
-        socket.onNewMessage(({ chatRoomId, message }) => {
+        if (!socket.isConnected) {
+            console.log('Socket not connected, skipping new message listener setup');
+            return;
+        }
+
+        console.log('Setting up new message listener, socket connected:', socket.isConnected);
+        
+        const handleNewMessage = ({ chatRoomId, message }: { chatRoomId: string; message: any }) => {
+            console.log('Received new message:', { chatRoomId, message });
+            
+            // Add message to current chat if it matches
+            if (selectedChat && chatRoomId === selectedChat.id) {
+                console.log('Adding message to current chat');
                 setMessages((prev) => [...prev, message]);
-        });
-        return () => socket.offNewMessage();
-    }, [selectedChat, socket]);
+            }
+            
+            // Update chat rooms list with new message
+            setChatRooms((prev) => {
+                const existingRoom = prev.find(room => room.id === chatRoomId);
+                if (!existingRoom) {
+                    console.log('Chat room not found in current state:', chatRoomId);
+                    return prev;
+                }
+                
+                console.log('Updating chat room with new message');
+                const updatedRooms = prev.map(room =>
+                    room.id === chatRoomId
+                        ? {
+                            ...room,
+                            lastMessage: message,
+                            // Only increment unread count if the message is from someone else AND chat is not currently open
+                            unreadCount: message.senderId === currentUserId
+                                ? room.unreadCount
+                                : (selectedChat?.id === chatRoomId ? room.unreadCount : room.unreadCount + 1)
+                        }
+                        : room
+                );
+
+                // Sort chat rooms by last message time (most recent first)
+                const sortedRooms = updatedRooms.sort((a, b) => {
+                    const aTime = a.lastMessage?.createdAt;
+                    const bTime = b.lastMessage?.createdAt;
+                    if (!aTime || !bTime) return 0;
+                    return new Date(bTime).getTime() - new Date(aTime).getTime();
+                });
+                return sortedRooms;
+            });
+            
+            // Play notification sound for messages from others
+            if (message.senderId !== currentUserId) {
+                playNotificationSound();
+            }
+        };
+
+        socket.onNewMessage(handleNewMessage);
+        
+        return () => {
+            console.log('Cleaning up new message listener');
+            socket.offNewMessage();
+        };
+    }, [socket.isConnected, selectedChat, currentUserId]); // Include selectedChat and currentUserId for proper updates
 
     // Real-time: typing indicator
     useEffect(() => {
@@ -326,6 +467,24 @@ export default function ChatPage() {
                                         tooltip="New Chat"
                                     />
                                 </div>
+                                
+                                {/* Socket Status Indicator */}
+                                <div className="flex align-items-center gap-2 mb-2 text-sm">
+                                    <div className={`w-2rem h-2rem border-circle flex align-items-center justify-content-center ${
+                                        socket.isConnected ? 'bg-green-500' : socket.isConnecting ? 'bg-yellow-500' : 'bg-red-500'
+                                    }`}>
+                                        <i className={`pi ${
+                                            socket.isConnected ? 'pi-check' : socket.isConnecting ? 'pi-clock' : 'pi-times'
+                                        } text-white text-xs`}></i>
+                                    </div>
+                                    <span className={socket.isConnected ? 'text-green-600' : socket.isConnecting ? 'text-yellow-600' : 'text-red-600'}>
+                                        {socket.isConnected ? 'Connected' : socket.isConnecting ? 'Connecting...' : 'Disconnected'}
+                                    </span>
+                                    {socket.socket?.id && (
+                                        <span className="text-xs text-500">({socket.socket.id.slice(0, 8)}...)</span>
+                                    )}
+                                </div>
+                                
                                 <span className="p-input-icon-left w-full">
                                     <i className="pi pi-search" />
                                     <InputText
@@ -430,32 +589,53 @@ export default function ChatPage() {
                                 <>
                                     {/* Chat Header */}
                                     <div className="p-3 border-bottom-1 surface-border">
-                                        <div className="flex align-items-center gap-3">
-                                            {selectedChat.isGroup ? (
-                                                <div className="flex flex-column gap-1">
-                                                    {selectedChat.participants.slice(0, 2).map((user, index) => (
-                                                        <Avatar
-                                                            key={user.id}
-                                                            image={user.profileImage}
-                                                            label={`${user.firstName[0]}${user.lastName[0]}`}
-                                                            size="normal"
-                                                            className={index === 1 ? 'ml-2' : ''}
-                                                        />
-                                                    ))}
+                                        <div className="flex align-items-center justify-content-between">
+                                            <div className="flex align-items-center gap-3">
+                                                {selectedChat.isGroup ? (
+                                                    <div className="flex flex-column gap-1">
+                                                        {selectedChat.participants.slice(0, 2).map((user, index) => (
+                                                            <Avatar
+                                                                key={user.id}
+                                                                image={user.profileImage}
+                                                                label={`${user.firstName[0]}${user.lastName[0]}`}
+                                                                size="normal"
+                                                                className={index === 1 ? 'ml-2' : ''}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <Avatar
+                                                        image={selectedChat.participants[0]?.profileImage}
+                                                        label={`${selectedChat.participants[0]?.firstName[0]}${selectedChat.participants[0]?.lastName[0]}`}
+                                                        size="large"
+                                                    />
+                                                )}
+                                                <div>
+                                                    <h4 className="m-0">{getChatDisplayName(selectedChat)}</h4>
+                                                    <p className="m-0 text-sm text-600">
+                                                        {selectedChat.participants.length} participant{selectedChat.participants.length > 1 ? 's' : ''}
+                                                    </p>
                                                 </div>
-                                            ) : (
-                                                <Avatar
-                                                    image={selectedChat.participants[0]?.profileImage}
-                                                    label={`${selectedChat.participants[0]?.firstName[0]}${selectedChat.participants[0]?.lastName[0]}`}
-                                                    size="large"
-                                                />
-                                            )}
-                                            <div>
-                                                <h4 className="m-0">{getChatDisplayName(selectedChat)}</h4>
-                                                <p className="m-0 text-sm text-600">
-                                                    {selectedChat.participants.length} participant{selectedChat.participants.length > 1 ? 's' : ''}
-                                                </p>
                                             </div>
+                                            
+                                            {/* Test Socket Button */}
+                                            <Button
+                                                icon="pi pi-bolt"
+                                                label="Test Socket"
+                                                size="small"
+                                                severity="secondary"
+                                                onClick={() => {
+                                                    if (socket.socket) {
+                                                        console.log('Emitting test event from client');
+                                                        socket.socket.emit('test-event', { 
+                                                            message: 'Test from chat page',
+                                                            chatRoomId: selectedChat.id,
+                                                            timestamp: new Date().toISOString()
+                                                        });
+                                                    }
+                                                }}
+                                                tooltip="Test socket connection"
+                                            />
                                         </div>
                                     </div>
 

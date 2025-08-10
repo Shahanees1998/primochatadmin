@@ -105,4 +105,47 @@ export class NotificationService {
             metadata: userData
         });
     }
+
+    static async markAsRead(notificationId: string, userId: string) {
+        const notification = await prismadb.notification.update({
+            where: {
+                id: notificationId,
+                userId: userId
+            },
+            data: {
+                isRead: true
+            }
+        });
+
+        // Emit socket event for real-time update
+        if (io) {
+            io.to(userId).emit('notification-updated', {
+                id: notification.id,
+                isRead: notification.isRead
+            });
+        }
+
+        return notification;
+    }
+
+    static async markAllAsRead(userId: string) {
+        const result = await prismadb.notification.updateMany({
+            where: {
+                userId: userId,
+                isRead: false
+            },
+            data: {
+                isRead: true
+            }
+        });
+
+        // Emit socket event for real-time update
+        if (io) {
+            io.to(userId).emit('all-notifications-read', {
+                count: result.count
+            });
+        }
+
+        return result;
+    }
 } 

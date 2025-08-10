@@ -1,0 +1,29 @@
+{
+  "info": {
+    "name": "PrimoChat - Get Calendar Event Details",
+    "description": "Single-request Postman collection to fetch a specific calendar event's details for the authenticated user.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://primoochat.vercel.app/api", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Get Calendar Event Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/calendar/{{event_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["calendar", "{{event_id}}"]
+        },
+        "description": "Fetch details for a specific calendar event (trestle board or custom) belonging to the authenticated user. One of 'trestleBoard' or 'customEvent' is populated; the other is null."
+      },
+      "response": []
+    }
+  ]
+}

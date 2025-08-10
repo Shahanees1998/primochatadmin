@@ -1,16 +1,11 @@
-import { Server as NetServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { NextApiResponse } from 'next';
 
-export type NextApiResponseServerIO = NextApiResponse & {
-  socket: {
-    server: NetServer & {
-      io: SocketIOServer;
-    };
-  };
-};
+// Extend global to include io
+declare global {
+  var io: SocketIOServer | undefined;
+}
 
-export const getIO = () => {
+export const getIO = (): SocketIOServer => {
   if (typeof global !== 'undefined' && global.io) {
     return global.io;
   }
@@ -18,4 +13,4 @@ export const getIO = () => {
 };
 
 // For use in other parts of the application
-export const io = typeof global !== 'undefined' ? global.io : null; 
+export const io: SocketIOServer | undefined = typeof global !== 'undefined' ? global.io : undefined; 

@@ -180,10 +180,9 @@ export async function POST(request: NextRequest) {
 
                     // Also send a specific notification to the admin who created the user
                     if (authenticatedReq.user?.userId) {
-                        const creatorNotification = NotificationService.createUserAddedByAdminNotification(
+                        const creatorNotification = NotificationService.createUserJoinedNotification(
                             authenticatedReq.user.userId,
-                            `${user.firstName} ${user.lastName}`,
-                            user.email
+                            `${user.firstName} ${user.lastName}`
                         );
 
                         // Send all notifications in parallel

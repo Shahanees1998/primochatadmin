@@ -165,10 +165,6 @@ export default function MessagesPage() {
             return;
         }
 
-        if (!currentUserId) {
-            return;
-        }
-
         // Remove any existing listener
         if (messageListenerRef.current) {
             socket.offNewMessage();
@@ -187,7 +183,6 @@ export default function MessagesPage() {
                         ? {
                             ...room,
                             lastMessage: message,
-                            updatedAt: new Date().toISOString(),
                             // Only increment unread count if the message is from someone else AND chat is not currently open
                             unreadCount: message.senderId === currentUserId
                                 ? room.unreadCount
@@ -198,8 +193,8 @@ export default function MessagesPage() {
 
                 // Sort chat rooms by last message time (most recent first)
                 const sortedRooms = updatedRooms.sort((a, b) => {
-                    const aTime = a.lastMessage?.createdAt || a.updatedAt;
-                    const bTime = b.lastMessage?.createdAt || b.updatedAt;
+                    const aTime = a.lastMessage?.createdAt;
+                    const bTime = b.lastMessage?.createdAt;
                     return new Date(bTime).getTime() - new Date(aTime).getTime();
                 });
                 return sortedRooms;
@@ -254,7 +249,7 @@ export default function MessagesPage() {
             socket.offNewMessage();
             messageListenerRef.current = null;
         };
-    }, [socket.isConnected, currentUserId]); // Only depend on socket connection status and currentUserId
+    }, [socket.isConnected]); // Only depend on socket connection status
 
     // Real-time: typing indicator
     useEffect(() => {
