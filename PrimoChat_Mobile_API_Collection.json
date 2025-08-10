@@ -44,8 +44,7 @@
             "url": {
               "raw": "{{socket_url}}",
               "host": ["{{socket_url}}"]
-            },
-            "description": "Socket.IO connection endpoint for mobile apps. This is the same URL as your API base URL.\n\n**Connection Details:**\n- URL: {{socket_url}} (same as base_url without /api)\n- Transport: WebSocket + Polling\n- Auto-reconnection: Enabled\n\n**Mobile App Setup (React Native/Flutter):**\n1. Install socket.io-client\n2. Connect to the socket URL\n3. Join user room with user ID\n4. Listen for real-time events\n\n**Example React Native:**\n```javascript\nimport io from 'socket.io-client';\n\nconst socket = io('https://primoochat.vercel.app', {\n  transports: ['websocket', 'polling'],\n  autoConnect: true,\n  reconnection: true\n});\n\n// Join user room\nsocket.emit('join-user', userId);\n\n// Listen for notifications\nsocket.on('new-notification', (notification) => {\n  console.log('New notification:', notification);\n});\n\n// Listen for chat messages\nsocket.on('new-message', (message) => {\n  console.log('New message:', message);\n});\n```\n\n**Example Flutter:**\n```dart\nimport 'package:socket_io_client/socket_io_client.dart' as IO;\n\nIO.Socket socket = IO.io('https://primoochat.vercel.app', <String, dynamic>{\n  'transports': ['websocket', 'polling'],\n  'autoConnect': true,\n  'reconnection': true,\n});\n\n// Join user room\nsocket.emit('join-user', userId);\n\n// Listen for events\nsocket.on('new-notification', (data) {\n  print('New notification: \$data');\n});\n```"
+            }
           },
           "response": []
         },
