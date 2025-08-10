@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
-import { prisma } from '@/lib/prisma';
+import prismadb from '@/configs/prismadb';
 
 export async function GET(
   request: NextRequest,
@@ -16,7 +16,7 @@ export async function GET(
       const eventId = params.id;
 
       // Get user's calendar to verify access and locate event type
-      const userCalendar = await prisma.userCalendar.findUnique({
+      const userCalendar = await prismadb.userCalendar.findUnique({
         where: { userId },
         include: {
           user: {
@@ -43,7 +43,7 @@ export async function GET(
       }
 
       if (isTrestle) {
-        const trestleBoard = await prisma.trestleBoard.findUnique({ where: { id: eventId } });
+        const trestleBoard = await prismadb.trestleBoard.findUnique({ where: { id: eventId } });
         if (!trestleBoard) {
           return NextResponse.json({ error: 'Trestle board not found' }, { status: 404 });
         }
@@ -73,7 +73,7 @@ export async function GET(
       }
 
       // isCustom
-      const customEvent = await prisma.customEvent.findUnique({ where: { id: eventId } });
+      const customEvent = await prismadb.customEvent.findUnique({ where: { id: eventId } });
       if (!customEvent) {
         return NextResponse.json({ error: 'Custom event not found' }, { status: 404 });
       }
@@ -131,7 +131,7 @@ export async function PUT(
       }
 
       // Check if event exists and belongs to user
-      const existingEvent = await prisma.customEvent.findFirst({
+      const existingEvent = await prismadb.customEvent.findFirst({
         where: {
           id: params.id,
           userId: authenticatedReq.user.userId,
@@ -145,7 +145,7 @@ export async function PUT(
         );
       }
 
-      const event = await prisma.customEvent.update({
+      const event = await prismadb.customEvent.update({
         where: { id: params.id },
         data: {
           title,
@@ -176,7 +176,7 @@ export async function DELETE(
       }
 
       // Check if event exists and belongs to user
-      const existingEvent = await prisma.customEvent.findFirst({
+      const existingEvent = await prismadb.customEvent.findFirst({
         where: {
           id: params.id,
           userId: authenticatedReq.user.userId,
@@ -190,7 +190,7 @@ export async function DELETE(
         );
       }
 
-      await prisma.customEvent.delete({
+      await prismadb.customEvent.delete({
         where: { id: params.id },
       });
 
