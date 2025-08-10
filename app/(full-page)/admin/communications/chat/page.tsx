@@ -67,6 +67,11 @@ export default function ChatPage() {
     const [chatSearchTerm, setChatSearchTerm] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const toast = useRef<Toast>(null);
+    
+    // Pagination state for messages
+    const [messagePage, setMessagePage] = useState(1);
+    const [hasMoreMessages, setHasMoreMessages] = useState(true);
+    const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
 
     const currentUserId = user?.id; // Replace with real user ID from auth context in production
     const socket = useSocket({ userId: currentUserId });
@@ -174,9 +179,19 @@ export default function ChatPage() {
 
     useEffect(() => {
         if (selectedChat) {
-            loadMessages(selectedChat.id);
+            setMessagePage(1);
+            setHasMoreMessages(true);
+            loadMessages(selectedChat.id, 1, false);
         }
     }, [selectedChat]);
+
+    // Function to load more messages (for infinite scroll)
+    const loadMoreMessages = async () => {
+        if (!selectedChat || !hasMoreMessages || loadingMoreMessages) return;
+        
+        const nextPage = messagePage + 1;
+        await loadMessages(selectedChat.id, nextPage, true);
+    };
 
     useEffect(() => {
         scrollToBottom();
@@ -317,18 +332,43 @@ export default function ChatPage() {
         }
     };
 
-    const loadMessages = async (chatRoomId: string) => {
-        setMessagesLoading(true);
+    const loadMessages = async (chatRoomId: string, page: number = 1, append: boolean = false) => {
+        if (page === 1) {
+            setMessagesLoading(true);
+        } else {
+            setLoadingMoreMessages(true);
+        }
+        
         try {
-            const response = await apiClient.getChatMessages(chatRoomId);
+            const response = await apiClient.getChatMessages(chatRoomId, { 
+                page, 
+                limit: 50,
+                sortOrder: 'desc' // Newest first
+            });
+            
             if (response.error) {
                 throw new Error(response.error);
             }
-            setMessages(response.data?.messages || []);
+            
+            const newMessages = response.data?.messages || [];
+            
+            if (append) {
+                // Append older messages to the beginning (for pagination)
+                setMessages(prev => [...newMessages, ...prev]);
+            } else {
+                // Replace all messages (for initial load or new chat selection)
+                setMessages(newMessages);
+            }
+            
+            // Update pagination state
+            setMessagePage(page);
+            setHasMoreMessages(page < (response.data?.pagination?.totalPages || 1));
+            
         } catch (error) {
             showToast("error", "Error", "Failed to load messages");
         } finally {
             setMessagesLoading(false);
+            setLoadingMoreMessages(false);
         }
     };
 
@@ -628,9 +668,7 @@ export default function ChatPage() {
                                                     if (socket.socket) {
                                                         console.log('Emitting test event from client');
                                                         socket.socket.emit('test-event', { 
-                                                            message: 'Test from chat page',
-                                                            chatRoomId: selectedChat.id,
-                                                            timestamp: new Date().toISOString()
+                                                            message: 'Test from chat page'
                                                         });
                                                     }
                                                 }}
@@ -652,6 +690,21 @@ export default function ChatPage() {
                                             </div>
                                         ) : (
                                             <div className="p-3">
+                                                {/* Load More Messages Button */}
+                                                {hasMoreMessages && (
+                                                    <div className="text-center mb-3">
+                                                        <Button
+                                                            label="Load More Messages"
+                                                            icon="pi pi-chevron-up"
+                                                            size="small"
+                                                            severity="secondary"
+                                                            loading={loadingMoreMessages}
+                                                            onClick={loadMoreMessages}
+                                                            className="w-full"
+                                                        />
+                                                    </div>
+                                                )}
+                                                
                                                 {messages.map((message) => (
                                                     <div
                                                         key={message.id}

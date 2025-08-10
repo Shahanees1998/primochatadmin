@@ -548,10 +548,12 @@ class ApiClient {
     async getChatMessages(chatRoomId: string, params?: {
         page?: number;
         limit?: number;
+        sortOrder?: 'asc' | 'desc';
     }) {
         const searchParams = new URLSearchParams();
         if (params?.page) searchParams.append('page', params.page.toString());
         if (params?.limit) searchParams.append('limit', params.limit.toString());
+        if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder);
         
         return this.get<{
             messages: any[];
