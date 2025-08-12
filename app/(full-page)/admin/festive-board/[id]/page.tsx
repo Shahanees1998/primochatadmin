@@ -179,7 +179,7 @@ export default function FestiveBoardViewPage() {
           </div>
           <div className="flex gap-2">
             <Button
-              label="Manage Meal Selections"
+              label="Reporting and Manage Meal Selections"
               icon="pi pi-users"
               className="p-button-success"
               onClick={() => setShowMealSelections(true)}

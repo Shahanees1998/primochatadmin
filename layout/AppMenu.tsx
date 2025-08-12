@@ -25,22 +25,6 @@ const AppMenu = () => {
             ],
         },
         {
-            label: "Meal Management",
-            icon: "pi pi-apple",
-            items: [
-                {
-                    label: "All Meals",
-                    icon: "pi pi-fw pi-list",
-                    to: "/admin/meal/meals",
-                },
-                {
-                    label: "Meal Categories",
-                    icon: "pi pi-fw pi-tags",
-                    to: "/admin/meal/categories",
-                },
-            ],
-        },
-        {
             label: "Festive Board",
             icon: "pi pi-calendar-plus",
             items: [
@@ -53,6 +37,16 @@ const AppMenu = () => {
                     label: "Create Board",
                     icon: "pi pi-fw pi-plus",
                     to: "/admin/festive-board/create",
+                },
+                {
+                    label: "All Meals",
+                    icon: "pi pi-fw pi-list",
+                    to: "/admin/meal/meals",
+                },
+                {
+                    label: "Meal Categories",
+                    icon: "pi pi-fw pi-tags",
+                    to: "/admin/meal/categories",
                 },
             ],
         },

@@ -19,6 +19,16 @@
       "key": "socket_url",
       "value": "https://primoochat.vercel.app",
       "type": "string"
+    },
+    {
+      "key": "festive_board_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "category_id",
+      "value": "",
+      "type": "string"
     }
   ],
   "auth": {
@@ -405,6 +415,46 @@
               "host": ["{{base_url}}"],
               "path": ["admin", "festive-board", "{{festive_board_id}}", "selections"]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Meal and Select for User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"festiveBoardId\": \"{{festive_board_id}}\",\n  \"title\": \"Meal Title\",\n  \"description\": \"Meal description\",\n  \"categoryId\": \"{{category_id}}\",\n  \"imageUrl\": \"https://example.com/image.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/festive-board/add-meal",
+              "host": ["{{base_url}}"],
+              "path": ["festive-board", "add-meal"]
+            },
+            "description": "Creates a new meal, adds it to the specified festive board, and automatically selects it for the authenticated user.\n\n**Required Fields:**\n- festiveBoardId: ID of the festive board\n- title: Meal title\n- categoryId: ID of the meal category\n\n**Optional Fields:**\n- description: Meal description\n- imageUrl: URL to meal image\n\n**Response:** Returns the created meal, festive board meal association, and user selection details."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Meal Selections for Festive Board",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/festive-board/add-meal?festiveBoardId={{festive_board_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["festive-board", "add-meal"],
+              "query": [
+                { "key": "festiveBoardId", "value": "{{festive_board_id}}" }
+              ]
+            },
+            "description": "Retrieves all meal selections for the authenticated user in a specific festive board.\n\n**Query Parameters:**\n- festiveBoardId: ID of the festive board\n\n**Response:** Returns an array of meal selections with meal details, category information, and festive board details."
           },
           "response": []
         },
