@@ -42,12 +42,12 @@ export async function withAuth(
           
           // Set new access token in cookie
           const response = await handler(req as AuthenticatedRequest);
-          
+          const isProd = process.env.NODE_ENV === 'production';
           // Add the new token to the response
           response.cookies.set('access_token', newAccessToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: isProd,
+            sameSite: isProd ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
             path: '/',
           });

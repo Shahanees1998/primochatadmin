@@ -21,12 +21,12 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Token refreshed successfully',
     });
-
+    const isProd = process.env.NODE_ENV === 'production';
     // Set new access token in cookie
     response.cookies.set('access_token', newAccessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
       path: '/',
     });

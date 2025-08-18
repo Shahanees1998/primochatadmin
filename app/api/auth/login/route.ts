@@ -67,20 +67,21 @@ console.log('user', user);
         updatedAt: user?.updatedAt,
       },
     });
+    const isProd = process.env.NODE_ENV === 'production';
    console.log('response', response);
     // Set authentication cookies for web apps
     response.cookies.set('access_token', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
       path: '/',
     });
 
     response.cookies.set('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
       path: '/',
     });

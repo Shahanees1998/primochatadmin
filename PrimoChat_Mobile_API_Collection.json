@@ -278,7 +278,153 @@
               "path": ["auth", "forgot-password"]
             }
           },
-          "response": []
+          "description": "Request a password reset email. The system will send a beautiful HTML email with a reset link that expires in 1 hour.",
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/forgot-password",
+                  "host": ["{{base_url}}"],
+                  "path": ["auth", "forgot-password"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"If an account with that email exists, a password reset link has been sent.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Validate Reset Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/validate-reset-token",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "validate-reset-token"]
+            }
+          },
+          "description": "Validate a password reset token before allowing the user to reset their password. This endpoint checks if the token is valid and not expired.",
+          "response": [
+            {
+              "name": "Valid Token Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/validate-reset-token",
+                  "host": ["{{base_url}}"],
+                  "path": ["auth", "validate-reset-token"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Token is valid\",\n  \"userId\": \"507f1f77bcf86cd799439011\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"password\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "reset-password"]
+            }
+          },
+          "description": "Reset a user's password using a valid reset token. The password must be at least 6 characters long. After successful reset, the token is invalidated.",
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"password\": \"newpassword123\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/reset-password",
+                  "host": ["{{base_url}}"],
+                  "path": ["auth", "reset-password"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Password reset successfully\"\n}"
+            }
+          ]
         },
         {
           "name": "Logout",
@@ -858,6 +1004,27 @@
               "path": ["admin", "chat", "rooms"]
             }
           },
+          "response": []
+        },
+        {
+          "name": "Start Direct Chat With User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"participantIds\": [\"{{other_user_id}}\"],\n  \"isGroup\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/chat/rooms",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "chat", "rooms"]
+            }
+          },
+          "description": "Start or retrieve a direct chat with a specific user. If a direct chat already exists between the current user and the provided user, the existing room is returned; otherwise a new room is created.",
           "response": []
         },
         {

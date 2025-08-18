@@ -11,17 +11,39 @@ const ForgotPassword: Page = () => {
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [emailError, setEmailError] = useState("");
     const router = useRouter();
     const { layoutConfig } = useContext(LayoutContext);
     const toast = useRef<Toast>(null);
     const dark = layoutConfig.colorScheme !== "light";
 
+    const validateEmail = (email: string) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    };
+
     const handleSubmit = async () => {
+        // Clear previous errors
+        setEmailError("");
+
+        // Validate email
         if (!email) {
+            setEmailError("Email is required");
             toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
                 detail: 'Please enter your email address',
+                life: 3000
+            });
+            return;
+        }
+
+        if (!validateEmail(email)) {
+            setEmailError("Please enter a valid email address");
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Please enter a valid email address',
                 life: 3000
             });
             return;
@@ -44,26 +66,39 @@ const ForgotPassword: Page = () => {
                 toast.current?.show({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Password reset email sent successfully',
-                    life: 3000
+                    detail: data.message || 'Password reset email sent successfully',
+                    life: 5000
                 });
             } else {
                 toast.current?.show({
                     severity: 'error',
                     summary: 'Error',
                     detail: data.error || 'Failed to send reset email',
-                    life: 3000
+                    life: 4000
                 });
             }
         } catch (error) {
+            console.error('Forgot password error:', error);
             toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'An unexpected error occurred',
-                life: 3000
+                detail: 'An unexpected error occurred. Please try again.',
+                life: 4000
             });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setEmail(value);
+        if (emailError) setEmailError("");
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !loading) {
+            handleSubmit();
         }
     };
 
@@ -101,6 +136,11 @@ const ForgotPassword: Page = () => {
             <div className="min-h-screen flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
                 <div className="border-1 surface-border surface-card border-round py-7 px-4 md:px-7 z-1">
                     <div className="mb-4">
+                        <div style={{ display: 'flex', alignItems: 'center' }} className="app-logo flex items-center justify-content-center gap-3 mb-4">
+                            <img src="/images/logo.svg" alt="PrimoChat Logo" style={{ width: '50px' }} />
+                            <div style={{ fontSize: '2rem' }}>|</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', fontStyle: 'italic' }}>Admin</div>
+                        </div>
                         <div className="text-900 text-xl font-bold mb-2">
                             Forgot Password
                         </div>
@@ -118,14 +158,18 @@ const ForgotPassword: Page = () => {
                                 <InputText
                                     id="email"
                                     type="email"
-                                    className="w-full md:w-25rem"
-                                    placeholder="Email"
+                                    className={`w-full md:w-25rem ${emailError ? 'p-invalid' : ''}`}
+                                    placeholder="Enter your email address"
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    onChange={handleEmailChange}
+                                    onKeyPress={handleKeyPress}
                                     disabled={loading}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                                    autoFocus
                                 />
                             </span>
+                            {emailError && (
+                                <small className="p-error block mb-3">{emailError}</small>
+                            )}
                             <div className="flex flex-wrap gap-2 justify-content-between">
                                 <Button
                                     label="Back to Login"
@@ -135,7 +179,7 @@ const ForgotPassword: Page = () => {
                                     disabled={loading}
                                 ></Button>
                                 <Button
-                                    label={loading ? "Sending..." : "Submit"}
+                                    label={loading ? "Sending..." : "Send Reset Link"}
                                     className="flex-auto"
                                     onClick={handleSubmit}
                                     loading={loading}
@@ -150,12 +194,26 @@ const ForgotPassword: Page = () => {
                                 <p className="text-600">
                                     We've sent a password reset link to <strong>{email}</strong>
                                 </p>
+                                <p className="text-500 text-sm mt-2">
+                                    The link will expire in 1 hour for security reasons.
+                                </p>
                             </div>
-                            <Button
-                                label="Back to Login"
-                                className="w-full"
-                                onClick={() => router.push("/auth/login")}
-                            ></Button>
+                            <div className="flex flex-column gap-2">
+                                <Button
+                                    label="Back to Login"
+                                    className="w-full"
+                                    onClick={() => router.push("/auth/login")}
+                                ></Button>
+                                <Button
+                                    label="Resend Email"
+                                    outlined
+                                    className="w-full"
+                                    onClick={() => {
+                                        setSubmitted(false);
+                                        setEmail("");
+                                    }}
+                                ></Button>
+                            </div>
                         </div>
                     )}
                 </div>

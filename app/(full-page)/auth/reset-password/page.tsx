@@ -13,6 +13,10 @@ const ResetPasswordContent = () => {
     const [loading, setLoading] = useState(false);
     const [tokenValid, setTokenValid] = useState(false);
     const [token, setToken] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+    const [confirmPasswordError, setConfirmPasswordError] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const { layoutConfig } = useContext(LayoutContext);
@@ -49,52 +53,91 @@ const ResetPasswordContent = () => {
             if (response.ok) {
                 setTokenValid(true);
             } else {
+                const data = await response.json();
                 toast.current?.show({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Invalid or expired reset link',
-                    life: 3000
+                    detail: data.error || 'Invalid or expired reset link',
+                    life: 4000
                 });
                 router.push('/auth/login');
             }
         } catch (error) {
+            console.error('Token validation error:', error);
             toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
                 detail: 'Failed to validate reset link',
-                life: 3000
+                life: 4000
             });
             router.push('/auth/login');
         }
     };
 
+    const validatePassword = (password: string) => {
+        if (password.length < 6) {
+            return "Password must be at least 6 characters long";
+        }
+        if (password.length > 128) {
+            return "Password must be less than 128 characters";
+        }
+        return "";
+    };
+
+    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setPassword(value);
+        if (passwordError) setPasswordError("");
+        
+        // Clear confirm password error if passwords now match
+        if (confirmPassword && value === confirmPassword && confirmPasswordError) {
+            setConfirmPasswordError("");
+        }
+    };
+
+    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setConfirmPassword(value);
+        if (confirmPasswordError) setConfirmPasswordError("");
+    };
+
     const handleSubmit = async () => {
-        if (!password || !confirmPassword) {
+        // Clear previous errors
+        setPasswordError("");
+        setConfirmPasswordError("");
+
+        // Validate password
+        const passwordValidation = validatePassword(password);
+        if (passwordValidation) {
+            setPasswordError(passwordValidation);
             toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'Please fill in all fields',
-                life: 3000
+                detail: passwordValidation,
+                life: 4000
+            });
+            return;
+        }
+
+        // Validate confirm password
+        if (!confirmPassword) {
+            setConfirmPasswordError("Please confirm your password");
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Please confirm your password',
+                life: 4000
             });
             return;
         }
 
         if (password !== confirmPassword) {
+            setConfirmPasswordError("Passwords do not match");
             toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
                 detail: 'Passwords do not match',
-                life: 3000
-            });
-            return;
-        }
-
-        if (password.length < 6) {
-            toast.current?.show({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Password must be at least 6 characters long',
-                life: 3000
+                life: 4000
             });
             return;
         }
@@ -129,18 +172,25 @@ const ResetPasswordContent = () => {
                     severity: 'error',
                     summary: 'Error',
                     detail: data.error || 'Failed to reset password',
-                    life: 3000
+                    life: 4000
                 });
             }
         } catch (error) {
+            console.error('Reset password error:', error);
             toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
                 detail: 'An unexpected error occurred',
-                life: 3000
+                life: 4000
             });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !loading) {
+            handleSubmit();
         }
     };
 
@@ -189,6 +239,11 @@ const ResetPasswordContent = () => {
             <div className="min-h-screen flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
                 <div className="border-1 surface-border surface-card border-round py-7 px-4 md:px-7 z-1">
                     <div className="mb-4">
+                        <div style={{ display: 'flex', alignItems: 'center' }} className="app-logo flex items-center justify-content-center gap-3 mb-4">
+                            <img src="/images/logo.svg" alt="PrimoChat Logo" style={{ width: '50px' }} />
+                            <div style={{ fontSize: '2rem' }}>|</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', fontStyle: 'italic' }}>Admin</div>
+                        </div>
                         <div className="text-900 text-xl font-bold mb-2">
                             Reset Password
                         </div>
@@ -197,31 +252,76 @@ const ResetPasswordContent = () => {
                         </span>
                     </div>
                     <div className="flex flex-column">
-                        <span className="p-input-icon-left w-full mb-4">
-                            <i className="pi pi-lock"></i>
+                        <div style={{ position: "relative" }} className="w-full mb-4">
                             <InputText
                                 id="password"
-                                type="password"
-                                className="w-full md:w-25rem"
+                                type={showPassword ? "text" : "password"}
+                                className={`w-full md:w-25rem ${passwordError ? 'p-invalid' : ''}`}
                                 placeholder="New Password"
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                onChange={handlePasswordChange}
+                                onKeyPress={handleKeyPress}
                                 disabled={loading}
+                                style={{ paddingRight: "2.5rem" }}
                             />
-                        </span>
-                        <span className="p-input-icon-left w-full mb-4">
-                            <i className="pi pi-lock"></i>
+                            <button
+                                type="button"
+                                tabIndex={-1}
+                                onClick={() => setShowPassword((v) => !v)}
+                                style={{
+                                    position: "absolute",
+                                    right: "0.75rem",
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    padding: 0,
+                                    zIndex: 2,
+                                }}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                <i className={`pi ${showPassword ? "pi-eye-slash" : "pi-eye"}`}></i>
+                            </button>
+                        </div>
+                        {passwordError && (
+                            <small className="p-error block mb-3">{passwordError}</small>
+                        )}
+                        <div style={{ position: "relative" }} className="w-full mb-4">
                             <InputText
                                 id="confirmPassword"
-                                type="password"
-                                className="w-full md:w-25rem"
+                                type={showConfirmPassword ? "text" : "password"}
+                                className={`w-full md:w-25rem ${confirmPasswordError ? 'p-invalid' : ''}`}
                                 placeholder="Confirm New Password"
                                 value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                onChange={handleConfirmPasswordChange}
+                                onKeyPress={handleKeyPress}
                                 disabled={loading}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                                style={{ paddingRight: "2.5rem" }}
                             />
-                        </span>
+                            <button
+                                type="button"
+                                tabIndex={-1}
+                                onClick={() => setShowConfirmPassword((v) => !v)}
+                                style={{
+                                    position: "absolute",
+                                    right: "0.75rem",
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    padding: 0,
+                                    zIndex: 2,
+                                }}
+                                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                            >
+                                <i className={`pi ${showConfirmPassword ? "pi-eye-slash" : "pi-eye"}`}></i>
+                            </button>
+                        </div>
+                        {confirmPasswordError && (
+                            <small className="p-error block mb-3">{confirmPasswordError}</small>
+                        )}
                         <div className="flex flex-wrap gap-2 justify-content-between">
                             <Button
                                 label="Cancel"
