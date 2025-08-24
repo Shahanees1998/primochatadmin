@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
         if (!settings) {
             // Return default settings if none exist
             return NextResponse.json({
-                siteName: "PrimoChat Admin",
-                siteDescription: "Administrative dashboard for PrimoChat community management",
-                contactEmail: "admin@primochat.com",
+                siteName: "FRATERNA Admin",
+                siteDescription: "Administrative dashboard for FRATERNA community management",
+                contactEmail: "app.thebuilders@gmail.com",
                 maxFileSize: 10,
                 allowedFileTypes: "pdf,doc,docx,jpg,jpeg,png",
                 defaultUserRole: "MEMBER",

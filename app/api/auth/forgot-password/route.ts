@@ -6,8 +6,8 @@ import sgMail from '@sendgrid/mail';
 
 // Configure SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@primochat.com';
-const APP_NAME = 'PrimoChat Admin';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'app.thebuilders@gmail.com';
+const APP_NAME = 'FRATERNA Admin';
 
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
@@ -16,7 +16,6 @@ if (SENDGRID_API_KEY) {
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
-
     if (!email) {
       return NextResponse.json(
         { error: 'Email is required' },

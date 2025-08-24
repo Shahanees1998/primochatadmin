@@ -24,9 +24,9 @@ interface SettingsForm {
 }
 
 const defaultSettings: SettingsForm = {
-    siteName: "PrimoChat Admin",
-    siteDescription: "Administrative dashboard for PrimoChat community management",
-    contactEmail: "admin@primochat.com",
+    siteName: "FRATERNA Admin",
+    siteDescription: "Administrative dashboard for FRATERNA community management",
+    contactEmail: "app.thebuilders@gmail.com",
     maxFileSize: 10,
     allowedFileTypes: "pdf,doc,docx,jpg,jpeg,png",
     defaultUserRole: "MEMBER",

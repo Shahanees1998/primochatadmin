@@ -2,7 +2,6 @@
 import { LayoutProvider } from "../layout/context/layoutcontext";
 import { Providers } from "./providers";
 import ClientOnly from "@/components/ClientOnly";
-import SocketTest from "@/components/SocketTest";
 
 import "primeflex/primeflex.css";
 import "primeicons/primeicons.css";
@@ -18,8 +17,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
-                <title>PrimoChat Admin - Community Management System</title>
-                <meta name="description" content="Administrative dashboard for PrimoChat community management" />
+                <title>FRATERNA Admin - Community Management System</title>
+                <meta name="description" content="Administrative dashboard for FRATERNA community management" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
                 <link rel="apple-touch-icon" href="/images/logo.svg" />
@@ -35,7 +34,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
                         <ClientOnly>
                             <LayoutProvider>
                                 {children}
-                                <SocketTest />
                             </LayoutProvider>
                         </ClientOnly>
                     </PrimeReactProvider>

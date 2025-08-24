@@ -137,7 +137,7 @@ const ForgotPassword: Page = () => {
                 <div className="border-1 surface-border surface-card border-round py-7 px-4 md:px-7 z-1">
                     <div className="mb-4">
                         <div style={{ display: 'flex', alignItems: 'center' }} className="app-logo flex items-center justify-content-center gap-3 mb-4">
-                            <img src="/images/logo.svg" alt="PrimoChat Logo" style={{ width: '50px' }} />
+                            <img src="/images/logo.svg" alt="FRATERNA Logo" style={{ width: '50px' }} />
                             <div style={{ fontSize: '2rem' }}>|</div>
                             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', fontStyle: 'italic' }}>Admin</div>
                         </div>
