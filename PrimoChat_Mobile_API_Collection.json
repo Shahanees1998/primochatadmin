@@ -1335,5 +1335,221 @@
         }
       ]
     }
+    ,
+    {
+      "name": "Socket via REST",
+      "description": "HTTP endpoints that mirror Socket.IO actions for mobile apps.",
+      "item": [
+        {
+          "name": "Join User Room (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/join-user",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "join-user"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Join Chat Room (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatRoomId\": \"{{chat_room_id}}\",\n  \"userId\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/join-chat",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "join-chat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Leave Chat Room (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatRoomId\": \"{{chat_room_id}}\",\n  \"userId\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/leave-chat",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "leave-chat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Typing Start (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatRoomId\": \"{{chat_room_id}}\",\n  \"userId\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/typing-start",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "typing-start"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Typing Stop (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatRoomId\": \"{{chat_room_id}}\",\n  \"userId\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/typing-stop",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "typing-stop"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Message Read (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatRoomId\": \"{{chat_room_id}}\",\n  \"messageId\": \"{{message_id}}\",\n  \"userId\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/mark-read",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "mark-read"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Test Event (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room\": \"chat-{{chat_room_id}}\",\n  \"data\": { \"hello\": \"world\" }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/test-event",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "test-event"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Notification (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"notification\": {\n    \"title\": \"Test\",\n    \"message\": \"Hello from REST\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/notify",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "notify"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Emit User Created (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/user-created",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "user-created"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Emit Meal Selection (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"festiveBoardId\": \"{{festive_board_id}}\",\n  \"festiveBoardTitle\": \"Title\",\n  \"mealData\": {}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/meal-selection",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "meal-selection"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Emit Trestle Board Added (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{trestle_board_id}}\",\n  \"title\": \"New Trestle Board\",\n  \"description\": \"Description\",\n  \"date\": \"2024-01-01T00:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/socket/trestle-board-added",
+              "host": ["{{base_url}}"],
+              "path": ["socket", "trestle-board-added"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
   ]
-} 
+}
