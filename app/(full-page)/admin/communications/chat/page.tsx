@@ -14,7 +14,7 @@ import { Skeleton } from "primereact/skeleton";
 import { Badge } from "primereact/badge";
 import { Tooltip } from "primereact/tooltip";
 import { apiClient } from "@/lib/apiClient";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSocket } from "@/hooks/useSocket";
 import { ChatMessage } from "@/types/socket";
 import { useUsers } from "@/lib/hooks/useApi";
@@ -50,6 +50,7 @@ interface ChatRoom {
 
 export default function ChatPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user } = useAuth();
 
     const [users, setUsers] = useState<User[]>([]);
@@ -176,6 +177,16 @@ export default function ChatPage() {
         loadUsers();
         loadChatRooms();
     }, []);
+
+    // When chat rooms load, if a room id is provided via ?room=, select it
+    useEffect(() => {
+        const roomParam = searchParams?.get('room');
+        if (!roomParam || chatRooms.length === 0) return;
+        const target = chatRooms.find(r => r.id === roomParam);
+        if (target) {
+            setSelectedChat(target);
+        }
+    }, [searchParams, chatRooms]);
 
     useEffect(() => {
         if (selectedChat) {
@@ -659,7 +670,7 @@ export default function ChatPage() {
                                             </div>
                                             
                                             {/* Test Socket Button */}
-                                            <Button
+                                            {/* <Button
                                                 icon="pi pi-bolt"
                                                 label="Test Socket"
                                                 size="small"
@@ -673,7 +684,7 @@ export default function ChatPage() {
                                                     }
                                                 }}
                                                 tooltip="Test socket connection"
-                                            />
+                                            /> */}
                                         </div>
                                     </div>
 
