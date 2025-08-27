@@ -16,7 +16,16 @@ import { Tooltip } from "primereact/tooltip";
 import { apiClient } from "@/lib/apiClient";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePusher } from "@/hooks/usePusher";
-import { ChatMessage } from "@/types/socket";
+type ChatMessage = {
+    id: string;
+    chatRoomId: string;
+    senderId: string;
+    content: string;
+    type: 'TEXT' | 'IMAGE' | 'FILE';
+    isRead: boolean;
+    createdAt: string;
+    sender?: User;
+};
 import { useUsers } from "@/lib/hooks/useApi";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -81,14 +90,7 @@ export default function ChatPage() {
     // Audio context for notification sounds
     const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
 
-    // Debug: Log socket status changes
-    useEffect(() => {
-        console.log('Socket status changed:', { 
-            isConnected: socket.isConnected, 
-            isConnecting: socket.isConnecting,
-            socketId: socket.socket?.id 
-        });
-    }, [socket.isConnected, socket.isConnecting, socket.socket?.id]);
+    // Realtime handled via Pusher
 
     // Initialize audio context
     useEffect(() => {
@@ -378,12 +380,10 @@ export default function ChatPage() {
     useEffect(() => {
         if (selectedChat) {
             messages.forEach((msg) => {
-                if (!msg.isRead && msg.senderId !== currentUserId) {
-                    socket.markMessageAsRead(selectedChat.id, msg.id, currentUserId ?? '');
-                }
+                // Pusher read receipts are emitted by API endpoints
             });
         }
-    }, [selectedChat, messages, currentUserId, socket]);
+    }, [selectedChat, messages, currentUserId]);
 
     const createNewChat = async () => {
         if (selectedUsers.length === 0) return;
@@ -609,19 +609,14 @@ export default function ChatPage() {
                                                 </div>
                                             </div>
                                             
-                                            {/* Test Socket Button */}
+                                            {/* Test Realtime Button (disabled) */}
                                             {/* <Button
                                                 icon="pi pi-bolt"
                                                 label="Test Socket"
                                                 size="small"
                                                 severity="secondary"
                                                 onClick={() => {
-                                                    if (socket.socket) {
-                                                        console.log('Emitting test event from client');
-                                                        socket.socket.emit('test-event', { 
-                                                            message: 'Test from chat page'
-                                                        });
-                                                    }
+                                                    // No-op: Pusher test not wired from client here
                                                 }}
                                                 tooltip="Test socket connection"
                                             /> */}

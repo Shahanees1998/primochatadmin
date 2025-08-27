@@ -16,7 +16,6 @@ import { apiClient } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { usePusher } from "@/hooks/usePusher";
-import { ChatMessage } from "@/types/socket";
 
 interface User {
     id: string;
