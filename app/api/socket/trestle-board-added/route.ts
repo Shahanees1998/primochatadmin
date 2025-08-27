@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getIO } from '@/lib/socket';
+import { pusherServer } from '@/lib/realtime';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,8 +11,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const io = getIO();
-    io.emit('trestle-board-added', { id, title, description, date, timestamp: new Date() });
+    await pusherServer.trigger('global', 'trestle-board-added', { id, title, description, date, timestamp: new Date() });
 
     return NextResponse.json({ success: true, message: 'trestle-board-added event emitted' });
   } catch (error) {

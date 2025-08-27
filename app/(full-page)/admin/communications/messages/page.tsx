@@ -15,7 +15,7 @@ import { Tooltip } from "primereact/tooltip";
 import { apiClient } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { useSocket } from "@/hooks/useSocket";
+import { usePusher } from "@/hooks/usePusher";
 import { ChatMessage } from "@/types/socket";
 
 interface User {
@@ -77,8 +77,9 @@ export default function MessagesPage() {
     const selectedChatRef = useRef<ChatRoom | null>(null);
     const messageListenerRef = useRef<((data: any) => void) | null>(null);
     const currentUserId = user?.id || "";
-    const socket = useSocket({ userId: currentUserId });
+    const pusher = usePusher(currentUserId);
     const [typingUsers, setTypingUsers] = useState<{ [chatId: string]: string[] }>({});
+    const chatRoomsRef = useRef<ChatRoom[]>([]);
 
     const playNotificationSound = () => {
         try {
@@ -146,126 +147,82 @@ export default function MessagesPage() {
     }, [selectedChat]);
 
     useEffect(() => {
+        chatRoomsRef.current = chatRooms;
+    }, [chatRooms]);
+
+    useEffect(() => {
         scrollToBottom();
     }, [messages]);
 
-    // Real-time: join/leave chat room
+    // Real-time: receive new messages via Pusher
     useEffect(() => {
-        if (selectedChat && socket.isConnected) {
-            socket.joinChat(selectedChat.id);
-            return () => {
-                socket.leaveChat(selectedChat.id);
-            };
-        }
-    }, [selectedChat, socket.isConnected]);
-
-    // Real-time: receive new messages - Set up once when socket connects
-    useEffect(() => {
-        if (!socket.isConnected) {
-            return;
-        }
-
-        // Remove any existing listener
-        if (messageListenerRef.current) {
-            socket.offNewMessage();
-        }
-
-        const handleNewMessage = ({ chatRoomId, message }: { chatRoomId: string; message: any }) => {
-            const currentSelectedChat = selectedChatRef.current;
-            setChatRooms((prev) => {
-                const existingRoom = prev.find(room => room.id === chatRoomId);
-
-                if (!existingRoom) {
-                    return prev;
-                }
-                const updatedRooms = prev.map(room =>
-                    room.id === chatRoomId
-                        ? {
-                            ...room,
-                            lastMessage: message,
-                            // Only increment unread count if the message is from someone else AND chat is not currently open
-                            unreadCount: message.senderId === currentUserId
-                                ? room.unreadCount
-                                : (currentSelectedChat?.id === chatRoomId ? room.unreadCount : room.unreadCount + 1)
-                        }
-                        : room
-                );
-
-                // Sort chat rooms by last message time (most recent first)
-                const sortedRooms = updatedRooms.sort((a, b) => {
-                    const aTime = a.lastMessage?.createdAt;
-                    const bTime = b.lastMessage?.createdAt;
-                    return new Date(bTime).getTime() - new Date(aTime).getTime();
-                });
-                return sortedRooms;
-            });
-
-            // If the message is for the currently selected chat, add it to messages
-            if (currentSelectedChat && chatRoomId === currentSelectedChat.id) {
-                setMessages((prev) => {
-                    const newMessages = [...prev, message];
-                    // Sort messages by creation time (oldest first, newest last)
-                    return newMessages.sort((a, b) => 
-                        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                    );
-                });
-
-                // If this is a message from someone else, mark it as read immediately
-                if (message.senderId !== currentUserId) {
-                    // Mark as read via API
-                    apiClient.markMessageAsRead(message.id).catch(error => {
-                        console.error('Error marking new message as read:', error);
+        // subscribe to all rooms for list updates
+        const unsubs: Array<() => void> = [];
+        chatRooms.forEach(room => {
+            const off = pusher.subscribeChat(room.id, {
+                onNewMessage: ({ chatRoomId, message }: any) => {
+                    const existsNow = chatRoomsRef.current.some(r => r.id === chatRoomId);
+                    if (!existsNow) {
+                        apiClient.getChatRooms().then((res) => {
+                            const list = res.data?.chatRooms || [];
+                            const found = list.find((r: any) => r.id === chatRoomId);
+                            if (!found) return;
+                            setChatRooms((prev) => [{ ...found, lastMessage: message, unreadCount: (found.unreadCount || 0) + (message.senderId === currentUserId ? 0 : 1) }, ...prev.filter(r => r.id !== chatRoomId)]);
+                        });
+                        return;
+                    }
+                    const currentSelectedChat = selectedChatRef.current;
+                    setChatRooms((prev) => {
+                        const existingRoom = prev.find(r => r.id === chatRoomId);
+                        if (!existingRoom) return prev;
+                        const nextUnread = message.senderId === currentUserId
+                            ? existingRoom.unreadCount
+                            : (currentSelectedChat?.id === chatRoomId ? existingRoom.unreadCount : existingRoom.unreadCount + 1);
+                        const lastMessageId = existingRoom.lastMessage?.id;
+                        if (lastMessageId === message.id && existingRoom.unreadCount === nextUnread) return prev;
+                        const updatedRooms = prev.map(r => r.id === chatRoomId ? { ...r, lastMessage: message, unreadCount: nextUnread } : r);
+                        return updatedRooms.sort((a, b) => new Date((b.lastMessage?.createdAt || b.updatedAt)).getTime() - new Date((a.lastMessage?.createdAt || a.updatedAt)).getTime());
                     });
-
-                    // Emit socket event for real-time updates
-                    socket.markMessageAsRead(chatRoomId, message.id, currentUserId);
-                }
-            } else {
-                // Message is for a different chat - show notification and play sound
-                if (message.senderId !== currentUserId) {
-                    // Play notification sound
-                    playNotificationSound();
-
-                    // Show toast notification
-                    const senderName = message.sender ? `${message.sender.firstName} ${message.sender.lastName}` : 'Someone';
-                    const chatName = getChatNameById(chatRoomId);
-                    showToast("info", "New Message", `${senderName} sent a message in ${chatName}`);
-
-                    // Show browser notification if app is not in focus
-                    if (!document.hasFocus()) {
-                        showBrowserNotification("New Message", `${senderName} sent a message in ${chatName}`);
+                    // push into open conversation
+                    if (currentSelectedChat && chatRoomId === currentSelectedChat.id) {
+                        setMessages(prev => {
+                            const nm = [...prev, message];
+                            return nm.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                        });
                     }
                 }
-            }
-        };
+            });
+            unsubs.push(off);
+        });
+        return () => { unsubs.forEach(u => u && u()); };
+    }, [chatRooms, currentUserId, pusher]);
 
-        // Store the listener reference
-        messageListenerRef.current = handleNewMessage;
-
-        // Set up the listener
-        socket.onNewMessage(handleNewMessage);
-
-        return () => {
-            socket.offNewMessage();
-            messageListenerRef.current = null;
-        };
-    }, [socket.isConnected]); // Only depend on socket connection status
+    // Pusher: typing indicator
+    useEffect(() => {
+        const unsubs: Array<() => void> = [];
+        chatRooms.forEach(room => {
+            const off = pusher.subscribeChat(room.id, {
+                onTyping: ({ chatRoomId, userId, isTyping }: any) => {
+                    setTypingUsers(prev => {
+                        const users = new Set(prev[chatRoomId] || []);
+                        if (isTyping) users.add(userId); else users.delete(userId);
+                        return { ...prev, [chatRoomId]: Array.from(users) };
+                    });
+                }
+            });
+            unsubs.push(off);
+        });
+        return () => { unsubs.forEach(u => u && u()); };
+    }, [chatRooms, pusher]);
 
     // Real-time: typing indicator
     useEffect(() => {
-        socket.onUserTyping(({ chatRoomId, userId, isTyping }) => {
-            setTypingUsers((prev) => {
-                const users = new Set(prev[chatRoomId] || []);
-                if (isTyping) users.add(userId); else users.delete(userId);
-                return { ...prev, [chatRoomId]: Array.from(users) };
-            });
-        });
-        return () => socket.offUserTyping();
-    }, [socket]);
+        // handled by pusher typing effect above
+    }, []);
 
     // Real-time: mark messages as read
     useEffect(() => {
-        socket.onMessageRead(({ chatRoomId, messageId, userId }) => {
+        const handleRead = ({ chatRoomId, messageId, userId }: any) => {
             if (selectedChat && chatRoomId === selectedChat.id) {
                 setMessages((prev) => prev.map(m => m.id === messageId ? { ...m, isRead: true } : m));
             }
@@ -275,9 +232,14 @@ export default function MessagesPage() {
                     ? { ...room, unreadCount: Math.max(0, room.unreadCount - 1) }
                     : room
             ));
+        };
+        const unsubs: Array<() => void> = [];
+        chatRooms.forEach(room => {
+            const off = pusher.subscribeChat(room.id, { onMessageRead: handleRead });
+            unsubs.push(off);
         });
-        return () => socket.offMessageRead();
-    }, [selectedChat, socket]);
+        return () => { unsubs.forEach(u => u && u()); };
+    }, [selectedChat, chatRooms, pusher]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -333,7 +295,13 @@ export default function MessagesPage() {
                 })
             );
 
-            setChatRooms(updatedChatRooms);
+            // Sort rooms by last activity (prefer lastMessage time, fallback to updatedAt)
+            const sortedRooms = updatedChatRooms.sort((a, b) => {
+                const aTime = a.lastMessage?.createdAt || a.updatedAt;
+                const bTime = b.lastMessage?.createdAt || b.updatedAt;
+                return new Date(bTime).getTime() - new Date(aTime).getTime();
+            });
+            setChatRooms(sortedRooms);
         } catch (error) {
             showToast("error", "Error", "Failed to load chat rooms");
         }
@@ -445,8 +413,7 @@ export default function MessagesPage() {
                 );
             });
 
-            // Send via socket for real-time
-            socket.sendMessage(selectedChat.id, realMessage);
+            // Pusher emit handled by server API; no client emit needed
 
             // Update the chat room's last message immediately
             setChatRooms((prev) => prev.map(room =>
@@ -468,11 +435,8 @@ export default function MessagesPage() {
 
     // Typing indicator
     const handleTyping = useCallback(() => {
-        if (selectedChat) {
-            socket.startTyping(selectedChat.id, currentUserId);
-            setTimeout(() => socket.stopTyping(selectedChat.id, currentUserId), 2000);
-        }
-    }, [selectedChat, currentUserId, socket]);
+        // Optional: call typing-start/stop endpoints if needed
+    }, []);
 
     // Mark all messages as read when opening chat
     useEffect(() => {
@@ -485,10 +449,7 @@ export default function MessagesPage() {
                         const messageIds = unreadMessages.map(msg => msg.id);
                         await apiClient.markMessagesAsRead(messageIds, selectedChat.id);
 
-                        // Emit socket events for real-time updates
-                        unreadMessages.forEach((msg) => {
-                            socket.markMessageAsRead(selectedChat.id, msg.id, currentUserId);
-                        });
+                        // Pusher read receipt is emitted by API endpoint
 
                         // Update messages state to reflect read status
                         setMessages((prev) => prev.map(msg =>
@@ -502,15 +463,7 @@ export default function MessagesPage() {
 
                     // Update unread count in chat rooms - set to 0 since we're reading all messages
                     setChatRooms((prev) => prev.map(room =>
-                        room.id === selectedChat.id
-                            ? { ...room, unreadCount: 0 }
-                            : room
-                    ));
-
-                } else {
-                    // If no unread messages, still set unread count to 0
-                    setChatRooms((prev) => prev.map(room =>
-                        room.id === selectedChat.id
+                        room.id === selectedChat.id && room.unreadCount !== 0
                             ? { ...room, unreadCount: 0 }
                             : room
                     ));
@@ -519,7 +472,7 @@ export default function MessagesPage() {
         };
 
         markMessagesAsRead();
-    }, [selectedChat, messages, currentUserId, socket]);
+    }, [selectedChat, messages, currentUserId]);
 
     const createNewChat = async () => {
         if (selectedUsers.length === 0) return;

@@ -15,7 +15,7 @@ import { Badge } from "primereact/badge";
 import { Tooltip } from "primereact/tooltip";
 import { apiClient } from "@/lib/apiClient";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSocket } from "@/hooks/useSocket";
+import { usePusher } from "@/hooks/usePusher";
 import { ChatMessage } from "@/types/socket";
 import { useUsers } from "@/lib/hooks/useApi";
 import { useAuth } from "@/hooks/useAuth";
@@ -75,7 +75,7 @@ export default function ChatPage() {
     const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
 
     const currentUserId = user?.id; // Replace with real user ID from auth context in production
-    const socket = useSocket({ userId: currentUserId });
+    const pusher = usePusher(currentUserId ?? '');
     const [typingUsers, setTypingUsers] = useState<{ [chatId: string]: string[] }>({});
 
     // Audio context for notification sounds
@@ -208,99 +208,27 @@ export default function ChatPage() {
         scrollToBottom();
     }, [messages]);
 
-    // Real-time: join/leave chat room
+    // Real-time: receive new messages via Pusher for selected chat
     useEffect(() => {
-        if (selectedChat && socket.isConnected) {
-            socket.joinChat(selectedChat.id);
-            return () => socket.leaveChat(selectedChat.id);
-        }
-    }, [selectedChat, socket.isConnected]);
-
-    // Real-time: receive new messages
-    useEffect(() => {
-        if (!socket.isConnected) {
-            console.log('Socket not connected, skipping new message listener setup');
-            return;
-        }
-
-        console.log('Setting up new message listener, socket connected:', socket.isConnected);
-        
-        const handleNewMessage = ({ chatRoomId, message }: { chatRoomId: string; message: any }) => {
-            console.log('Received new message:', { chatRoomId, message });
-            
-            // Add message to current chat if it matches
-            if (selectedChat && chatRoomId === selectedChat.id) {
-                console.log('Adding message to current chat');
+        if (!selectedChat) return;
+        const off = pusher.subscribeChat(selectedChat.id, {
+            onNewMessage: ({ chatRoomId, message }: any) => {
+                if (chatRoomId !== selectedChat.id) return;
                 setMessages((prev) => [...prev, message]);
-            }
-            
-            // Update chat rooms list with new message
-            setChatRooms((prev) => {
-                const existingRoom = prev.find(room => room.id === chatRoomId);
-                if (!existingRoom) {
-                    console.log('Chat room not found in current state:', chatRoomId);
-                    return prev;
+                setChatRooms((prev) => prev.map(room => room.id === chatRoomId ? { ...room, lastMessage: message } : room));
+                if (message.senderId !== currentUserId) {
+                    playNotificationSound();
                 }
-                
-                console.log('Updating chat room with new message');
-                const updatedRooms = prev.map(room =>
-                    room.id === chatRoomId
-                        ? {
-                            ...room,
-                            lastMessage: message,
-                            // Only increment unread count if the message is from someone else AND chat is not currently open
-                            unreadCount: message.senderId === currentUserId
-                                ? room.unreadCount
-                                : (selectedChat?.id === chatRoomId ? room.unreadCount : room.unreadCount + 1)
-                        }
-                        : room
-                );
-
-                // Sort chat rooms by last message time (most recent first)
-                const sortedRooms = updatedRooms.sort((a, b) => {
-                    const aTime = a.lastMessage?.createdAt;
-                    const bTime = b.lastMessage?.createdAt;
-                    if (!aTime || !bTime) return 0;
-                    return new Date(bTime).getTime() - new Date(aTime).getTime();
-                });
-                return sortedRooms;
-            });
-            
-            // Play notification sound for messages from others
-            if (message.senderId !== currentUserId) {
-                playNotificationSound();
-            }
-        };
-
-        socket.onNewMessage(handleNewMessage);
-        
-        return () => {
-            console.log('Cleaning up new message listener');
-            socket.offNewMessage();
-        };
-    }, [socket.isConnected, selectedChat, currentUserId]); // Include selectedChat and currentUserId for proper updates
-
-    // Real-time: typing indicator
-    useEffect(() => {
-        socket.onUserTyping(({ chatRoomId, userId, isTyping }) => {
-            setTypingUsers((prev) => {
-                const users = new Set(prev[chatRoomId] || []);
-                if (isTyping) users.add(userId); else users.delete(userId);
-                return { ...prev, [chatRoomId]: Array.from(users) };
-            });
-        });
-        return () => socket.offUserTyping();
-    }, [socket]);
-
-    // Real-time: mark messages as read
-    useEffect(() => {
-        socket.onMessageRead(({ chatRoomId, messageId, userId }) => {
-            if (selectedChat && chatRoomId === selectedChat.id) {
-                setMessages((prev) => prev.map(m => m.id === messageId ? { ...m, isRead: true } : m));
             }
         });
-        return () => socket.offMessageRead();
-    }, [selectedChat, socket]);
+        return () => { off && off(); };
+    }, [selectedChat, pusher, currentUserId]);
+
+    // Remove old socket listeners block entirely
+
+    // Pusher typing handled in Messages page for list; optional here if needed later
+
+    // Read receipts handled by Pusher in messages page
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -383,15 +311,20 @@ export default function ChatPage() {
         }
     };
 
-    // Send message (real-time)
+    // Send message via REST so server emits 'new-message'
     const sendMessage = async () => {
         if (!newMessage.trim() || !selectedChat) return;
+
+        const messageContent = newMessage.trim();
+        setNewMessage("");
+
         const senderUser = users.find(u => u.id === currentUserId);
-        const msg: ChatMessage = {
-            id: Math.random().toString(36).substr(2, 9),
+        const optimisticId = Math.random().toString(36).substr(2, 9);
+        const optimisticMessage: ChatMessage = {
+            id: optimisticId,
             chatRoomId: selectedChat.id,
-            senderId: currentUserId ?? '',
-            content: newMessage,
+            senderId: (currentUserId ?? ''),
+            content: messageContent,
             type: 'TEXT',
             isRead: false,
             createdAt: new Date().toISOString(),
@@ -406,18 +339,40 @@ export default function ChatPage() {
                 }
                 : undefined,
         };
-        setMessages((prev) => [...prev, msg]);
-        setNewMessage("");
-        socket.sendMessage(selectedChat.id, msg);
+
+        // Optimistic UI update
+        setMessages((prev) => [...prev, optimisticMessage]);
+
+        try {
+            // Persist via API (this will emit 'new-message' on the server)
+            const response = await apiClient.sendMessage({
+                chatRoomId: selectedChat.id,
+                content: messageContent,
+                type: 'TEXT',
+            });
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            const realMessage = response.data;
+            // Replace optimistic message with the real one
+            setMessages((prev) => prev.map(m =>
+                m.id === optimisticId ? { ...realMessage, createdAt: realMessage.createdAt } : m
+            ));
+        } catch (error) {
+            showToast("error", "Error", "Failed to send message");
+            // Revert optimistic update
+            setMessages((prev) => prev.filter(m => m.id !== optimisticId));
+        }
     };
 
     // Typing indicator
     const handleTyping = useCallback(() => {
         if (selectedChat) {
-            socket.startTyping(selectedChat.id, currentUserId ?? '');
-            setTimeout(() => socket.stopTyping(selectedChat.id, currentUserId ?? ''), 2000);
+            // optional: call typing endpoints if needed
         }
-    }, [selectedChat, currentUserId, socket]);
+    }, [selectedChat, currentUserId]);
 
     // Mark all messages as read when opening chat
     useEffect(() => {
@@ -519,22 +474,7 @@ export default function ChatPage() {
                                     />
                                 </div>
                                 
-                                {/* Socket Status Indicator */}
-                                <div className="flex align-items-center gap-2 mb-2 text-sm">
-                                    <div className={`w-2rem h-2rem border-circle flex align-items-center justify-content-center ${
-                                        socket.isConnected ? 'bg-green-500' : socket.isConnecting ? 'bg-yellow-500' : 'bg-red-500'
-                                    }`}>
-                                        <i className={`pi ${
-                                            socket.isConnected ? 'pi-check' : socket.isConnecting ? 'pi-clock' : 'pi-times'
-                                        } text-white text-xs`}></i>
-                                    </div>
-                                    <span className={socket.isConnected ? 'text-green-600' : socket.isConnecting ? 'text-yellow-600' : 'text-red-600'}>
-                                        {socket.isConnected ? 'Connected' : socket.isConnecting ? 'Connecting...' : 'Disconnected'}
-                                    </span>
-                                    {socket.socket?.id && (
-                                        <span className="text-xs text-500">({socket.socket.id.slice(0, 8)}...)</span>
-                                    )}
-                                </div>
+                                {/* Realtime indicator removed (Pusher-based) */}
                                 
                                 <span className="p-input-icon-left w-full">
                                     <i className="pi pi-search" />

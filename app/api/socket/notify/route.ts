@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getIO } from '@/lib/socket';
+import { pusherServer } from '@/lib/realtime';
 
 export async function POST(request: NextRequest) {
   try {
     const { userId, notification, room } = await request.json();
-    const io = getIO();
 
     if (userId) {
-      io.to(userId).emit('new-notification', notification);
+      await pusherServer.trigger(`user-${userId}`, 'new-notification', notification);
       return NextResponse.json({ success: true, message: 'Notification sent to user' });
     }
 
     if (room) {
-      io.to(room).emit('new-notification', notification);
+      await pusherServer.trigger(room, 'new-notification', notification);
       return NextResponse.json({ success: true, message: 'Notification sent to room' });
     }
 
-    io.emit('new-notification', notification);
+    await pusherServer.trigger('global', 'new-notification', notification);
     return NextResponse.json({ success: true, message: 'Notification broadcasted' });
   } catch (error) {
     console.error('notify error:', error);

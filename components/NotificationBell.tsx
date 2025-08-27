@@ -6,7 +6,7 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { Badge } from 'primereact/badge';
 import { Dialog } from 'primereact/dialog';
 import { useAuth } from '@/hooks/useAuth';
-import { useSocket } from '@/hooks/useSocket';
+import { usePusher } from '@/hooks/usePusher';
 import { useToast } from '@/store/toast.context';
 import { apiClient } from '@/lib/apiClient';
 
@@ -38,18 +38,7 @@ export default function NotificationBell() {
     const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
 
     // Socket connection for real-time notifications
-    const socket = useSocket({
-        userId: user?.id,
-        onConnect: () => {
-            console.log('Socket connected for notifications');
-        },
-        onDisconnect: () => {
-            console.log('Socket disconnected from notifications');
-        },
-        onError: (error) => {
-            console.error('Socket connection error:', error);
-        }
-    });
+    const pusher = usePusher(user?.id);
 
     // Initialize audio context
     useEffect(() => {
@@ -143,29 +132,34 @@ export default function NotificationBell() {
         }
     }, [user?.id]);
 
-    // Polling fallback when socket is not connected
+    // Polling fallback when pusher is not ready (very rare)
     useEffect(() => {
-        if (socket.isConnected || !user?.id) return;
-
+        if (!user?.id) return;
         const pollInterval = setInterval(() => {
             loadNotifications();
         }, 10000); // Poll every 10 seconds
-
         return () => clearInterval(pollInterval);
-    }, [socket.isConnected, user?.id]);
+    }, [user?.id]);
 
-    // Real-time notification handling
+    // Real-time notification handling (Pusher)
     useEffect(() => {
         if (!user?.id) return;
-
-        console.log('Socket connection status:', socket.isConnected, 'User ID:', user.id);
-        
-        if (!socket.isConnected) {
-            console.log('Socket not connected, will retry when connected');
-            return;
-        }
-
-        console.log('Setting up real-time notification listeners for user:', user.id);
+        const offUser = pusher.subscribeUser({
+            onNotification: (notification: any) => {
+                const n = notification as Notification;
+                // Check if notification already exists to prevent duplicates
+                setNotifications(prev => {
+                    const exists = prev.some(x => x.id === n.id);
+                    if (exists) return prev;
+                    const updated = [n, ...prev];
+                    return updated.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                });
+                setUnreadCount(prev => prev + 1);
+                playNotificationSound();
+                showToast('info', 'New Notification', n.title);
+                if (!document.hasFocus()) showBrowserNotification('New Notification', n.title);
+            }
+        });
 
         // Listen for new notifications from server
         const handleNewNotification = (notification: Notification) => {
@@ -372,31 +366,12 @@ export default function NotificationBell() {
             }
         };
 
-        // Add event listeners using the socket methods from useSocket hook
-        socket.onNewMessage(handleNewMessage);
-        
-        // Listen for notification events directly on the socket
-        if (socket.socket) {
-            socket.socket.on('new-notification', handleNewNotification);
-            socket.socket.on('meal-selection', handleMealSelection);
-            socket.socket.on('trestle-board-added', handleTrestleBoardAdded);
-            socket.socket.on('user-created', handleUserCreated);
-            socket.socket.on('user-joined', handleUserCreated);
-        }
-
-        console.log('Real-time notification listeners set up successfully');
+        // Subscribe to global events if needed via another channel in future
 
         return () => {
-            console.log('Cleaning up real-time notification listeners');
-            // Remove event listeners
-            socket.offNewMessage();
-            socket.socket?.off('new-notification', handleNewNotification);
-            socket.socket?.off('meal-selection', handleMealSelection);
-            socket.socket?.off('trestle-board-added', handleTrestleBoardAdded);
-            socket.socket?.off('user-created', handleUserCreated);
-            socket.socket?.off('user-joined', handleUserCreated);
+            offUser?.();
         };
-    }, [socket.isConnected, user?.id, showToast, audioContext]);
+    }, [user?.id, showToast, audioContext]);
 
     const loadNotifications = async (page: number = 1, append: boolean = false) => {
         if (!user?.id) return;

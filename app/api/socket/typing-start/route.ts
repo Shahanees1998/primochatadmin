@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getIO } from '@/lib/socket';
+import { pusherServer } from '@/lib/realtime';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,9 +11,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const io = getIO();
-    const roomName = `chat-${chatRoomId}`;
-    io.to(roomName).emit('user-typing', { chatRoomId, userId, isTyping: true, timestamp: new Date() });
+    await pusherServer.trigger(`chat-${chatRoomId}`, 'user-typing', { chatRoomId, userId, isTyping: true, timestamp: new Date() });
 
     return NextResponse.json({ success: true, message: 'typing-start event emitted' });
   } catch (error) {

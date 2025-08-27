@@ -1,34 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useSocket } from '@/hooks/useSocket';
+import { usePusher } from '@/hooks/usePusher';
 import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/lib/apiClient';
 
 export default function SocketTest() {
     const { user } = useAuth();
-    const [socketStatus, setSocketStatus] = useState('Disconnected');
+    const [socketStatus, setSocketStatus] = useState('Connected');
     const [events, setEvents] = useState<string[]>([]);
     const [testLoading, setTestLoading] = useState(false);
 
-    const socket = useSocket({
-        userId: user?.id,
-        onConnect: () => {
-            setSocketStatus('Connected');
-            setEvents(prev => [...prev, 'Connected to socket server']);
-        },
-        onDisconnect: () => {
-            setSocketStatus('Disconnected');
-            setEvents(prev => [...prev, 'Disconnected from socket server']);
-        },
-        onError: (error) => {
-            setSocketStatus('Error');
-            setEvents(prev => [...prev, `Connection error: ${error.message}`]);
-        }
-    });
+    const p = usePusher(user?.id);
 
     useEffect(() => {
-        if (!socket.socket || !user?.id) return;
+        if (!user?.id) return;
 
         const handleNewNotification = (notification: any) => {
             setEvents(prev => [...prev, `New notification: ${notification.title}`]);
@@ -42,23 +28,15 @@ export default function SocketTest() {
             setEvents(prev => [...prev, `Test event response: ${data.message}`]);
         };
 
-        // Listen for notification events
-        socket.socket.on('new-notification', handleNewNotification);
-        socket.socket.on('new-message', handleNewMessage);
-        socket.socket.on('test-event', handleTestEvent);
+        const offUser = p.subscribeUser({ onNotification: handleNewNotification });
 
         return () => {
-            socket.socket?.off('new-notification', handleNewNotification);
-            socket.socket?.off('new-message', handleNewMessage);
-            socket.socket?.off('test-event', handleTestEvent);
+            offUser?.();
         };
-    }, [socket.socket, user?.id]);
+    }, [user?.id, p]);
 
     const testEmit = () => {
-        if (socket.socket) {
-            socket.socket.emit('test-event', { message: 'Test from client' });
-            setEvents(prev => [...prev, 'Sent test event']);
-        }
+        setEvents(prev => [...prev, 'Pusher test placeholder']);
     };
 
     const testNotification = async () => {
@@ -105,14 +83,14 @@ export default function SocketTest() {
                 <button
                     onClick={testEmit}
                     className="bg-blue-500 text-white px-2 py-1 rounded text-xs"
-                    disabled={!socket.isConnected}
+                    disabled={false}
                 >
                     Test Emit
                 </button>
                 <button
                     onClick={testNotification}
                     className="bg-green-500 text-white px-2 py-1 rounded text-xs"
-                    disabled={!socket.isConnected || testLoading}
+                    disabled={testLoading}
                 >
                     {testLoading ? 'Sending...' : 'Test Notification'}
                 </button>

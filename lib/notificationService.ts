@@ -1,5 +1,5 @@
 import prismadb from '@/configs/prismadb';
-import { io } from '@/lib/socket';
+import { pusherServer } from '@/lib/realtime';
 import { NotificationType } from '@prisma/client';
 
 export interface CreateNotificationData {
@@ -29,20 +29,18 @@ export class NotificationService {
                 }
             });
 
-            // Emit socket event for real-time notification
-            if (io) {
-                io.to(data.userId).emit('new-notification', {
-                    id: notification.id,
-                    title: notification.title,
-                    message: notification.message,
-                    type: notification.type,
-                    isRead: notification.isRead,
-                    createdAt: notification.createdAt,
-                    relatedId: notification.relatedId,
-                    relatedType: notification.relatedType,
-                    metadata: notification.metadata
-                });
-            }
+            // Emit Pusher event for real-time notification
+            await pusherServer.trigger(`user-${data.userId}`, 'new-notification', {
+                id: notification.id,
+                title: notification.title,
+                message: notification.message,
+                type: notification.type,
+                isRead: notification.isRead,
+                createdAt: notification.createdAt,
+                relatedId: notification.relatedId,
+                relatedType: notification.relatedType,
+                metadata: notification.metadata
+            });
 
             return notification;
         } catch (error) {
@@ -117,13 +115,11 @@ export class NotificationService {
             }
         });
 
-        // Emit socket event for real-time update
-        if (io) {
-            io.to(userId).emit('notification-updated', {
-                id: notification.id,
-                isRead: notification.isRead
-            });
-        }
+        // Emit Pusher event for real-time update
+        await pusherServer.trigger(`user-${userId}`, 'notification-updated', {
+            id: notification.id,
+            isRead: notification.isRead
+        });
 
         return notification;
     }
@@ -139,12 +135,10 @@ export class NotificationService {
             }
         });
 
-        // Emit socket event for real-time update
-        if (io) {
-            io.to(userId).emit('all-notifications-read', {
-                count: result.count
-            });
-        }
+        // Emit Pusher event for real-time update
+        await pusherServer.trigger(`user-${userId}`, 'all-notifications-read', {
+            count: result.count
+        });
 
         return result;
     }

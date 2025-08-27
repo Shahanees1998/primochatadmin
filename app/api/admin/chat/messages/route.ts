@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prismadb from '@/configs/prismadb';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
-import { getIO } from '@/lib/socket';
+import { pusherServer } from '@/lib/realtime';
 import { NotificationService } from '@/lib/notificationService';
 
 export async function POST(request: NextRequest) {
@@ -66,24 +66,17 @@ export async function POST(request: NextRequest) {
                 },
             });
 
-            // Emit socket event for real-time message
+            // Emit real-time via Pusher
             try {
-                const io = getIO();
-                const roomName = `chat-${chatRoomId}`;
-                console.log(`Emitting new-message to room: ${roomName}`);
-                console.log(`Message data:`, { chatRoomId, message: { ...message, createdAt: message.createdAt.toISOString() } });
-                
-                io.to(roomName).emit('new-message', {
+                await pusherServer.trigger(`chat-${chatRoomId}`, 'new-message', {
                     chatRoomId,
                     message: {
                         ...message,
                         createdAt: message.createdAt.toISOString(),
                     },
                 });
-                
-                console.log(`Message emitted successfully to room: ${roomName}`);
             } catch (error) {
-                console.error('Error emitting socket event:', error);
+                console.error('Pusher emit error:', error);
             }
 
             // Create notifications for other participants

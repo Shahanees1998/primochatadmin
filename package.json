@@ -58,6 +58,8 @@
     "primeflex": "^3.2.1",
     "primeicons": "^6.0.1",
     "primereact": "^10.4.0",
+    "pusher": "^5.2.0",
+    "pusher-js": "^8.4.0",
     "quill": "^2.0.2",
     "quill-image-resize": "^3.0.9",
     "quill-image-resize-module": "^3.0.0",

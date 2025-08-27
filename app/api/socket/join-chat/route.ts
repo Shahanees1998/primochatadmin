@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getIO } from '@/lib/socket';
+// No-op for Pusher; clients subscribe directly. Keep for backward compatibility.
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,9 +11,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const io = getIO();
-    const roomName = `chat-${chatRoomId}`;
-    io.to(roomName).emit('user-joined-chat', { room: chatRoomId, userId, timestamp: new Date() });
+    return NextResponse.json({ success: true, message: 'Pusher: clients subscribe directly to channels' });
 
     return NextResponse.json({ success: true, message: 'join-chat event emitted' });
   } catch (error) {

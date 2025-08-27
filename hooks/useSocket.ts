@@ -122,7 +122,7 @@ export const useSocket = (options: UseSocketOptions = {}) => {
         if (socketRef.current && isConnected) {
             console.log('Setting up new-message listener on socket:', socketRef.current.id);
             socketRef.current.on('new-message', (data) => {
-                console.log('Received new-message event:', data);
+                console.log('Received new-message event>>>>:', data);
                 callback(data);
             });
         } else {
@@ -132,7 +132,7 @@ export const useSocket = (options: UseSocketOptions = {}) => {
                 if (socketRef.current) {
                     console.log('Setting up new-message listener after connection');
                     socketRef.current.on('new-message', (data) => {
-                        console.log('Received new-message event:', data);
+                        console.log('Received new-message event<<<<<:', data);
                         callback(data);
                     });
                 }
