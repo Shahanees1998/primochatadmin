@@ -948,6 +948,22 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Mark All Room Messages as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/chat/rooms/{{room_id}}/mark-read",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "chat", "rooms", "{{room_id}}", "mark-read"]
+            },
+            "description": "Marks all unread messages in the specified room as read for the authenticated user."
+          },
+          "response": []
         }
       ]
     },
