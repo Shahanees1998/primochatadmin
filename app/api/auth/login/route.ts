@@ -42,7 +42,14 @@ export async function POST(request: NextRequest) {
         updatedAt: true,
       },
     });
-console.log('user', user);
+
+    // Enforce admin-only login for admin panel
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'You are unauthorized to login to the admin panel' },
+        { status: 403 }
+      );
+    }
     // Create response with token for mobile apps
     const response = NextResponse.json({
       success: true,

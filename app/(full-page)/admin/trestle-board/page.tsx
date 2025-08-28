@@ -12,6 +12,8 @@ import { Dropdown } from "primereact/dropdown";
 import { Calendar } from "primereact/calendar";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Toast } from "primereact/toast";
+import { FileUpload } from "primereact/fileupload";
+import { ProgressBar } from "primereact/progressbar";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { FilterMatchMode } from "primereact/api";
 import { useRouter } from "next/navigation";
@@ -41,6 +43,17 @@ interface TrestleBoardFormData {
     location: string;
     category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
     isRSVP: boolean;
+}
+
+interface CSVTrestleBoardData {
+    title: string;
+    description?: string;
+    date: string; // ISO or yyyy-mm-dd
+    time?: string;
+    location?: string;
+    category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
+    isRSVP?: boolean;
+    maxAttendees?: number | null;
 }
 
 export default function TrestleBoardPage() {
@@ -81,6 +94,12 @@ export default function TrestleBoardPage() {
     const [sortOrder, setSortOrder] = useState<SortOrderType | undefined>(undefined);
     const toast = useRef<Toast>(null);
     const debouncedSearchTerm = useDebounce(userSearchQuery, 500);
+    const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
+    const [csvData, setCsvData] = useState<CSVTrestleBoardData[]>([]);
+    const [csvErrors, setCsvErrors] = useState<string[]>([]);
+    const [bulkUploadLoading, setBulkUploadLoading] = useState(false);
+    const [bulkUploadProgress, setBulkUploadProgress] = useState(0);
+    const [bulkUploadStatus, setBulkUploadStatus] = useState<string>("");
 
     // Effect to trigger search when debounced term changes
     useEffect(() => {
@@ -146,6 +165,146 @@ export default function TrestleBoardPage() {
 
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {
         toast.current?.show({ severity, summary, detail, life: 3000 });
+    };
+
+    // CSV Upload for Trestle Boards
+    const parseCSV = (csvText: string): CSVTrestleBoardData[] => {
+        const lines = csvText.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const data: CSVTrestleBoardData[] = [];
+        const errors: string[] = [];
+
+        const validCategories = new Set(['REGULAR_MEETING','DISTRICT','EMERGENT','PRACTICE','CGP','SOCIAL']);
+
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            const values = line.split(',').map(v => v.trim());
+            if (values.length !== headers.length) {
+                errors.push(`Row ${i + 1}: Column count mismatch`);
+                continue;
+            }
+
+            const row: Record<string, string> = {} as any;
+            headers.forEach((header, index) => {
+                row[header] = values[index];
+            });
+
+            // Required: title, date, category
+            if (!row.title || !row.date || !row.category) {
+                errors.push(`Row ${i + 1}: Missing required fields (title, date, category)`);
+                continue;
+            }
+
+            const categoryUpper = (row.category || '').toUpperCase();
+            if (!validCategories.has(categoryUpper)) {
+                errors.push(`Row ${i + 1}: Invalid category '${row.category}'`);
+                continue;
+            }
+
+            const isRSVP = (row.isrsvp || '').toLowerCase();
+            const maxAttendeesStr = row.maxattendees;
+
+            data.push({
+                title: row.title,
+                description: row.description || undefined,
+                date: row.date,
+                time: row.time || undefined,
+                location: row.location || undefined,
+                category: categoryUpper as CSVTrestleBoardData['category'],
+                isRSVP: isRSVP ? isRSVP === 'true' || isRSVP === '1' || isRSVP === 'yes' : undefined,
+                maxAttendees: maxAttendeesStr ? (isNaN(Number(maxAttendeesStr)) ? null : Number(maxAttendeesStr)) : null,
+            });
+        }
+
+        setCsvErrors(errors);
+        return data;
+    };
+
+    const handleCSVUpload = (event: any) => {
+        const file = event.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const csvText = e.target?.result as string;
+            const parsed = parseCSV(csvText);
+            setCsvData(parsed);
+        };
+        reader.readAsText(file);
+    };
+
+    const downloadCSVTemplate = () => {
+        const template = `title,description,date,time,location,category,isrsvp,maxattendees\nRegular Meeting,,2024-12-25,19:00,Lodge Hall,REGULAR_MEETING,true,50\nDistrict Visit,,2024-12-28,18:30,District Center,DISTRICT,false,`;
+        const blob = new Blob([template], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'trestle_board_upload_template.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
+    const processBulkUpload = async () => {
+        if (csvData.length === 0) {
+            showToast("error", "Error", "No valid data to upload");
+            return;
+        }
+
+        setBulkUploadLoading(true);
+        setBulkUploadProgress(0);
+        setBulkUploadStatus("Starting bulk upload...");
+
+        let successCount = 0;
+        let errorCount = 0;
+        const errors: string[] = [];
+
+        for (let i = 0; i < csvData.length; i++) {
+            const item = csvData[i];
+            setBulkUploadStatus(`Processing ${item.title} (${i + 1}/${csvData.length})`);
+            try {
+                const response = await apiClient.createTrestleBoard({
+                    title: item.title,
+                    description: item.description || undefined,
+                    date: item.date,
+                    time: item.time || undefined,
+                    location: item.location || undefined,
+                    category: item.category,
+                    isRSVP: item.isRSVP || false,
+                    maxAttendees: item.maxAttendees === null ? undefined : item.maxAttendees,
+                });
+                if (response.error) {
+                    errorCount++;
+                    errors.push(`${item.title}: ${response.error}`);
+                } else {
+                    successCount++;
+                }
+            } catch (error) {
+                errorCount++;
+                errors.push(`${item.title}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+            setBulkUploadProgress(((i + 1) / csvData.length) * 100);
+        }
+
+        setBulkUploadStatus(`Upload completed. ${successCount} successful, ${errorCount} failed.`);
+
+        if (successCount > 0) {
+            showToast("success", "Bulk Upload Complete", `${successCount} trestle boards added successfully`);
+            loadTrestleBoards();
+        }
+        if (errorCount > 0) {
+            showToast("warn", "Bulk Upload Issues", `${errorCount} items failed to upload. Check console for details.`);
+            console.error("Bulk trestle board upload errors:", errors);
+        }
+
+        setTimeout(() => {
+            setShowBulkUploadDialog(false);
+            setCsvData([]);
+            setCsvErrors([]);
+            setBulkUploadProgress(0);
+            setBulkUploadStatus("");
+            setBulkUploadLoading(false);
+        }, 3000);
     };
 
     const openNewTrestleBoardDialog = () => {
@@ -402,6 +561,12 @@ export default function TrestleBoardPage() {
                     onClick={() => router.push('/admin/calendar')}
                     severity="info"
                 /> */}
+                <Button
+                    label="Bulk Upload"
+                    icon="pi pi-upload"
+                    onClick={() => setShowBulkUploadDialog(true)}
+                    severity="info"
+                />
                 <Button
                     label="Create TrestleBoard"
                     icon="pi pi-plus"
@@ -698,6 +863,91 @@ export default function TrestleBoardPage() {
 
             <Toast ref={toast} />
             <ConfirmDialog />
+            {/* Bulk Upload Dialog */}
+            <Dialog
+                visible={showBulkUploadDialog}
+                style={{ width: "600px", maxWidth: "95vw", zIndex: 2000, borderRadius: 12 }}
+                header="Bulk Upload Trestle Boards"
+                modal
+                className=""
+                onHide={() => setShowBulkUploadDialog(false)}
+                footer={
+                    <div className="flex gap-2 justify-content-end">
+                        <Button 
+                            label="Download Template" 
+                            icon="pi pi-download" 
+                            text 
+                            onClick={downloadCSVTemplate}
+                        />
+                        <Button 
+                            label="Cancel" 
+                            icon="pi pi-times" 
+                            text 
+                            onClick={() => setShowBulkUploadDialog(false)} 
+                        />
+                        <Button
+                            label={bulkUploadLoading ? "Uploading..." : "Upload Trestle Boards"}
+                            icon={bulkUploadLoading ? "pi pi-spin pi-spinner" : "pi pi-upload"}
+                            onClick={processBulkUpload}
+                            disabled={csvData.length === 0 || csvErrors.length > 0 || bulkUploadLoading}
+                        />
+                    </div>
+                }
+            >
+                <div className="flex flex-column gap-4">
+                    <div>
+                        <h3 className="text-lg font-semibold mb-2">Upload CSV File</h3>
+                        <p className="text-600 mb-3">
+                            Upload a CSV file with trestle board data. Columns: title, description (optional), date (yyyy-mm-dd), time (optional), location (optional), category (REGULAR_MEETING|DISTRICT|EMERGENT|PRACTICE|CGP|SOCIAL), isrsvp (true/false), maxattendees (number, optional)
+                        </p>
+                        <FileUpload
+                            mode="basic"
+                            name="csv"
+                            accept=".csv"
+                            maxFileSize={1000000}
+                            customUpload
+                            uploadHandler={handleCSVUpload}
+                            auto
+                            chooseLabel="Choose CSV File"
+                        />
+                    </div>
+
+                    {csvData.length > 0 && (
+                        <div>
+                            <h4 className="font-semibold mb-2">Preview ({csvData.length} items)</h4>
+                            <div className="max-h-40 overflow-y-auto border-1 border-round p-3">
+                                {csvData.slice(0, 5).map((item, index) => (
+                                    <div key={index} className="text-sm mb-1">
+                                        {item.title} - {item.date} ({item.category})
+                                    </div>
+                                ))}
+                                {csvData.length > 5 && (
+                                    <div className="text-sm text-600">... and {csvData.length - 5} more</div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {csvErrors.length > 0 && (
+                        <div>
+                            <h4 className="font-semibold text-red-600 mb-2">Validation Errors ({csvErrors.length})</h4>
+                            <div className="max-h-32 overflow-y-auto border-1 border-round p-3 bg-red-50">
+                                {csvErrors.map((error, index) => (
+                                    <div key={index} className="text-sm text-red-600 mb-1">{error}</div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {bulkUploadStatus && (
+                        <div>
+                            <h4 className="font-semibold mb-2">Upload Progress</h4>
+                            <ProgressBar value={bulkUploadProgress} />
+                            <p className="text-sm mt-2">{bulkUploadStatus}</p>
+                        </div>
+                    )}
+                </div>
+            </Dialog>
         </div>
     );
 } 
