@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
                         const emailContent = createWelcomeEmail(user.firstName, loginUrl, user.email, plainPassword);
 
                         await sgMail.send({
-                            to: 'shahanees1998@gmail.com',
+                            to: email,
                             from: FROM_EMAIL,
                             subject: `Welcome to ${APP_NAME}`,
                             html: emailContent,
