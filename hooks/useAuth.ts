@@ -108,10 +108,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-client': 'admin-web',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, isAdminPanel: true }),
       });
-      console.log(response,'KĶ............................................');
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Login failed');

@@ -7,6 +7,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password } = body;
 
+    // Determine client type/source
+    const clientHeader = request.headers.get('x-client');
+    const isAdminPanelRequest = body?.isAdminPanel === true;
+
     // Validate input
     if (!email || !password) {
       return NextResponse.json(
@@ -43,8 +47,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Enforce admin-only login for admin panel
-    if (!user || user.role !== 'ADMIN') {
+    // Enforce admin-only login only when request is from admin web app
+    if (isAdminPanelRequest && (!user || user.role !== 'ADMIN')) {
       return NextResponse.json(
         { error: 'You are unauthorized to login to the admin panel' },
         { status: 403 }
@@ -76,22 +80,24 @@ export async function POST(request: NextRequest) {
     });
     const isProd = process.env.NODE_ENV === 'production';
    console.log('response', response);
-    // Set authentication cookies for web apps
-    response.cookies.set('access_token', accessToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
-      path: '/',
-    });
+    // Set authentication cookies only for admin web app logins
+    if (isAdminPanelRequest) {
+      response.cookies.set('access_token', accessToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+        path: '/',
+      });
 
-    response.cookies.set('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' : 'lax',
-      maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
-      path: '/',
-    });
+      response.cookies.set('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+        path: '/',
+      });
+    }
 
     return response;
   } catch (error) {
