@@ -222,6 +222,17 @@ export async function POST(request: NextRequest) {
             updatedAt: chatRoom.updatedAt.toISOString(),
         };
 
+            // Notify all participants about the newly created room so their UIs can insert it
+            try {
+                for (const participant of transformedChatRoom.participants) {
+                    await pusherServer.trigger(`user-${participant.id}`, 'chat-room-created', {
+                        chatRoom: transformedChatRoom,
+                    });
+                }
+            } catch (e) {
+                console.error('Pusher emit chat-room-created failed', e);
+            }
+
             return NextResponse.json(transformedChatRoom, { status: 201 });
         } catch (error) {
             console.error('Error creating chat room:', error);

@@ -45,13 +45,15 @@ export function usePusher(userId?: string) {
         };
     };
 
-    const subscribeUser = (handlers: Partial<{ onNotification: (p: any) => void }>) => {
+    const subscribeUser = (handlers: Partial<{ onNotification: (p: any) => void; onChatRoomCreated: (p: any) => void }>) => {
         if (!pusherRef.current || !userId) return () => {};
         const cname = userChannelName(userId);
         const channel = pusherRef.current.subscribe(cname);
         if (handlers.onNotification) channel.bind('new-notification', handlers.onNotification);
+        if (handlers.onChatRoomCreated) channel.bind('chat-room-created', handlers.onChatRoomCreated);
         return () => {
             if (handlers.onNotification) channel.unbind('new-notification', handlers.onNotification);
+            if (handlers.onChatRoomCreated) channel.unbind('chat-room-created', handlers.onChatRoomCreated);
             pusherRef.current?.unsubscribe(cname);
         };
     };

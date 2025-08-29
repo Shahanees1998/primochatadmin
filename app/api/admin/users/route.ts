@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { AuthService } from '@/lib/auth';
 import { NotificationService } from '@/lib/notificationService';
+import { pusherServer } from '@/lib/realtime';
 import sgMail from '@sendgrid/mail';
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
@@ -205,6 +206,119 @@ export async function POST(request: NextRequest) {
                 } catch (notificationError) {
                     console.error('Error sending notifications:', notificationError);
                     // Don't fail the user creation if notification fails
+                }
+
+                // Ensure default group chat exists and include the new user
+                try {
+                    const groupName = 'General';
+                    // Try to find existing default group with participants
+                    let groupRoom = await prisma.chatRoom.findFirst({
+                        where: { isGroupChat: true, name: groupName },
+                        include: {
+                            participants: {
+                                include: {
+                                    user: {
+                                        select: {
+                                            id: true,
+                                            firstName: true,
+                                            lastName: true,
+                                            email: true,
+                                            profileImage: true,
+                                            status: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    });
+
+                    if (!groupRoom) {
+                        // Create the default group with all users including the newly created one
+                        const allUsers = await prisma.user.findMany({ select: { id: true } });
+                        groupRoom = await prisma.chatRoom.create({
+                            data: {
+                                isGroupChat: true,
+                                name: groupName,
+                                participants: {
+                                    create: allUsers.map((u) => ({ userId: u.id })),
+                                },
+                            },
+                            include: {
+                                participants: {
+                                    include: {
+                                        user: {
+                                            select: {
+                                                id: true,
+                                                firstName: true,
+                                                lastName: true,
+                                                email: true,
+                                                profileImage: true,
+                                                status: true,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        });
+
+                        const transformed = {
+                            id: groupRoom.id,
+                            isGroup: true,
+                            name: groupRoom.name,
+                            participants: groupRoom.participants.map((p) => p.user),
+                            lastMessage: undefined,
+                            unreadCount: 0,
+                            updatedAt: groupRoom.updatedAt.toISOString(),
+                        };
+                        // Notify all participants that the default room exists
+                        for (const p of groupRoom.participants) {
+                            await pusherServer.trigger(`user-${p.user.id}`, 'chat-room-created', { chatRoom: transformed });
+                        }
+                    } else {
+                        // Add the new user if not already a participant
+                        const isMember = groupRoom.participants.some((p) => p.user.id === user.id);
+                        if (!isMember) {
+                            await prisma.chatRoom.update({
+                                where: { id: groupRoom.id },
+                                data: { participants: { create: { userId: user.id } } },
+                            });
+                            // Reload with participants for payload
+                            const updated = await prisma.chatRoom.findUnique({
+                                where: { id: groupRoom.id },
+                                include: {
+                                    participants: {
+                                        include: {
+                                            user: {
+                                                select: {
+                                                    id: true,
+                                                    firstName: true,
+                                                    lastName: true,
+                                                    email: true,
+                                                    profileImage: true,
+                                                    status: true,
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            });
+                            if (updated) {
+                                const transformed = {
+                                    id: updated.id,
+                                    isGroup: true,
+                                    name: updated.name,
+                                    participants: updated.participants.map((p) => p.user),
+                                    lastMessage: undefined,
+                                    unreadCount: 0,
+                                    updatedAt: updated.updatedAt.toISOString(),
+                                };
+                                // Notify only the new user so their UI inserts the room
+                                await pusherServer.trigger(`user-${user.id}`, 'chat-room-created', { chatRoom: transformed });
+                            }
+                        }
+                    }
+                } catch (groupError) {
+                    console.error('Default group setup failed:', groupError);
                 }
 
                 // Send welcome email to the new user (if SendGrid configured)

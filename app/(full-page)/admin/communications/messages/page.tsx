@@ -67,6 +67,7 @@ export default function MessagesPage() {
     const [usersLoading, setUsersLoading] = useState(false);
     const [messagesLoading, setMessagesLoading] = useState(false);
     const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+    const [creatingChat, setCreatingChat] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [chatSearchTerm, setChatSearchTerm] = useState("");
@@ -153,6 +154,40 @@ export default function MessagesPage() {
         scrollToBottom();
     }, [messages]);
 
+    // Real-time: subscribe to user channel for newly created rooms
+    useEffect(() => {
+        if (!user?.id) return;
+        const off = pusher.subscribeUser({
+            onChatRoomCreated: ({ chatRoom }: any) => {
+                setChatRooms(prev => {
+                    if (prev.some(r => r.id === chatRoom.id)) return prev;
+                    return [chatRoom, ...prev];
+                });
+            },
+            onNotification: (payload: any) => {
+                try {
+                    // If a message notification arrives for a room we don’t have yet, load it
+                    if (payload?.type === 'CHAT_MESSAGE') {
+                        const chatRoomId = payload?.relatedId || payload?.metadata?.chatRoomId;
+                        if (!chatRoomId) return;
+                        const exists = chatRoomsRef.current.some(r => r.id === chatRoomId);
+                        if (exists) return;
+                        apiClient.getChatRooms().then(res => {
+                            const list = res.data?.chatRooms || [];
+                            const found = list.find((r: any) => r.id === chatRoomId);
+                            if (!found) return;
+                            setChatRooms(prev => {
+                                if (prev.some(r => r.id === chatRoomId)) return prev;
+                                return [found, ...prev];
+                            });
+                        });
+                    }
+                } catch {}
+            }
+        });
+        return () => { off && off(); };
+    }, [user?.id, pusher]);
+
     // Real-time: receive new messages via Pusher
     useEffect(() => {
         // subscribe to all rooms for list updates
@@ -162,11 +197,15 @@ export default function MessagesPage() {
                 onNewMessage: ({ chatRoomId, message }: any) => {
                     const existsNow = chatRoomsRef.current.some(r => r.id === chatRoomId);
                     if (!existsNow) {
+                        // If we are not subscribed to this room yet (new room for this user), fetch it once
                         apiClient.getChatRooms().then((res) => {
                             const list = res.data?.chatRooms || [];
                             const found = list.find((r: any) => r.id === chatRoomId);
                             if (!found) return;
-                            setChatRooms((prev) => [{ ...found, lastMessage: message, unreadCount: (found.unreadCount || 0) + (message.senderId === currentUserId ? 0 : 1) }, ...prev.filter(r => r.id !== chatRoomId)]);
+                            setChatRooms((prev) => {
+                                if (prev.some(r => r.id === chatRoomId)) return prev; // double-guard
+                                return [{ ...found, lastMessage: message, unreadCount: (found.unreadCount || 0) + (message.senderId === currentUserId ? 0 : 1) }, ...prev];
+                            });
                         });
                         return;
                     }
@@ -185,6 +224,7 @@ export default function MessagesPage() {
                     // push into open conversation
                     if (currentSelectedChat && chatRoomId === currentSelectedChat.id) {
                         setMessages(prev => {
+                            if (prev.some(m => m.id === message.id)) return prev;
                             const nm = [...prev, message];
                             return nm.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
                         });
@@ -370,13 +410,13 @@ export default function MessagesPage() {
                     : undefined,
             };
 
-            setMessages((prev) => {
-                const newMessages = [...prev, optimisticMessage];
-                // Sort messages by creation time (oldest first, newest last)
-                return newMessages.sort((a, b) => 
-                    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                );
-            });
+            // setMessages((prev) => {
+            //     // const newMessages = [...prev, optimisticMessage];
+            //     // // Sort messages by creation time (oldest first, newest last)
+            //     return optimisticMessage.sort((a, b) => 
+            //         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            //     );
+            // });
 
             // Update chat room's last message optimistically
             setChatRooms((prev) => prev.map(room =>
@@ -400,16 +440,19 @@ export default function MessagesPage() {
                 throw new Error(response.error);
             }
 
-            // Update with real message data
+            // Update with real message data, de-duplicating against realtime echo
             const realMessage = response.data;
             setMessages((prev) => {
-                const updatedMessages = prev.map(m =>
-                    m.id === optimisticMessage.id ? { ...realMessage, createdAt: realMessage.createdAt } : m
-                );
-                // Sort messages by creation time (oldest first, newest last)
-                return updatedMessages.sort((a, b) => 
-                    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                );
+                const alreadyHasReal = prev.some(m => m.id === realMessage.id);
+                let next = prev;
+                if (alreadyHasReal) {
+                    // Realtime echo arrived first: drop the optimistic one
+                    next = prev.filter(m => m.id !== optimisticMessage.id);
+                } else {
+                    // Replace optimistic with real
+                    next = prev.map(m => m.id === optimisticMessage.id ? { ...realMessage, createdAt: realMessage.createdAt } : m);
+                }
+                return next.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
             });
 
             // Pusher emit handled by server API; no client emit needed
@@ -428,7 +471,7 @@ export default function MessagesPage() {
         } catch (error) {
             showToast("error", "Error", "Failed to send message");
             // Revert optimistic update
-            setMessages((prev) => prev.filter(m => m.id !== Math.random().toString(36).substr(2, 9)));
+            // setMessages((prev) => prev.filter(m => m.id !== optimisticMessage.id));
         }
     };
 
@@ -474,8 +517,9 @@ export default function MessagesPage() {
     }, [selectedChat, messages, currentUserId]);
 
     const createNewChat = async () => {
-        if (selectedUsers.length === 0) return;
+        if (creatingChat || selectedUsers.length === 0) return;
 
+        setCreatingChat(true);
         try {
 
             const response = await apiClient.createChatRoom({
@@ -508,6 +552,8 @@ export default function MessagesPage() {
             setSelectedUsers([]);
         } catch (error) {
             showToast("error", "Error", "Failed to create chat room");
+        } finally {
+            setCreatingChat(false);
         }
     };
 
@@ -543,9 +589,11 @@ export default function MessagesPage() {
         getChatName(chat).toLowerCase().includes(chatSearchTerm.toLowerCase())
     );
 
-    const filteredUsers = users.filter(user =>
-        `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredUsers = users
+        .filter(user => user.id !== currentUserId)
+        .filter(user =>
+            `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
     const formatTime = (dateString: string) => {
         const date = new Date(dateString);
@@ -899,7 +947,7 @@ export default function MessagesPage() {
                             label="Create Chat"
                             icon="pi pi-check"
                             onClick={createNewChat}
-                            disabled={selectedUsers.length === 0}
+                            disabled={creatingChat || selectedUsers.length === 0}
                         />
                     </div>
                 }
@@ -915,7 +963,7 @@ export default function MessagesPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-2">Select Users</label>
+                        <label className="block text-sm font-medium mb-2">Select User</label>
                         <ScrollPanel style={{ height: '200px' }}>
                             <div className="flex flex-column gap-2">
                                 {filteredUsers.map((user) => (
@@ -924,13 +972,11 @@ export default function MessagesPage() {
                                         className={`p-2 border-round cursor-pointer transition-colors ${selectedUsers.some(u => u.id === user.id)
                                                 ? 'bg-primary text-white'
                                                 : 'hover:bg-gray-100'
-                                            }`}
+                                            } ${selectedUsers.length >= 1 && !selectedUsers.some(u => u.id === user.id) ? 'opacity-50 pointer-events-none' : ''}`}
                                         onClick={() => {
-                                            setSelectedUsers(prev =>
-                                                prev.some(u => u.id === user.id)
-                                                    ? prev.filter(u => u.id !== user.id)
-                                                    : [...prev, user]
-                                            );
+                                            setSelectedUsers(prev => (
+                                                prev.some(u => u.id === user.id) ? [] : [user]
+                                            ));
                                         }}
                                     >
                                         <div className="flex align-items-center gap-3">

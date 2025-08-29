@@ -72,6 +72,7 @@ export default function ChatPage() {
     const [chatRoomsLoading, setChatRoomsLoading] = useState(true);
     const [messagesLoading, setMessagesLoading] = useState(false);
     const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+    const [creatingChat, setCreatingChat] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [chatSearchTerm, setChatSearchTerm] = useState("");
@@ -210,13 +211,45 @@ export default function ChatPage() {
         scrollToBottom();
     }, [messages]);
 
+    // Real-time: subscribe to user channel for newly created rooms so the list updates without refresh
+    useEffect(() => {
+        if (!currentUserId) return;
+        const off = pusher.subscribeUser({
+            onChatRoomCreated: ({ chatRoom }: any) => {
+                setChatRooms(prev => {
+                    if (prev.some(r => r.id === chatRoom.id)) return prev;
+                    return [chatRoom, ...prev];
+                });
+            }
+        });
+        return () => { off && off(); };
+    }, [currentUserId, pusher]);
+
+    // Real-time: subscribe to all rooms to keep the sidebar updated with last messages/unreads
+    useEffect(() => {
+        const unsubs: Array<() => void> = [];
+        chatRooms.forEach(room => {
+            const off = pusher.subscribeChat(room.id, {
+                onNewMessage: ({ chatRoomId, message }: any) => {
+                    setChatRooms(prev => prev.map(r => r.id === chatRoomId ? { ...r, lastMessage: message } : r));
+                }
+            });
+            unsubs.push(off);
+        });
+        return () => { unsubs.forEach(u => u && u()); };
+    }, [chatRooms, pusher]);
+
     // Real-time: receive new messages via Pusher for selected chat
     useEffect(() => {
         if (!selectedChat) return;
         const off = pusher.subscribeChat(selectedChat.id, {
             onNewMessage: ({ chatRoomId, message }: any) => {
                 if (chatRoomId !== selectedChat.id) return;
-                setMessages((prev) => [...prev, message]);
+                setMessages((prev) => {
+                    // Prevent duplicate when optimistic update is already replaced by real message
+                    if (prev.some(m => m.id === message.id)) return prev;
+                    return [...prev, message];
+                });
                 setChatRooms((prev) => prev.map(room => room.id === chatRoomId ? { ...room, lastMessage: message } : room));
                 if (message.senderId !== currentUserId) {
                     playNotificationSound();
@@ -358,10 +391,14 @@ export default function ChatPage() {
             }
 
             const realMessage = response.data;
-            // Replace optimistic message with the real one
-            setMessages((prev) => prev.map(m =>
-                m.id === optimisticId ? { ...realMessage, createdAt: realMessage.createdAt } : m
-            ));
+            // Replace optimistic message with the real one, avoiding duplicates if realtime echo arrived first
+            setMessages((prev) => {
+                const alreadyHasReal = prev.some(m => m.id === realMessage.id);
+                if (alreadyHasReal) {
+                    return prev.filter(m => m.id !== optimisticId);
+                }
+                return prev.map(m => m.id === optimisticId ? { ...realMessage, createdAt: realMessage.createdAt } : m);
+            });
         } catch (error) {
             showToast("error", "Error", "Failed to send message");
             // Revert optimistic update
@@ -386,8 +423,9 @@ export default function ChatPage() {
     }, [selectedChat, messages, currentUserId]);
 
     const createNewChat = async () => {
-        if (selectedUsers.length === 0) return;
+        if (creatingChat || selectedUsers.length === 0) return;
         try {
+            setCreatingChat(true);
             const response = await apiClient.createChatRoom({
                 participantIds: selectedUsers.map(u => u.id),
                 name: selectedUsers.length > 1 ? `Group Chat (${selectedUsers.length} members)` : undefined
@@ -418,6 +456,8 @@ export default function ChatPage() {
             setSelectedUsers([]);
         } catch (error) {
             showToast("error", "Error", "Failed to create chat room");
+        } finally {
+            setCreatingChat(false);
         }
     };
 
@@ -735,7 +775,7 @@ export default function ChatPage() {
                         <Button
                             label="Create Chat"
                             onClick={createNewChat}
-                            disabled={selectedUsers.length === 0}
+                            disabled={creatingChat || selectedUsers.length === 0}
                         />
                     </div>
                 }
@@ -755,7 +795,7 @@ export default function ChatPage() {
                     </div>
 
                     <div>
-                        <label className="font-bold mb-2 block">Select Users</label>
+                        <label className="font-bold mb-2 block">Select User</label>
                         <ScrollPanel className="h-10rem border-1 surface-border border-round">
                             {usersLoading ? (
                                 <div className="p-3">
@@ -771,6 +811,7 @@ export default function ChatPage() {
                             ) : (
                                 <div className="p-3">
                                     {users
+                                        .filter(user => user.id !== currentUserId)
                                         .filter(user =>
                                             `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                             user.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -778,14 +819,9 @@ export default function ChatPage() {
                                         .map((user) => (
                                             <div
                                                 key={user.id}
-                                                className={`flex align-items-center gap-3 p-2 cursor-pointer border-round hover:surface-100 ${selectedUsers.some(u => u.id === user.id) ? 'surface-100' : ''
-                                                    }`}
+                                                className={`flex align-items-center gap-3 p-2 cursor-pointer border-round hover:surface-100 ${selectedUsers.some(u => u.id === user.id) ? 'surface-100' : ''} ${selectedUsers.length >= 1 && !selectedUsers.some(u => u.id === user.id) ? 'opacity-50 pointer-events-none' : ''}`}
                                                 onClick={() => {
-                                                    setSelectedUsers(prev =>
-                                                        prev.some(u => u.id === user.id)
-                                                            ? prev.filter(u => u.id !== user.id)
-                                                            : [...prev, user]
-                                                    );
+                                                    setSelectedUsers(prev => (prev.some(u => u.id === user.id) ? [] : [user]));
                                                 }}
                                             >
                                                 <Avatar
