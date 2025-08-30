@@ -22,6 +22,7 @@ model User {
   phone                String?
   role                 UserRole   @default(MEMBER)
   status               UserStatus @default(PENDING)
+  isDeleted            Boolean    @default(false)
   profileImage         String?
   profileImagePublicId String? // Cloudinary public_id for profile image
   membershipNumber     String?    @unique

@@ -106,6 +106,7 @@ export class AuthService {
         phone: true,
         role: true,
         status: true,
+        isDeleted: true,
         membershipNumber: true,
         profileImage: true,
         profileImagePublicId: true,
@@ -119,6 +120,10 @@ export class AuthService {
 
     if (!user) {
       throw new Error('Invalid email or password');
+    }
+
+    if (user.isDeleted) {
+      throw new Error('Account has been deleted. Please contact admin.');
     }
 
     if (user.status === 'DEACTIVATED') {

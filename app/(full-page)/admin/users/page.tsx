@@ -595,8 +595,11 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
                                 rowData.paidDate ? new Date(rowData.paidDate).toLocaleDateString() : "Not paid"
                             )} style={{ minWidth: "120px" }} />
                             <Column field="status" header="Status" body={(rowData) => (
-                                <Tag value={rowData.status} severity={getStatusSeverity(rowData.status)} />
-                            )} style={{ minWidth: "120px" }} />
+                                <div className="flex align-items-center gap-2">
+                                    <Tag value={rowData.status} severity={getStatusSeverity(rowData.status)} />
+                                    {rowData.isDeleted && <Tag value="Deleted" severity="danger" />}
+                                </div>
+                            )} style={{ minWidth: "150px" }} />
                             {/* <Column field="joinDate" header="Join Date" body={(rowData) => (
                                 new Date(rowData.joinDate || "").toLocaleDateString()
                             )} style={{ minWidth: "120px" }} /> */}

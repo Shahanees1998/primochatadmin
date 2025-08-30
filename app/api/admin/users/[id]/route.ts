@@ -157,13 +157,15 @@ export async function DELETE(
                 );
             }
 
-            // Delete user
-            await prisma.user.delete({
+            // Soft delete: mark isDeleted true and set status to DEACTIVATED
+            await prisma.user.update({
                 where: { id: params.id },
+                // Cast to any until Prisma types are regenerated with `isDeleted`
+                data: ({ isDeleted: true, status: 'DEACTIVATED' } as any),
             });
 
             return NextResponse.json(
-                { message: 'Member deleted successfully' },
+                { message: 'Member soft-deleted successfully' },
                 { status: 200 }
             );
         } catch (error) {
