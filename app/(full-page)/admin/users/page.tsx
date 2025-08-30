@@ -446,22 +446,22 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
                     tooltip="View Details"
                     onClick={() => router.push(`/admin/users/${rowData.id}`)}
                 /> */}
-                <Button
+               {rowData.role !== "ADMIN" && <Button
                     icon="pi pi-pencil"
                     size="small"
                     text
                     severity="secondary"
                     tooltip="Edit Member"
                     onClick={() => openEditUserDialog(rowData)}
-                />
-                <Button
+                />}
+              {rowData.role !== "ADMIN" && <Button
                     icon="pi pi-trash"
                     size="small"
                     text
                     severity="danger"
                     tooltip="Delete Member"
                     onClick={() => confirmDeleteUser(rowData)}
-                />
+                />}
             </div>
         );
     };
