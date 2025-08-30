@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { pusherServer } from '@/lib/realtime';
 
 export async function GET(request: NextRequest) {
     return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
