@@ -181,7 +181,6 @@ export default function DocumentViewPage() {
             const response = await apiClient.updateDocument(documentId, {
                 title: documentForm.title,
                 description: documentForm.description,
-                category: documentForm.category,
                 tags: documentForm.tags.split(",").map(tag => tag.trim()).filter(tag => tag),
                 permissions: documentForm.permissions
             });
