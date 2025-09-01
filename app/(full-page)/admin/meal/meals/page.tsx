@@ -46,6 +46,7 @@ export default function MealsPage() {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [selectedMeals, setSelectedMeals] = useState<Meal[]>([]);
   const [formData, setFormData] = useState<MealFormData>({
     title: '',
     description: '',
@@ -187,6 +188,40 @@ export default function MealsPage() {
     }
   };
 
+  const confirmBulkDeleteMeals = () => {
+    if (selectedMeals.length === 0) return;
+    
+    confirmDialog({
+      message: `Are you sure you want to delete ${selectedMeals.length} selected meal(s)?`,
+      header: 'Bulk Delete Confirmation',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => bulkDeleteMeals(),
+    });
+  };
+
+  const bulkDeleteMeals = async () => {
+    if (selectedMeals.length === 0) return;
+    
+    try {
+      const deletePromises = selectedMeals.map(meal => apiClient.deleteMeal(meal.id));
+      await Promise.all(deletePromises);
+      
+      setSelectedMeals([]);
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Success',
+        detail: `${selectedMeals.length} meal(s) deleted successfully`
+      });
+      loadMeals(); // Reload the list
+    } catch (error) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to delete some meals'
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.title.trim()) {
       toast.current?.show({
@@ -268,41 +303,54 @@ export default function MealsPage() {
   };
 
   const header = useMemo(() => (
-    <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
-      <div className="flex flex-column">
-        <h2 className="text-2xl font-bold m-0">Meal Management</h2>
-        <span className="text-600">Manage all meals and their categories</span>
-      </div>
-      <div className="flex gap-2">
-        <span className="p-input-icon-left">
-          <i className="pi pi-search" />
-          <InputText
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search meals..."
-            className="w-full"
+    <>
+      <div className="w-full flex justify-content-end">
+        {selectedMeals.length > 0 && (
+          <Button
+            label={`Delete Selected (${selectedMeals.length})`}
+            icon="pi pi-trash"
+            onClick={confirmBulkDeleteMeals}
+            severity="danger"
+            className="p-button-raised mb-4"
           />
-        </span>
-        {/* <Dropdown
-          placeholder="Filter by category"
-          value={selectedCategory}
-          options={[
-            { label: 'All Categories', value: '' },
-            ...categoryOptions
-          ]}
-          onChange={(e) => setSelectedCategory(e.value)}
-          className="min-w-[200px]"
-          disabled={categoriesLoading}
-        /> */}
-        <Button
-          label="Add New Meal"
-          icon="pi pi-plus"
-          onClick={handleCreate}
-          severity="success"
-        />
+        )}
       </div>
-    </div>
-  ), [searchTerm, selectedCategory, categoryOptions, categoriesLoading]);
+      <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
+        <div className="flex flex-column">
+          <h2 className="text-2xl font-bold m-0">Meal Management</h2>
+          <span className="text-600">Manage all meals and their categories</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="p-input-icon-left">
+            <i className="pi pi-search" />
+            <InputText
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search meals..."
+              className="w-full"
+            />
+          </span>
+          {/* <Dropdown
+            placeholder="Filter by category"
+            value={selectedCategory}
+            options={[
+              { label: 'All Categories', value: '' },
+              ...categoryOptions
+            ]}
+            onChange={(e) => setSelectedCategory(e.value)}
+            className="min-w-[200px]"
+            disabled={categoriesLoading}
+          /> */}
+          <Button
+            label="Add New Item"
+            icon="pi pi-plus"
+            onClick={handleCreate}
+            severity="success"
+          />
+        </div>
+      </div>
+    </>
+  ), [searchTerm, selectedCategory, categoryOptions, categoriesLoading, selectedMeals.length]);
 
   const skeletonRows = Array.from({ length: 5 }, (_, i) => ({
     id: i.toString(),
@@ -326,6 +374,11 @@ export default function MealsPage() {
             className="p-datatable-sm"
             header={header}
           >
+            <Column 
+              selectionMode="multiple" 
+              headerStyle={{ width: '3rem' }}
+              style={{ width: '3rem' }}
+            />
             <Column 
               field="title" 
               header="Title" 
@@ -385,7 +438,15 @@ export default function MealsPage() {
           emptyMessage="No meals found"
           loading={loading}
           header={header}
+          selectionMode="multiple"
+          selection={selectedMeals}
+          onSelectionChange={(e) => setSelectedMeals(e.value as Meal[])}
         >
+          <Column 
+            selectionMode="multiple" 
+            headerStyle={{ width: '3rem' }}
+            style={{ width: '3rem' }}
+          />
           <Column field="title" header="Title" />
           <Column field="description" header="Description" style={{ maxWidth: '300px' }} />
           <Column field="category.name" header="Category" body={categoryBodyTemplate} />
@@ -402,7 +463,7 @@ export default function MealsPage() {
       <Dialog
         visible={dialogVisible}
         onHide={() => setDialogVisible(false)}
-        header={editingMeal ? 'Edit Meal' : 'Add New Meal'}
+        header={editingMeal ? 'Edit Item' : 'Add New Item'}
         style={{ width: '600px', maxWidth: '95vw', zIndex: 2000, borderRadius: 12 }}
         modal
         closeOnEscape={!submitting}

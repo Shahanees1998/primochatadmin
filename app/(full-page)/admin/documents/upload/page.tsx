@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "primereact/card";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
@@ -9,12 +9,13 @@ import { Dropdown } from "primereact/dropdown";
 import { FileUpload } from "primereact/fileupload";
 import { Toast } from "primereact/toast";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/apiClient";
 import TestUpload from "@/components/TestUpload";
 
 interface DocumentFormData {
     title: string;
     description: string;
-    category: string;
+    categoryId: string;
     permissions: string;
     tags: string;
 }
@@ -24,31 +25,42 @@ export default function UploadDocumentPage() {
     const [formData, setFormData] = useState<DocumentFormData>({
         title: "",
         description: "",
-        category: "GENERAL",
+        categoryId: "",
         permissions: "MEMBER_ONLY",
         tags: "",
     });
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(false);
     const toast = useRef<Toast>(null);
     const fileUploadRef = useRef<FileUpload>(null);
 
-    const categoryOptions = [
-        { label: "General", value: "GENERAL" },
-        { label: "Meeting Minutes", value: "MEETING_MINUTES" },
-        { label: "Policies", value: "POLICIES" },
-        { label: "Forms", value: "FORMS" },
-        { label: "Reports", value: "REPORTS" },
-        { label: "Newsletters", value: "NEWSLETTERS" },
-        { label: "Training", value: "TRAINING" },
-        { label: "Other", value: "OTHER" },
-    ];
+    const categoryOptions = categories.map(cat => ({ label: cat.title, value: cat.id }));
 
     const permissionOptions = [
         { label: "Public", value: "PUBLIC" },
         { label: "Member Only", value: "MEMBER_ONLY" },
         { label: "Admin Only", value: "ADMIN_ONLY" },
     ];
+
+    const loadCategories = async () => {
+        setCategoriesLoading(true);
+        try {
+            const response = await apiClient.getDocumentCategories({ limit: 100 });
+            if (response.data) {
+                setCategories(response.data.categories);
+            }
+        } catch (error) {
+            console.error('Error loading categories:', error);
+        } finally {
+            setCategoriesLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadCategories();
+    }, []);
 
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {
         toast.current?.show({ severity, summary, detail, life: 3000 });
@@ -76,6 +88,11 @@ export default function UploadDocumentPage() {
             return;
         }
 
+        if (!formData.categoryId) {
+            showToast("error", "Error", "Please select a category");
+            return;
+        }
+
         setLoading(true);
         try {
             // Create FormData for file upload
@@ -83,7 +100,7 @@ export default function UploadDocumentPage() {
             formDataToSend.append('file', uploadedFile);
             formDataToSend.append('title', formData.title);
             formDataToSend.append('description', formData.description);
-            formDataToSend.append('category', formData.category);
+            formDataToSend.append('categoryId', formData.categoryId);
             formDataToSend.append('tags', formData.tags);
             formDataToSend.append('permissions', formData.permissions);
             const response = await fetch('/api/admin/documents', {
@@ -102,7 +119,7 @@ export default function UploadDocumentPage() {
             setFormData({
                 title: "",
                 description: "",
-                category: "GENERAL",
+                categoryId: "",
                 permissions: "MEMBER_ONLY",
                 tags: "",
             });
@@ -182,15 +199,21 @@ export default function UploadDocumentPage() {
                         </div>
 
                         <div className="col-12 md:col-6">
-                            <label htmlFor="category" className="font-bold">Category</label>
+                            <label htmlFor="category" className="font-bold">Category *</label>
                             <Dropdown
                                 id="category"
-                                value={formData.category}
+                                value={formData.categoryId}
                                 options={categoryOptions}
-                                onChange={(e) => setFormData({ ...formData, category: e.value })}
+                                onChange={(e) => setFormData({ ...formData, categoryId: e.value })}
                                 placeholder="Select Category"
                                 className="w-full"
+                                loading={categoriesLoading}
                             />
+                            {categories.length === 0 && !categoriesLoading && (
+                                <small className="text-orange-600">
+                                    No categories available. Please create categories first.
+                                </small>
+                            )}
                         </div>
 
                         <div className="col-12 md:col-6">

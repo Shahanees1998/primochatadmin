@@ -54,6 +54,15 @@
 - ✅ **Get Documents** - GET `/api/admin/documents` (Tested in webapp)
 - ✅ **Get Document Details** - GET `/api/admin/documents/{id}` (Tested in webapp)
 - ✅ **Upload Document** - POST `/api/admin/documents` (Tested in webapp)
+- ✅ **Update Document** - PUT `/api/admin/documents/{id}` (Tested in webapp)
+- ✅ **Delete Document** - DELETE `/api/admin/documents/{id}` (Tested in webapp)
+
+### Document Categories
+- ✅ **Get Document Categories** - GET `/api/admin/document-categories` (Tested in webapp)
+- ✅ **Create Document Category** - POST `/api/admin/document-categories` (Tested in webapp)
+- ✅ **Get Document Category Details** - GET `/api/admin/document-categories/{id}` (Tested in webapp)
+- ✅ **Update Document Category** - PUT `/api/admin/document-categories/{id}` (Tested in webapp)
+- ✅ **Delete Document Category** - DELETE `/api/admin/document-categories/{id}` (Tested in webapp)
 
 ### Phonebook
 - ✅ **Get Phonebook** - GET `/api/admin/phonebook` (Tested in webapp)
@@ -231,6 +240,54 @@ GET /api/admin/announcements?type=IMPORTANT
 // Search announcements
 GET /api/admin/announcements?search=meeting
 ```
+
+### **Documents Filtering**
+```javascript
+// Get documents with filtering
+GET /api/admin/documents?page=1&limit=20&search=&category=&documentType=&permissions=
+
+// Filter by document type (auto-determined)
+GET /api/admin/documents?documentType=PDF
+
+// Filter by category
+GET /api/admin/documents?category=category_id
+
+// Search documents
+GET /api/admin/documents?search=meeting minutes
+```
+
+### **Document Categories**
+```javascript
+// Get document categories
+GET /api/admin/document-categories?page=1&limit=20&search=
+
+// Create new category
+POST /api/admin/document-categories
+{
+  "title": "Meeting Minutes",
+  "description": "Official meeting documentation"
+}
+
+// Update category
+PUT /api/admin/document-categories/{id}
+{
+  "title": "Updated Category",
+  "description": "Updated description"
+}
+```
+
+### **Document Type Auto-Detection**
+The system now automatically determines document types based on file extensions:
+
+- **PDF**: `.pdf` files
+- **IMAGE**: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.svg` files
+- **DOCUMENT**: `.doc`, `.docx` files
+- **SPREADSHEET**: `.xls`, `.xlsx` files
+- **PRESENTATION**: `.ppt`, `.pptx` files
+- **TEXT**: `.txt` files
+- **LINK**: External URLs
+
+Document types are automatically set when uploading files or adding URLs.
 
 ## 🚀 **Mobile App Implementation Tips**
 

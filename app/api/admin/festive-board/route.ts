@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
   return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       const body = await request.json();
-      const { month, year, title, description, mealIds } = body;
+      const { month, year, title, mainCourse, description, mealIds } = body;
 
       // Validate required fields
       if (!month || !year || !title || !mealIds || !Array.isArray(mealIds)) {
@@ -156,6 +156,7 @@ export async function POST(request: NextRequest) {
           month: parseInt(month),
           year: parseInt(year),
           title,
+          mainCourse,
           description,
           createdById: authenticatedReq.user!.userId,
           meals: {

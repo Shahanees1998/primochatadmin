@@ -26,11 +26,23 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // PUT /api/admin/documents/[id] - Update document
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { title, description, category, tags, permissions } = await request.json();
+    const { title, description, categoryId, tags, permissions } = await request.json();
     const updateData: any = {};
     if (title) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    if (category !== undefined) updateData.category = category;
+    if (categoryId !== undefined) {
+      if (categoryId) {
+        updateData.category = {
+          connect: {
+            id: categoryId
+          }
+        };
+      } else {
+        updateData.category = {
+          disconnect: true
+        };
+      }
+    }
     if (tags) updateData.tags = tags;
     if (permissions) updateData.permissions = permissions as 'PUBLIC' | 'MEMBER_ONLY' | 'ADMIN_ONLY';
     const document = await prisma.document.update({
@@ -39,6 +51,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       include: {
         user: {
           select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        category: {
+          select: { id: true, title: true, description: true },
         },
       },
     });

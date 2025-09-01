@@ -65,6 +65,7 @@ export default function EditFestiveBoardPage() {
     month: null as number | null,
     year: currentYear,
     title: '',
+    mainCourse: '',
     description: '',
     mealIds: [] as string[],
   });
@@ -136,6 +137,7 @@ export default function EditFestiveBoardPage() {
           month: boardData.month,
           year: boardData.year,
           title: boardData.title || '',
+          mainCourse: boardData.mainCourse || '',
           description: boardData.description || '',
           mealIds: mealIds,
         });
@@ -269,6 +271,7 @@ export default function EditFestiveBoardPage() {
       setLoading(true);
       const response = await apiClient.updateFestiveBoard(boardId, {
         title: formData.title,
+        mainCourse: formData.mainCourse,
         description: formData.description,
         mealIds: validMealIds,
       });
@@ -471,12 +474,23 @@ export default function EditFestiveBoardPage() {
           </div>
 
           <div className="col-12">
-            <label htmlFor="title" className="block font-bold mb-2">Board Title *</label>
+            <label htmlFor="title" className="block font-bold mb-2">Festive Board Title *</label>
             <InputText
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="Enter board title"
+              className="w-full"
+            />
+          </div>
+
+          <div className="col-12">
+            <label htmlFor="mainCourse" className="block font-bold mb-2">Main Course</label>
+            <InputText
+              id="mainCourse"
+              value={formData.mainCourse}
+              onChange={(e) => setFormData({ ...formData, mainCourse: e.target.value })}
+              placeholder="Enter main course"
               className="w-full"
             />
           </div>

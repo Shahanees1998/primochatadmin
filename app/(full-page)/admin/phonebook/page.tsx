@@ -49,6 +49,7 @@ export default function PhoneBookPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [globalFilterValue, setGlobalFilterValue] = useState("");
+    const [selectedEntries, setSelectedEntries] = useState<PhoneBookEntry[]>([]);
     const [filters, setFilters] = useState({
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         firstName: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
@@ -261,6 +262,34 @@ export default function PhoneBookPage() {
         }
     };
 
+    const confirmBulkDeleteEntries = () => {
+        if (selectedEntries.length === 0) return;
+        
+        confirmDialog({
+            message: `Are you sure you want to delete ${selectedEntries.length} selected phone book entry(ies)?`,
+            header: 'Bulk Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => bulkDeleteEntries(),
+        });
+    };
+
+    const bulkDeleteEntries = async () => {
+        if (selectedEntries.length === 0) return;
+        
+        try {
+            const deletePromises = selectedEntries.map(entry => 
+                fetch(`/api/admin/phonebook/${entry.id}`, { method: 'DELETE' })
+            );
+            await Promise.all(deletePromises);
+            
+            setSelectedEntries([]);
+            showToast("success", "Success", `${selectedEntries.length} phone book entry(ies) deleted successfully`);
+            loadPhoneBookEntries(); // Reload the list
+        } catch (error) {
+            showToast("error", "Error", "Failed to delete some phone book entries");
+        }
+    };
+
     const exportPhoneBook = () => {
         try {
             // Create CSV content
@@ -357,35 +386,48 @@ export default function PhoneBookPage() {
     };
 
     const header = (
-        <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
-            <div className="flex flex-column">
-                <h2 className="text-2xl font-bold m-0">Phone Book</h2>
-                <span className="text-600">Manage member contact information</span>
-            </div>
-            <div className="flex gap-2">
-                <span className="p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText
-                        value={globalFilterValue}
-                        onChange={onGlobalFilterChange}
-                        placeholder="Search contacts..."
-                        className="w-full"
+        <>
+            <div className="w-full flex justify-content-end">
+                {selectedEntries.length > 0 && (
+                    <Button
+                        label={`Delete Selected (${selectedEntries.length})`}
+                        icon="pi pi-trash"
+                        onClick={confirmBulkDeleteEntries}
+                        severity="danger"
+                        className="p-button-raised mb-4"
                     />
-                </span>
-                <Button
-                    label="Add Contact"
-                    icon="pi pi-plus"
-                    onClick={openNewEntryDialog}
-                    severity="success"
-                />
-                <Button
-                    label="Export"
-                    icon="pi pi-download"
-                    onClick={exportPhoneBook}
-                    severity="secondary"
-                />
+                )}
             </div>
-        </div>
+            <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
+                <div className="flex flex-column">
+                    <h2 className="text-2xl font-bold m-0">Phone Book</h2>
+                    <span className="text-600">Manage member contact information</span>
+                </div>
+                <div className="flex gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            value={globalFilterValue}
+                            onChange={onGlobalFilterChange}
+                            placeholder="Search contacts..."
+                            className="w-full"
+                        />
+                    </span>
+                    <Button
+                        label="Add Contact"
+                        icon="pi pi-plus"
+                        onClick={openNewEntryDialog}
+                        severity="success"
+                    />
+                    <Button
+                        label="Export"
+                        icon="pi pi-download"
+                        onClick={exportPhoneBook}
+                        severity="secondary"
+                    />
+                </div>
+            </div>
+        </>
     );
 
     if (loading) {
@@ -398,6 +440,11 @@ export default function PhoneBookPage() {
                             className="p-datatable-sm"
                             header={header}
                         >
+                            <Column 
+                                selectionMode="multiple" 
+                                headerStyle={{ width: '3rem' }}
+                                style={{ width: '3rem' }}
+                            />
                             <Column 
                                 field="firstName" 
                                 header="Name" 
@@ -475,7 +522,15 @@ export default function PhoneBookPage() {
                         header={header}
                         emptyMessage="No phone book entries found."
                         responsiveLayout="scroll"
+                        selectionMode="multiple"
+                        selection={selectedEntries}
+                        onSelectionChange={(e) => setSelectedEntries(e.value as PhoneBookEntry[])}
                     >
+                        <Column 
+                            selectionMode="multiple" 
+                            headerStyle={{ width: '3rem' }}
+                            style={{ width: '3rem' }}
+                        />
                         <Column field="user.firstName" header="Name" body={nameBodyTemplate} style={{ minWidth: "200px" }} />
                         <Column field="user.email" header="Email" body={emailBodyTemplate} style={{ minWidth: "200px" }} />
                         <Column field="phone" header="Contact" body={contactBodyTemplate} style={{ minWidth: "150px" }} />

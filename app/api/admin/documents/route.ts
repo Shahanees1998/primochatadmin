@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '10');
         const search = searchParams.get('search') || '';
         const category = searchParams.get('category') || '';
+        const documentType = searchParams.get('documentType') || '';
         const permissions = searchParams.get('permissions') || '';
         const sortField = searchParams.get('sortField') || 'createdAt';
         const sortOrder = searchParams.get('sortOrder') || '-1';
@@ -27,7 +28,11 @@ export async function GET(request: NextRequest) {
         }
 
         if (category) {
-            where.category = category;
+            where.categoryId = category;
+        }
+
+        if (documentType) {
+            where.documentType = documentType;
         }
 
         if (permissions) {
@@ -55,6 +60,13 @@ export async function GET(request: NextRequest) {
                             firstName: true,
                             lastName: true,
                             email: true,
+                        },
+                    },
+                    category: {
+                        select: {
+                            id: true,
+                            title: true,
+                            description: true,
                         },
                     },
                 },
@@ -98,7 +110,7 @@ export async function POST(request: NextRequest) {
         const url = formData.get('url') as string;
         const title = formData.get('title') as string;
         const description = formData.get('description') as string;
-        const category = formData.get('category') as string;
+        const categoryId = formData.get('categoryId') as string;
         const tags = formData.get('tags') as string;
         const permissions = formData.get('permissions') as string;
         const uploadedBy = formData.get('uploadedBy') as string;
@@ -141,10 +153,18 @@ export async function POST(request: NextRequest) {
         let documentData: any = {
             title,
             description,
-            category: category || 'GENERAL',
             tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
             permissions: permissions as 'PUBLIC' | 'MEMBER_ONLY' | 'ADMIN_ONLY',
         };
+
+        // Add category connection if categoryId is provided
+        if (categoryId) {
+            documentData.category = {
+                connect: {
+                    id: categoryId
+                }
+            };
+        }
 
         // Handle file upload
         if (file) {
@@ -182,16 +202,20 @@ export async function POST(request: NextRequest) {
                 max_bytes: 50 * 1024 * 1024 // 50MB
             });
 
-            // Auto-determine category based on file type
-            let autoCategory = category;
-            if (!category) {
-                if (file.type === 'application/pdf') {
-                    autoCategory = 'PDF';
-                } else if (file.type.startsWith('image/')) {
-                    autoCategory = 'IMAGE';
-                } else {
-                    autoCategory = 'DOCUMENT';
-                }
+            // Auto-determine document type based on file type
+            let autoDocumentType = 'DOCUMENT';
+            if (file.type === 'application/pdf') {
+                autoDocumentType = 'PDF';
+            } else if (file.type.startsWith('image/')) {
+                autoDocumentType = 'IMAGE';
+            } else if (file.type.includes('word') || file.type.includes('document')) {
+                autoDocumentType = 'DOCUMENT';
+            } else if (file.type.includes('excel') || file.type.includes('spreadsheet')) {
+                autoDocumentType = 'SPREADSHEET';
+            } else if (file.type.includes('powerpoint') || file.type.includes('presentation')) {
+                autoDocumentType = 'PRESENTATION';
+            } else if (file.type === 'text/plain') {
+                autoDocumentType = 'TEXT';
             }
 
             documentData = {
@@ -201,7 +225,7 @@ export async function POST(request: NextRequest) {
                 filePublicId: cloudinaryResult.public_id,
                 fileType: file.type,
                 fileSize: file.size,
-                category: autoCategory,
+                documentType: autoDocumentType,
             };
         }
 
@@ -217,16 +241,20 @@ export async function POST(request: NextRequest) {
                 );
             }
 
-            // Auto-determine category based on URL
-            let autoCategory = category;
-            if (!category) {
-                if (url.toLowerCase().includes('.pdf')) {
-                    autoCategory = 'PDF';
-                } else if (url.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
-                    autoCategory = 'IMAGE';
-                } else {
-                    autoCategory = 'LINK';
-                }
+            // Auto-determine document type based on URL
+            let autoDocumentType = 'LINK';
+            if (url.toLowerCase().includes('.pdf')) {
+                autoDocumentType = 'PDF';
+            } else if (url.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
+                autoDocumentType = 'IMAGE';
+            } else if (url.toLowerCase().match(/\.(doc|docx)$/)) {
+                autoDocumentType = 'DOCUMENT';
+            } else if (url.toLowerCase().match(/\.(xls|xlsx)$/)) {
+                autoDocumentType = 'SPREADSHEET';
+            } else if (url.toLowerCase().match(/\.(ppt|pptx)$/)) {
+                autoDocumentType = 'PRESENTATION';
+            } else if (url.toLowerCase().match(/\.(txt)$/)) {
+                autoDocumentType = 'TEXT';
             }
 
             documentData = {
@@ -236,7 +264,7 @@ export async function POST(request: NextRequest) {
                 filePublicId: null,
                 fileType: 'url',
                 fileSize: 0,
-                category: autoCategory,
+                documentType: autoDocumentType,
             };
         }
 
@@ -255,6 +283,13 @@ export async function POST(request: NextRequest) {
                         firstName: true,
                         lastName: true,
                         email: true,
+                    },
+                },
+                category: {
+                    select: {
+                        id: true,
+                        title: true,
+                        description: true,
                     },
                 },
             },

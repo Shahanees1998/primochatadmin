@@ -11,6 +11,7 @@ import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Toast } from "primereact/toast";
+import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { FilterMatchMode } from "primereact/api";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/apiClient";
@@ -47,6 +48,7 @@ export default function SupportPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [globalFilterValue, setGlobalFilterValue] = useState("");
+    const [selectedRequests, setSelectedRequests] = useState<SupportRequest[]>([]);
     const [filters, setFilters] = useState({
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         subject: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
@@ -234,6 +236,42 @@ export default function SupportPage() {
         }
     };
 
+    const confirmBulkDeleteRequests = () => {
+        if (selectedRequests.length === 0) return;
+        
+        confirmDialog({
+            message: `Are you sure you want to delete ${selectedRequests.length} selected support request(s)?`,
+            header: 'Bulk Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => bulkDeleteRequests(),
+        });
+    };
+
+    const bulkDeleteRequests = async () => {
+        if (selectedRequests.length === 0) return;
+        
+        try {
+            const deletePromises = selectedRequests.map(request => apiClient.deleteSupportRequest(request.id));
+            await Promise.all(deletePromises);
+            
+            setSelectedRequests([]);
+            showToast("success", "Success", `${selectedRequests.length} support request(s) deleted successfully`);
+            loadSupportRequests(); // Reload the list
+        } catch (error) {
+            showToast("error", "Error", "Failed to delete some support requests");
+        }
+    };
+
+    const confirmDeleteRequest = (request: SupportRequest) => {
+        confirmDialog({
+            message: `Are you sure you want to delete "${request.subject}"?`,
+            header: 'Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            acceptClassName: 'p-button-danger',
+            accept: () => deleteSupportRequest(request.id),
+        });
+    };
+
     const getStatusSeverity = (status: string) => {
         switch (status) {
             case "OPEN": return "danger";
@@ -288,11 +326,7 @@ export default function SupportPage() {
                     text
                     severity="danger"
                     tooltip="Delete"
-                    onClick={() => {
-                        if (confirm("Are you sure you want to delete this support request?")) {
-                            deleteSupportRequest(rowData.id);
-                        }
-                    }}
+                    onClick={() => confirmDeleteRequest(rowData)}
                 />
             </div>
         );
@@ -323,29 +357,42 @@ export default function SupportPage() {
     };
 
     const header = (
-        <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
-            <div className="flex flex-column">
-                <h2 className="text-2xl font-bold m-0">Support Requests</h2>
-                <span className="text-600">Manage and respond to user support requests</span>
-            </div>
-            <div className="flex gap-2">
-                <span className="p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText
-                        value={globalFilterValue}
-                        onChange={onGlobalFilterChange}
-                        placeholder="Search requests..."
-                        className="w-full"
+        <>
+            <div className="w-full flex justify-content-end">
+                {selectedRequests.length > 0 && (
+                    <Button
+                        label={`Delete Selected (${selectedRequests.length})`}
+                        icon="pi pi-trash"
+                        onClick={confirmBulkDeleteRequests}
+                        severity="danger"
+                        className="p-button-raised mb-4"
                     />
-                </span>
-                <Button
-                    label="Create Request"
-                    icon="pi pi-plus"
-                    onClick={openCreateDialog}
-                    severity="success"
-                />
+                )}
             </div>
-        </div>
+            <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
+                <div className="flex flex-column">
+                    <h2 className="text-2xl font-bold m-0">Support Requests</h2>
+                    <span className="text-600">Manage and respond to user support requests</span>
+                </div>
+                <div className="flex gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            value={globalFilterValue}
+                            onChange={onGlobalFilterChange}
+                            placeholder="Search requests..."
+                            className="w-full"
+                        />
+                    </span>
+                    <Button
+                        label="Create Request"
+                        icon="pi pi-plus"
+                        onClick={openCreateDialog}
+                        severity="success"
+                    />
+                </div>
+            </div>
+        </>
     );
 
     if (loading) {
@@ -358,6 +405,11 @@ export default function SupportPage() {
                             className="p-datatable-sm"
                             header={header}
                         >
+                            <Column 
+                                selectionMode="multiple" 
+                                headerStyle={{ width: '3rem' }}
+                                style={{ width: '3rem' }}
+                            />
                             <Column 
                                 field="user" 
                                 header="User" 
@@ -435,7 +487,15 @@ export default function SupportPage() {
                         header={header}
                         emptyMessage="No support requests found."
                         responsiveLayout="scroll"
+                        selectionMode="multiple"
+                        selection={selectedRequests}
+                        onSelectionChange={(e) => setSelectedRequests(e.value as SupportRequest[])}
                     >
+                        <Column 
+                            selectionMode="multiple" 
+                            headerStyle={{ width: '3rem' }}
+                            style={{ width: '3rem' }}
+                        />
                         <Column field="user" header="User" body={userBodyTemplate} style={{ minWidth: "200px" }} />
                         <Column field="subject" header="Subject" style={{ minWidth: "200px" }} />
                         <Column field="message" header="Message" body={messageBodyTemplate} style={{ minWidth: "300px" }} />
@@ -567,6 +627,7 @@ export default function SupportPage() {
             </Dialog>
 
             <Toast ref={toast} />
+            <ConfirmDialog />
         </div>
     );
 } 

@@ -32,6 +32,7 @@ export default function MealCategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<MealCategory | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<MealCategory[]>([]);
   const [formData, setFormData] = useState<CategoryFormData>({
     name: '',
     description: ''
@@ -141,6 +142,40 @@ export default function MealCategoriesPage() {
     }
   };
 
+  const confirmBulkDeleteCategories = () => {
+    if (selectedCategories.length === 0) return;
+    
+    confirmDialog({
+      message: `Are you sure you want to delete ${selectedCategories.length} selected category(ies)?`,
+      header: 'Bulk Delete Confirmation',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => bulkDeleteCategories(),
+    });
+  };
+
+  const bulkDeleteCategories = async () => {
+    if (selectedCategories.length === 0) return;
+    
+    try {
+      const deletePromises = selectedCategories.map(category => apiClient.deleteMealCategory(category.id));
+      await Promise.all(deletePromises);
+      
+      setSelectedCategories([]);
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Success',
+        detail: `${selectedCategories.length} category(ies) deleted successfully`
+      });
+      loadCategories(); // Reload the list
+    } catch (error) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to delete some categories'
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
       toast.current?.show({
@@ -206,30 +241,43 @@ export default function MealCategoriesPage() {
   };
 
   const header = useMemo(() => (
-    <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
-      <div className="flex flex-column">
-        <h2 className="text-2xl font-bold m-0">Meal Categories</h2>
-        <span className="text-600">Manage meal categories</span>
-      </div>
-      <div className="flex gap-2">
-        <span className="p-input-icon-left">
-          <i className="pi pi-search" />
-          <InputText
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search categories..."
-            className="w-full"
+    <>
+      <div className="w-full flex justify-content-end">
+        {selectedCategories.length > 0 && (
+          <Button
+            label={`Delete Selected (${selectedCategories.length})`}
+            icon="pi pi-trash"
+            onClick={confirmBulkDeleteCategories}
+            severity="danger"
+            className="p-button-raised mb-4"
           />
-        </span>
-        <Button
-          label="Add New Category"
-          icon="pi pi-plus"
-          onClick={handleCreate}
-          severity="success"
-        />
+        )}
       </div>
-    </div>
-  ), [searchTerm]);
+      <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
+        <div className="flex flex-column">
+          <h2 className="text-2xl font-bold m-0">Meal Categories</h2>
+          <span className="text-600">Manage meal categories</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="p-input-icon-left">
+            <i className="pi pi-search" />
+            <InputText
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search categories..."
+              className="w-full"
+            />
+          </span>
+          <Button
+            label="Add New Category"
+            icon="pi pi-plus"
+            onClick={handleCreate}
+            severity="success"
+          />
+        </div>
+      </div>
+    </>
+  ), [searchTerm, selectedCategories.length]);
 
   const skeletonRows = Array.from({ length: 5 }, (_, i) => ({
     id: i.toString(),
@@ -251,6 +299,11 @@ export default function MealCategoriesPage() {
             className="p-datatable-sm"
             header={header}
           >
+            <Column 
+              selectionMode="multiple" 
+              headerStyle={{ width: '3rem' }}
+              style={{ width: '3rem' }}
+            />
             <Column 
               field="name" 
               header="Name" 
@@ -305,7 +358,15 @@ export default function MealCategoriesPage() {
           emptyMessage="No categories found"
           loading={loading}
           header={header}
+          selectionMode="multiple"
+          selection={selectedCategories}
+          onSelectionChange={(e) => setSelectedCategories(e.value as MealCategory[])}
         >
+          <Column 
+            selectionMode="multiple" 
+            headerStyle={{ width: '3rem' }}
+            style={{ width: '3rem' }}
+          />
           <Column field="name" header="Name" />
           <Column field="description" header="Description" style={{ maxWidth: '300px' }} />
           <Column 

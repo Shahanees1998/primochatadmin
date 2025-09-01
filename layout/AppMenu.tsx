@@ -29,22 +29,17 @@ const AppMenu = () => {
             icon: "pi pi-calendar-plus",
             items: [
                 {
-                    label: "All Boards",
+                    label: "Main Menu",
                     icon: "pi pi-fw pi-list",
                     to: "/admin/festive-board",
                 },
                 {
-                    label: "Create Board",
-                    icon: "pi pi-fw pi-plus",
-                    to: "/admin/festive-board/create",
-                },
-                {
-                    label: "All Meals",
+                    label: "Sub Menu",
                     icon: "pi pi-fw pi-list",
                     to: "/admin/meal/meals",
                 },
                 {
-                    label: "Meal Categories",
+                    label: "Categories",
                     icon: "pi pi-fw pi-tags",
                     to: "/admin/meal/categories",
                 },

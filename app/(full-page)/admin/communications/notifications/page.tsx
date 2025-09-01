@@ -22,7 +22,6 @@ interface Notification {
     message: string;
     type: 'EVENT_UPDATE' | 'DOCUMENT_UPLOAD' | 'CHAT_MESSAGE' | 'BROADCAST' | 'SUPPORT_RESPONSE' | 'MEAL_SELECTION' | 'TRESTLE_BOARD_ADDED' | 'FESTIVE_BOARD_UPDATE' | 'USER_JOINED' | 'SYSTEM_ALERT';
     isRead: boolean;
-    isArchived: boolean;
     createdAt: string;
     user?: {
         id: string;
@@ -44,6 +43,7 @@ export default function NotificationsPage() {
     const [selectedStatus, setSelectedStatus] = useState<string>("");
     const [sortField, setSortField] = useState<string | undefined>(undefined);
     const [sortOrder, setSortOrder] = useState<string | undefined>(undefined);
+    const [selectedNotifications, setSelectedNotifications] = useState<Notification[]>([]);
     const toast = useRef<Toast>(null);
 
     const typeOptions = [
@@ -64,7 +64,6 @@ export default function NotificationsPage() {
         { label: "All Status", value: "" },
         { label: "Unread", value: "unread" },
         { label: "Read", value: "read" },
-        { label: "Archived", value: "archived" },
     ];
 
     useEffect(() => {
@@ -157,8 +156,7 @@ export default function NotificationsPage() {
 
     const deleteNotification = async (notificationId: string) => {
         try {
-            // For now, just mark as archived since we don't have a delete endpoint
-            const response = await apiClient.markNotificationAsRead(notificationId);
+            const response = await apiClient.deleteNotification(notificationId);
             if (response.error) {
                 throw new Error(response.error);
             }
@@ -166,9 +164,43 @@ export default function NotificationsPage() {
             setNotifications(prev => 
                 prev.filter(notification => notification.id !== notificationId)
             );
-            showToast("success", "Success", "Notification removed");
+            setTotalRecords(prev => prev - 1);
+            showToast("success", "Success", "Notification deleted successfully");
         } catch (error) {
-            showToast("error", "Error", "Failed to remove notification");
+            showToast("error", "Error", "Failed to delete notification");
+        }
+    };
+
+    const confirmBulkDeleteNotifications = () => {
+        if (selectedNotifications.length === 0) return;
+        
+        confirmDialog({
+            message: `Are you sure you want to delete ${selectedNotifications.length} selected notification(s)?`,
+            header: 'Bulk Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => bulkDeleteNotifications(),
+        });
+    };
+
+    const bulkDeleteNotifications = async () => {
+        if (selectedNotifications.length === 0) return;
+        
+        try {
+            const deletePromises = selectedNotifications.map(notification => apiClient.deleteNotification(notification.id));
+            await Promise.all(deletePromises);
+            
+            // Remove deleted notifications from local state
+            setNotifications(prev => 
+                prev.filter(notification => 
+                    !selectedNotifications.some(selected => selected.id === notification.id)
+                )
+            );
+            
+            setTotalRecords(prev => prev - selectedNotifications.length);
+            setSelectedNotifications([]);
+            showToast("success", "Success", `${selectedNotifications.length} notification(s) deleted successfully`);
+        } catch (error) {
+            showToast("error", "Error", "Failed to delete some notifications");
         }
     };
 
@@ -259,9 +291,6 @@ export default function NotificationsPage() {
     };
 
     const statusBodyTemplate = (rowData: Notification) => {
-        if (rowData.isArchived) {
-            return <Tag value="Archived" severity="secondary" />;
-        }
         return rowData.isRead ? (
             <Tag value="Read" severity="success" />
         ) : (
@@ -322,6 +351,16 @@ export default function NotificationsPage() {
                             <span className="text-600 text-lg">Manage system notifications and alerts</span>
                         </div>
                         <div className="flex gap-3 justify-content-end">
+                                                         {selectedNotifications.length > 0 && (
+                                 <Button
+                                     label={`Delete Selected (${selectedNotifications.length})`}
+                                     icon="pi pi-trash"
+                                     onClick={confirmBulkDeleteNotifications}
+                                     severity="danger"
+                                     className="p-button-raised"
+                                     size="large"
+                                 />
+                             )}
                             <Button
                                 label="Mark All as Read"
                                 icon="pi pi-check-double"
@@ -397,7 +436,15 @@ export default function NotificationsPage() {
                         onSort={onSortChange}
                         emptyMessage={loading ? "Loading..." : "No notifications found"}
                         className="p-datatable-sm"
+                        selectionMode="multiple"
+                        selection={selectedNotifications}
+                        onSelectionChange={(e) => setSelectedNotifications(e.value as Notification[])}
                     >
+                        <Column 
+                            selectionMode="multiple" 
+                            headerStyle={{ width: '3rem' }}
+                            style={{ width: '3rem' }}
+                        />
                         <Column
                             field="type"
                             header="Type"

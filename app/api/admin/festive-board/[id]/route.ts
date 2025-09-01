@@ -76,7 +76,7 @@ export async function PUT(
     try {
 
     const body = await request.json();
-    const { title, description, mealIds } = body;
+    const { title, mainCourse, description, mealIds } = body;
 
     // Validate required fields
     if (!title || !mealIds || !Array.isArray(mealIds)) {
@@ -117,6 +117,7 @@ export async function PUT(
       where: { id: params.id },
       data: {
         title,
+        mainCourse,
         description,
         meals: {
           deleteMany: {},

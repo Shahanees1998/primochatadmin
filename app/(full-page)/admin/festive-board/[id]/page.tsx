@@ -217,6 +217,14 @@ export default function FestiveBoardViewPage() {
                   </div>
                 </div>
               </div>
+              {board.mainCourse && (
+                <div className="col-12 md:col-6">
+                  <div className="mb-3">
+                    <label className="font-bold text-600">Main Course</label>
+                    <div className="text-lg">{board.mainCourse}</div>
+                  </div>
+                </div>
+              )}
               {board.description && (
                 <div className="col-12">
                   <div className="mb-3">

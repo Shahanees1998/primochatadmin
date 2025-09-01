@@ -92,6 +92,7 @@ export default function TrestleBoardPage() {
     const [saveLoading, setSaveLoading] = useState(false);
     const [sortField, setSortField] = useState<string | undefined>(undefined);
     const [sortOrder, setSortOrder] = useState<SortOrderType | undefined>(undefined);
+    const [selectedTrestleBoards, setSelectedTrestleBoards] = useState<TrestleBoard[]>([]);
     const toast = useRef<Toast>(null);
     const debouncedSearchTerm = useDebounce(userSearchQuery, 500);
     const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
@@ -416,6 +417,33 @@ export default function TrestleBoardPage() {
         }
     };
 
+    const confirmBulkDeleteTrestleBoards = () => {
+        if (selectedTrestleBoards.length === 0) return;
+        
+        confirmDialog({
+            message: `Are you sure you want to delete ${selectedTrestleBoards.length} selected trestle board(s)?`,
+            header: "Bulk Delete Confirmation",
+            icon: "pi pi-exclamation-triangle",
+            acceptClassName: "p-button-danger",
+            accept: () => bulkDeleteTrestleBoards(),
+        });
+    };
+
+    const bulkDeleteTrestleBoards = async () => {
+        if (selectedTrestleBoards.length === 0) return;
+        
+        try {
+            const deletePromises = selectedTrestleBoards.map(board => apiClient.deleteTrestleBoard(board.id));
+            await Promise.all(deletePromises);
+            
+            setSelectedTrestleBoards([]);
+            showToast("success", "Success", `${selectedTrestleBoards.length} trestle board(s) deleted successfully`);
+            loadTrestleBoards(); // Reload the list
+        } catch (error) {
+            showToast("error", "Error", "Failed to delete some trestle boards");
+        }
+    };
+
     const getCategorySeverity = (category: string) => {
         switch (category) {
             case "REGULAR_MEETING": return "info";
@@ -539,42 +567,55 @@ export default function TrestleBoardPage() {
         }
     };
 
-    const header = useMemo(() => (
-        <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
-            <div className="flex flex-column">
-                <h2 className="text-2xl font-bold m-0">Trestle Board Management</h2>
-                <span className="text-600">Create and manage all trestleBoards</span>
-            </div>
-            <div className="flex gap-2">
-                <span className="p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText
-                        value={globalFilterValue}
-                        onChange={onGlobalFilterChange}
-                        placeholder="Search trestleBoards..."
-                        className="w-full"
+        const header = useMemo(() => (
+        <>
+            <div className="w-full flex justify-content-end">
+                {selectedTrestleBoards.length > 0 && (
+                    <Button
+                        label={`Delete Selected (${selectedTrestleBoards.length})`}
+                        icon="pi pi-trash"
+                        onClick={confirmBulkDeleteTrestleBoards}
+                        severity="danger"
+                        className="p-button-raised mb-4"
                     />
-                </span>
-                {/* <Button
-                    label="My Calendar"
-                    icon="pi pi-calendar"
-                    onClick={() => router.push('/admin/calendar')}
-                    severity="info"
-                /> */}
-                <Button
-                    label="Bulk Upload"
-                    icon="pi pi-upload"
-                    onClick={() => setShowBulkUploadDialog(true)}
-                    severity="info"
-                />
-                <Button
-                    label="Create TrestleBoard"
-                    icon="pi pi-plus"
-                    onClick={openNewTrestleBoardDialog}
-                    severity="success"
-                />
+                )}
             </div>
-        </div>
+            <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
+                <div className="flex flex-column">
+                    <h2 className="text-2xl font-bold m-0">Trestle Board Management</h2>
+                    <span className="text-600">Create and manage all trestleBoards</span>
+                </div>
+                <div className="flex gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            value={globalFilterValue}
+                            onChange={onGlobalFilterChange}
+                            placeholder="Search trestleBoards..."
+                            className="w-full"
+                        />
+                    </span>
+                    {/* <Button
+                        label="My Calendar"
+                        icon="pi pi-calendar"
+                        onClick={() => router.push('/admin/calendar')}
+                        severity="info"
+                    /> */}
+                    <Button
+                        label="Bulk Upload"
+                        icon="pi pi-upload"
+                        onClick={() => setShowBulkUploadDialog(true)}
+                        severity="info"
+                    />
+                    <Button
+                        label="Create TrestleBoard"
+                        icon="pi pi-plus"
+                        onClick={openNewTrestleBoardDialog}
+                        severity="success"
+                    />
+                </div>
+            </div>
+        </>
     ), [globalFilterValue]);
 
     return (
@@ -590,6 +631,11 @@ export default function TrestleBoardPage() {
                             className="p-datatable-sm"
                             header={header}
                         >
+                            <Column 
+                                selectionMode="multiple" 
+                                headerStyle={{ width: '3rem' }}
+                                style={{ width: '3rem' }}
+                            />
                             <Column 
                                 field="title" 
                                 header="Title" 
@@ -660,7 +706,15 @@ export default function TrestleBoardPage() {
                             sortField={sortField}
                             sortOrder={sortOrder}
                             loadingIcon="pi pi-spinner"
+                            selectionMode="multiple"
+                            selection={selectedTrestleBoards}
+                            onSelectionChange={(e) => setSelectedTrestleBoards(e.value as TrestleBoard[])}
                         >
+                            <Column 
+                                selectionMode="multiple" 
+                                headerStyle={{ width: '3rem' }}
+                                style={{ width: '3rem' }}
+                            />
                             <Column field="title" header="Title" style={{ minWidth: "200px" }} />
                             <Column field="date" header="Date" body={(rowData) => (
                                 new Date(rowData.date).toLocaleDateString()

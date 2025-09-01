@@ -31,6 +31,7 @@ model User {
   lastLogin            DateTime?
   resetToken           String?
   resetTokenExpiry     DateTime?
+  isPasswordChanged    Boolean    @default(false)
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
@@ -43,6 +44,7 @@ model User {
   chatParticipants     ChatParticipant[]
   supportRequests      SupportRequest[]
   documents            Document[]
+  documentCategories   DocumentCategory[]
   phoneBookEntry       PhoneBookEntry?
   announcements        Announcement[]
   moderator            Moderator?
@@ -141,6 +143,21 @@ model Notification {
   @@map("notifications")
 }
 
+model DocumentCategory {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String   @unique
+  description String?
+  createdBy   String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user      User       @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  documents Document[]
+
+  @@map("document_categories")
+}
+
 model Document {
   id           String             @id @default(auto()) @map("_id") @db.ObjectId
   title        String
@@ -150,11 +167,13 @@ model Document {
   filePublicId String? // Cloudinary public_id for download
   fileType     String?
   fileSize     Int?
-  category     String?
+  documentType String?            // Auto-determined document type (PDF, IMAGE, DOCUMENT, etc.)
+  categoryId   String?            @db.ObjectId
   tags         String[]
   permissions  DocumentPermission @default(MEMBER_ONLY)
   uploadedBy   String             @db.ObjectId
   user         User               @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  category     DocumentCategory?  @relation(fields: [categoryId], references: [id])
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
@@ -429,6 +448,7 @@ model FestiveBoard {
   month       Int // 1-12 for January to December
   year        Int
   title       String
+  mainCourse  String?
   description String?
   createdById String   @db.ObjectId
   createdAt   DateTime @default(now())

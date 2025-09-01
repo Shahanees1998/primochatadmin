@@ -233,6 +233,17 @@ class ApiClient {
         return this.post('/users/change-password', { currentPassword, newPassword });
     }
 
+    async editProfile(profileData: {
+        firstName: string;
+        lastName: string;
+        phone?: string;
+        profileImage?: string;
+        profileImagePublicId?: string;
+        isPasswordChanged?: boolean;
+    }) {
+        return this.put<any>('/users/edit-profile', profileData);
+    }
+
     // TrestleBoard methods
     async getTrestleBoards(params?: {
         page?: number;
@@ -293,6 +304,7 @@ class ApiClient {
         limit?: number;
         search?: string;
         category?: string;
+        documentType?: string;
         sortField?: string;
         sortOrder?: number;
     }) {
@@ -328,7 +340,7 @@ class ApiClient {
     async updateDocument(id: string, documentData: {
         title?: string;
         description?: string;
-        category?: string;
+        categoryId?: string;
         tags?: string[];
         permissions?: 'PUBLIC' | 'MEMBER_ONLY' | 'ADMIN_ONLY';
     }) {
@@ -370,6 +382,45 @@ class ApiClient {
                 true
             );
         }
+    }
+
+    // Document Category methods
+    async getDocumentCategories(params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+    }) {
+        return this.get<{
+            categories: any[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                pages: number;
+            };
+        }>('/admin/document-categories', params);
+    }
+
+    async getDocumentCategory(id: string) {
+        return this.get<any>(`/admin/document-categories/${id}`);
+    }
+
+    async createDocumentCategory(categoryData: {
+        title: string;
+        description?: string;
+    }) {
+        return this.post<any>('/admin/document-categories', categoryData);
+    }
+
+    async updateDocumentCategory(id: string, categoryData: {
+        title: string;
+        description?: string;
+    }) {
+        return this.put<any>(`/admin/document-categories/${id}`, categoryData);
+    }
+
+    async deleteDocumentCategory(id: string) {
+        return this.delete(`/admin/document-categories/${id}`);
     }
 
     async uploadProfileImage(formData: FormData): Promise<ApiResponse<any>> {
@@ -431,6 +482,18 @@ class ApiClient {
     async markNotificationAsRead(notificationId: string): Promise<ApiResponse<any>> {
         return this.request(`/admin/notifications/${notificationId}?action=read`, {
             method: 'PATCH',
+        });
+    }
+
+    async archiveNotification(notificationId: string): Promise<ApiResponse<any>> {
+        return this.request(`/admin/notifications/${notificationId}?action=archive`, {
+            method: 'PATCH',
+        });
+    }
+
+    async deleteNotification(notificationId: string): Promise<ApiResponse<any>> {
+        return this.request(`/admin/notifications/${notificationId}`, {
+            method: 'DELETE',
         });
     }
 
@@ -824,6 +887,7 @@ class ApiClient {
         month: number;
         year: number;
         title: string;
+        mainCourse?: string;
         description?: string;
         mealIds: string[];
     }) {
@@ -832,6 +896,7 @@ class ApiClient {
 
     async updateFestiveBoard(id: string, boardData: {
         title: string;
+        mainCourse?: string;
         description?: string;
         mealIds: string[];
     }) {

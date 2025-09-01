@@ -102,6 +102,7 @@ export default function MembersPage() {
     const [saveLoading, setSaveLoading] = useState(false);
     const [sortField, setSortField] = useState<string | undefined>(undefined);
     const [sortOrder, setSortOrder] = useState<number | undefined>(undefined);
+    const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
 
     // Use debounce hook for search
     const debouncedFilterValue = useDebounce(globalFilterValue, 500);
@@ -158,7 +159,7 @@ export default function MembersPage() {
 
     const openNewMemberDialog = async () => {
         setEditingUser(null);
-        
+
         setUserForm({
             firstName: "",
             lastName: "",
@@ -246,10 +247,37 @@ export default function MembersPage() {
         });
     };
 
+    const confirmBulkDeleteUsers = () => {
+        if (selectedUsers.length === 0) return;
+
+        confirmDialog({
+            message: `Are you sure you want to delete ${selectedUsers.length} selected user(s)?`,
+            header: "Bulk Delete Confirmation",
+            icon: "pi pi-exclamation-triangle",
+            acceptClassName: "p-button-danger",
+            accept: () => bulkDeleteUsers(),
+        });
+    };
+
+    const bulkDeleteUsers = async () => {
+        if (selectedUsers.length === 0) return;
+
+        try {
+            const deletePromises = selectedUsers.map(user => apiClient.deleteUser(user.id));
+            await Promise.all(deletePromises);
+
+            setSelectedUsers([]);
+            showToast("success", "Success", `${selectedUsers.length} user(s) deleted successfully`);
+            loadMembers(); // Reload the list
+        } catch (error) {
+            showToast("error", "Error", "Failed to delete some users");
+        }
+    };
+
     const deleteUser = async (userId: string) => {
         try {
             const response = await apiClient.deleteUser(userId);
-            
+
             if (response.error) {
                 throw new Error(response.error);
             }
@@ -339,7 +367,7 @@ export default function MembersPage() {
         const template = `firstname,lastname,email,phone,status,membershipnumber,joindate,paiddate
 John,Doe,john.doe@example.com,+1234567890,PENDING,primo1234,2024-01-15,2024-01-15
 Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-01-16`;
-        
+
         const blob = new Blob([template], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -358,7 +386,7 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
         setBulkUploadLoading(true);
         setBulkUploadProgress(0);
         setBulkUploadStatus("Starting bulk upload...");
-        
+
         let successCount = 0;
         let errorCount = 0;
         const errors: string[] = [];
@@ -366,7 +394,7 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
         for (let i = 0; i < csvData.length; i++) {
             const userData = csvData[i];
             setBulkUploadStatus(`Processing ${userData.firstName} ${userData.lastName} (${i + 1}/${csvData.length})`);
-            
+
             try {
                 const response = await apiClient.createUser({
                     firstName: userData.firstName,
@@ -394,12 +422,12 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
         }
 
         setBulkUploadStatus(`Upload completed. ${successCount} successful, ${errorCount} failed.`);
-        
+
         if (successCount > 0) {
             showToast("success", "Bulk Upload Complete", `${successCount} members added successfully`);
             loadMembers(); // Refresh the list
         }
-        
+
         if (errorCount > 0) {
             showToast("warn", "Bulk Upload Issues", `${errorCount} members failed to upload. Check the console for details.`);
             console.error("Bulk upload errors:", errors);
@@ -420,8 +448,8 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
         return (
             <div className="flex align-items-center gap-2">
                 <Avatar
-                    image={rowData.profileImagePublicId ? 
-                        getProfileImageUrl(rowData.profileImagePublicId, 'small') : 
+                    image={rowData.profileImagePublicId ?
+                        getProfileImageUrl(rowData.profileImagePublicId, 'small') :
                         rowData.profileImage
                     }
                     icon={!rowData.profileImage && !rowData.profileImagePublicId ? "pi pi-user" : undefined}
@@ -446,7 +474,7 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
                     tooltip="View Details"
                     onClick={() => router.push(`/admin/users/${rowData.id}`)}
                 /> */}
-               {rowData.role !== "ADMIN" && <Button
+                {rowData.role !== "ADMIN" && <Button
                     icon="pi pi-pencil"
                     size="small"
                     text
@@ -454,48 +482,64 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
                     tooltip="Edit Member"
                     onClick={() => openEditUserDialog(rowData)}
                 />}
-              {rowData.role !== "ADMIN" && <Button
+                {rowData.role !== "ADMIN" && <Button
                     icon="pi pi-trash"
                     size="small"
                     text
                     severity="danger"
                     tooltip="Delete Member"
-                    onClick={() => confirmDeleteUser(rowData)}
-                />}
-            </div>
-        );
-    };
+                        onClick={() => confirmDeleteUser(rowData)}
+                    />}
+                </div>
+            );
+        };
 
-    const header = useMemo(() => (
-        <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
-            <div className="flex flex-column">
-                <h2 className="text-2xl font-bold m-0">Member Management</h2>
-                <span className="text-600">Manage all registered members</span>
-            </div>
-            <div className="flex gap-2">
-                <span className="p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText
-                        value={globalFilterValue}
-                        onChange={onGlobalFilterChange}
-                        placeholder="Search members..."
-                        className="w-full"
+        const header = useMemo(() => (
+            <>
+                <div className="w-full flex justify-content-end">
+                    {selectedUsers.length > 0 && (
+                        <Button
+                            label={`Delete Selected (${selectedUsers.length})`}
+                            icon="pi pi-trash"
+                            onClick={confirmBulkDeleteUsers}
+                            severity="danger"
+                            className="p-button-raised mb-4"
+                        />
+                    )}
+                </div>
+                <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
+
+                    <div className="flex flex-column">
+                        <h2 className="text-2xl font-bold m-0">Member Management</h2>
+                        <span className="text-600">Manage all registered members</span>
+                    </div>
+                    <div className="flex gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            value={globalFilterValue}
+                            onChange={onGlobalFilterChange}
+                            placeholder="Search members..."
+                            className="w-full"
+                        />
+                    </span>
+
+                    <Button
+                        label="Bulk Upload"
+                        icon="pi pi-upload"
+                        onClick={() => setShowBulkUploadDialog(true)}
+                        severity="info"
                     />
-                </span>
-                <Button
-                    label="Bulk Upload"
-                    icon="pi pi-upload"
-                    onClick={() => setShowBulkUploadDialog(true)}
-                    severity="info"
-                />
-                <Button
-                    label="Add Member"
-                    icon="pi pi-plus"
-                    onClick={openNewMemberDialog}
-                    severity="success"
-                />
+                    <Button
+                        label="Add Member"
+                        icon="pi pi-plus"
+                        onClick={openNewMemberDialog}
+                        severity="success"
+                    />
+                </div>
             </div>
-        </div>
+        </>
+
     ), [globalFilterValue]);
 
     return (
@@ -506,106 +550,119 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
                         <div className="p-error p-3 mb-3">{error}</div>
                     )}
                     <>
-                    {loading ? (
-                        <DataTable
-                            value={Array.from({ length: 5 }, (_, i) => ({ id: i }))}
-                            className="p-datatable-sm"
-                            header={header}
-                        >
-                            <Column 
-                                field="firstName" 
-                                header="Name" 
-                                body={() => (
-                                    <div className="flex align-items-center gap-2">
-                                        <Skeleton shape="circle" size="2rem" />
-                                        <div className="flex flex-column gap-1">
-                                            <Skeleton width="120px" height="16px" />
-                                            <Skeleton width="100px" height="14px" />
+                        {loading ? (
+                            <DataTable
+                                value={Array.from({ length: 5 }, (_, i) => ({ id: i }))}
+                                className="p-datatable-sm"
+                                header={header}
+                            >
+                                <Column
+                                    selectionMode="multiple"
+                                    headerStyle={{ width: '3rem' }}
+                                    style={{ width: '3rem' }}
+                                />
+                                <Column
+                                    field="firstName"
+                                    header="Name"
+                                    body={() => (
+                                        <div className="flex align-items-center gap-2">
+                                            <Skeleton shape="circle" size="2rem" />
+                                            <div className="flex flex-column gap-1">
+                                                <Skeleton width="120px" height="16px" />
+                                                <Skeleton width="100px" height="14px" />
+                                            </div>
                                         </div>
+                                    )}
+                                    style={{ minWidth: "200px" }}
+                                />
+                                <Column
+                                    field="email"
+                                    header="Email"
+                                    body={() => <Skeleton width="200px" height="16px" />}
+                                    style={{ minWidth: "200px" }}
+                                />
+                                <Column
+                                    field="phone"
+                                    header="Phone"
+                                    body={() => <Skeleton width="120px" height="16px" />}
+                                    style={{ minWidth: "150px" }}
+                                />
+                                <Column
+                                    field="paidDate"
+                                    header="Paid Date"
+                                    body={() => <Skeleton width="100px" height="16px" />}
+                                    style={{ minWidth: "120px" }}
+                                />
+                                <Column
+                                    field="role"
+                                    header="Role"
+                                    body={() => <Skeleton width="80px" height="24px" />}
+                                    style={{ minWidth: "100px" }}
+                                />
+                                <Column
+                                    header="Actions"
+                                    body={() => (
+                                        <div className="flex gap-2">
+                                            <Skeleton width="32px" height="32px" />
+                                            <Skeleton width="32px" height="32px" />
+                                            <Skeleton width="32px" height="32px" />
+                                        </div>
+                                    )}
+                                    style={{ width: "120px" }}
+                                />
+                            </DataTable>
+                        ) : (
+                            <DataTable
+                                value={users}
+                                paginator
+                                rows={rowsPerPage}
+                                totalRecords={totalRecords}
+                                lazy
+                                first={(currentPage - 1) * rowsPerPage}
+                                onPage={(e) => {
+                                    setCurrentPage((e.page || 0) + 1);
+                                    setRowsPerPage(e.rows || 10);
+                                }}
+                                loading={loading}
+                                filters={filters}
+                                filterDisplay="menu"
+                                globalFilterFields={["firstName", "lastName", "email", "membershipNumber"]}
+                                header={header}
+                                emptyMessage={error ? "Unable to load members. Please check your connection or try again later." : "No members found."}
+                                responsiveLayout="scroll"
+                                onSort={(e) => {
+                                    setSortField(e.sortField);
+                                    setSortOrder((e.sortOrder as 1 | 0 | -1 | undefined));
+                                }}
+                                sortField={sortField}
+                                sortOrder={sortOrder as 1 | 0 | -1 | undefined}
+                                selectionMode="multiple"
+                                selection={selectedUsers}
+                                onSelectionChange={(e) => setSelectedUsers(e.value as User[])}
+                            >
+                                <Column
+                                    selectionMode="multiple"
+                                    headerStyle={{ width: '3rem' }}
+                                    style={{ width: '3rem' }}
+                                />
+                                <Column field="firstName" header="Name" body={nameBodyTemplate} style={{ minWidth: "200px" }} />
+                                <Column field="email" header="Email" style={{ minWidth: "200px" }} />
+                                <Column field="phone" header="Phone" style={{ minWidth: "150px" }} />
+                                <Column field="paidDate" header="Paid Date" body={(rowData) => (
+                                    rowData.paidDate ? new Date(rowData.paidDate).toLocaleDateString() : "Not paid"
+                                )} style={{ minWidth: "120px" }} />
+                                <Column field="status" header="Status" body={(rowData) => (
+                                    <div className="flex align-items-center gap-2">
+                                        <Tag value={rowData.status} severity={getStatusSeverity(rowData.status)} />
+                                        {rowData.isDeleted && <Tag value="Deleted" severity="danger" />}
                                     </div>
-                                )}
-                                style={{ minWidth: "200px" }}
-                            />
-                            <Column 
-                                field="email" 
-                                header="Email" 
-                                body={() => <Skeleton width="200px" height="16px" />}
-                                style={{ minWidth: "200px" }}
-                            />
-                            <Column 
-                                field="phone" 
-                                header="Phone" 
-                                body={() => <Skeleton width="120px" height="16px" />}
-                                style={{ minWidth: "150px" }}
-                            />
-                            <Column 
-                                field="paidDate" 
-                                header="Paid Date" 
-                                body={() => <Skeleton width="100px" height="16px" />}
-                                style={{ minWidth: "120px" }}
-                            />
-                            <Column 
-                                field="role" 
-                                header="Role" 
-                                body={() => <Skeleton width="80px" height="24px" />}
-                                style={{ minWidth: "100px" }}
-                            />
-                            <Column 
-                                header="Actions" 
-                                body={() => (
-                                    <div className="flex gap-2">
-                                        <Skeleton width="32px" height="32px" />
-                                        <Skeleton width="32px" height="32px" />
-                                        <Skeleton width="32px" height="32px" />
-                            </div>
-                                )}
-                                style={{ width: "120px" }}
-                            />
-                        </DataTable>
-                    ) : (
-                        <DataTable
-                            value={users}
-                            paginator
-                            rows={rowsPerPage}
-                            totalRecords={totalRecords}
-                            lazy
-                            first={(currentPage - 1) * rowsPerPage}
-                            onPage={(e) => {
-                                setCurrentPage((e.page || 0) + 1);
-                                setRowsPerPage(e.rows || 10);
-                            }}
-                            loading={loading}
-                            filters={filters}
-                            filterDisplay="menu"
-                            globalFilterFields={["firstName", "lastName", "email", "membershipNumber"]}
-                            header={header}
-                            emptyMessage={error ? "Unable to load members. Please check your connection or try again later." : "No members found."}
-                            responsiveLayout="scroll"
-                            onSort={(e) => {
-                                setSortField(e.sortField);
-                                setSortOrder((e.sortOrder as 1 | 0 | -1 | undefined));
-                            }}
-                            sortField={sortField}
-                            sortOrder={sortOrder as 1 | 0 | -1 | undefined}
-                        >
-                            <Column field="firstName" header="Name" body={nameBodyTemplate} style={{ minWidth: "200px" }} />
-                            <Column field="email" header="Email" style={{ minWidth: "200px" }} />
-                            <Column field="phone" header="Phone" style={{ minWidth: "150px" }} />
-                            <Column field="paidDate" header="Paid Date" body={(rowData) => (
-                                rowData.paidDate ? new Date(rowData.paidDate).toLocaleDateString() : "Not paid"
-                            )} style={{ minWidth: "120px" }} />
-                            <Column field="status" header="Status" body={(rowData) => (
-                                <div className="flex align-items-center gap-2">
-                                    <Tag value={rowData.status} severity={getStatusSeverity(rowData.status)} />
-                                    {rowData.isDeleted && <Tag value="Deleted" severity="danger" />}
-                                </div>
-                            )} style={{ minWidth: "150px" }} />
-                            {/* <Column field="joinDate" header="Join Date" body={(rowData) => (
+                                )} style={{ minWidth: "150px" }} />
+                                {/* <Column field="joinDate" header="Join Date" body={(rowData) => (
                                 new Date(rowData.joinDate || "").toLocaleDateString()
                             )} style={{ minWidth: "120px" }} /> */}
-                            <Column body={actionBodyTemplate} style={{ width: "150px" }} />
-                        </DataTable>
-                    )}
+                                <Column body={actionBodyTemplate} style={{ width: "150px" }} />
+                            </DataTable>
+                        )}
                     </>
                 </Card>
             </div>
@@ -738,7 +795,7 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
                                     placeholder="Set password (leave blank for default)"
                                     className="w-full"
                                 />
-                                <i 
+                                <i
                                     className={`pi ${showPassword ? 'pi-eye-slash' : 'pi-eye'} cursor-pointer`}
                                     onClick={() => setShowPassword(!showPassword)}
                                     style={{ cursor: 'pointer' }}
@@ -759,17 +816,17 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
                 onHide={() => setShowBulkUploadDialog(false)}
                 footer={
                     <div className="flex gap-2 justify-content-end">
-                        <Button 
-                            label="Download Template" 
-                            icon="pi pi-download" 
-                            text 
+                        <Button
+                            label="Download Template"
+                            icon="pi pi-download"
+                            text
                             onClick={downloadCSVTemplate}
                         />
-                        <Button 
-                            label="Cancel" 
-                            icon="pi pi-times" 
-                            text 
-                            onClick={() => setShowBulkUploadDialog(false)} 
+                        <Button
+                            label="Cancel"
+                            icon="pi pi-times"
+                            text
+                            onClick={() => setShowBulkUploadDialog(false)}
                         />
                         <Button
                             label={bulkUploadLoading ? "Uploading..." : "Upload Members"}

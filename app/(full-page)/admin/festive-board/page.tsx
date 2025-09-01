@@ -19,6 +19,7 @@ interface FestiveBoard {
   month: number;
   year: number;
     title: string;
+    mainCourse?: string;
     description?: string;
   createdBy: {
     id: string;
@@ -68,6 +69,7 @@ export default function FestiveBoardPage() {
     const [totalRecords, setTotalRecords] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [selectedBoards, setSelectedBoards] = useState<FestiveBoard[]>([]);
   const toast = React.useRef<Toast>(null);
 
     useEffect(() => {
@@ -140,6 +142,40 @@ export default function FestiveBoardPage() {
     }
   };
 
+  const confirmBulkDeleteBoards = () => {
+    if (selectedBoards.length === 0) return;
+    
+    confirmDialog({
+      message: `Are you sure you want to delete ${selectedBoards.length} selected festive board(s)?`,
+      header: 'Bulk Delete Confirmation',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => bulkDeleteBoards(),
+    });
+  };
+
+  const bulkDeleteBoards = async () => {
+    if (selectedBoards.length === 0) return;
+    
+    try {
+      const deletePromises = selectedBoards.map(board => apiClient.deleteFestiveBoard(board.id));
+      await Promise.all(deletePromises);
+      
+      setSelectedBoards([]);
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Success',
+        detail: `${selectedBoards.length} festive board(s) deleted successfully`
+      });
+      loadBoards(); // Reload the list
+    } catch (error) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to delete some festive boards'
+      });
+    }
+  };
+
   const getMonthName = (month: number) => {
     return monthOptions.find(m => m.value === month)?.label || 'Unknown';
   };
@@ -149,6 +185,9 @@ export default function FestiveBoardPage() {
       <div className="flex flex-column">
         <span className="font-bold">{getMonthName(rowData.month)} {rowData.year}</span>
         <span className="text-sm text-600">{rowData.title}</span>
+        {rowData.mainCourse && (
+          <span className="text-xs text-500">Main: {rowData.mainCourse}</span>
+        )}
       </div>
     );
   };
@@ -215,32 +254,45 @@ export default function FestiveBoardPage() {
     };
 
   const header = useMemo(() => (
-        <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
-            <div className="flex flex-column">
-                <h2 className="text-2xl font-bold m-0">Festive Board Management</h2>
-        <span className="text-600">Manage monthly meal boards</span>
+        <>
+            <div className="w-full flex justify-content-end">
+                {selectedBoards.length > 0 && (
+                    <Button
+                        label={`Delete Selected (${selectedBoards.length})`}
+                        icon="pi pi-trash"
+                        onClick={confirmBulkDeleteBoards}
+                        severity="danger"
+                        className="p-button-raised mb-4"
+                    />
+                )}
             </div>
-            <div className="flex gap-2">
-                <span className="p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText
+            <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
+                <div className="flex flex-column">
+                    <h2 className="text-2xl font-bold m-0">Festive Board Management</h2>
+        <span className="text-600">Manage monthly meal boards</span>
+                </div>
+                <div className="flex gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi-search" />
+                        <InputText
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Search boards..."
                         className="w-full"
                     />
-                </span>
+                    </span>
 
-                <Button
-                    label="Create Board"
-                    icon="pi pi-plus"
+                    <Button
+                        label="Create Meal"
+                        icon="pi pi-plus"
           onClick={() => router.push('/admin/festive-board/create')}
-                    severity="success"
-                />
+                        severity="success"
+                    />
 
+                </div>
             </div>
-        </div>
-  ), [searchTerm]);
+        </>
+  ), [searchTerm, selectedBoards.length]);
 
   const skeletonRows = Array.from({ length: 5 }, (_, i) => ({
     id: i.toString(),
@@ -269,6 +321,11 @@ export default function FestiveBoardPage() {
             className="p-datatable-sm"
             header={header}
           >
+            <Column 
+              selectionMode="multiple" 
+              headerStyle={{ width: '3rem' }}
+              style={{ width: '3rem' }}
+            />
             <Column 
               field="month" 
               header="Month/Year" 
@@ -349,7 +406,15 @@ export default function FestiveBoardPage() {
                             header={header}
           emptyMessage="No Festive boards found"
           className="p-datatable-sm"
+          selectionMode="multiple"
+          selection={selectedBoards}
+          onSelectionChange={(e) => setSelectedBoards(e.value as FestiveBoard[])}
         >
+          <Column 
+            selectionMode="multiple" 
+            headerStyle={{ width: '3rem' }}
+            style={{ width: '3rem' }}
+          />
           <Column 
             field="month" 
             header="Month/Year" 

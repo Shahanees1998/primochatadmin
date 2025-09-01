@@ -97,6 +97,31 @@ export async function PATCH(
                 });
             }
 
+            if (action === 'archive') {
+                const notification = await prisma.notification.update({
+                    where: { 
+                        id: params.id,
+                        userId: authenticatedReq.user!.userId 
+                    },
+                    data: { isArchived: true },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                });
+
+                return NextResponse.json({
+                    ...notification,
+                    createdAt: notification.createdAt.toISOString(),
+                });
+            }
+
             return NextResponse.json(
                 { error: 'Invalid action' },
                 { status: 400 }
