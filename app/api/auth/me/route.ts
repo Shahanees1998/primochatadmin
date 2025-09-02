@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
@@ -12,25 +13,39 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Fetch complete user data from database to include all fields
+    const completeUser = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        status: true,
+        membershipNumber: true,
+        profileImage: true,
+        profileImagePublicId: true,
+        joinDate: true,
+        paidDate: true,
+        lastLogin: true,
+        isPasswordChanged: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!completeUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      user: {
-        id: user.userId,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-        role: user.role,
-        status: user.status,
-        membershipNumber: user.membershipNumber,
-        profileImage: user.profileImage,
-        profileImagePublicId: user.profileImagePublicId,
-        joinDate: user.joinDate,
-        paidDate: user.paidDate,
-        lastLogin: user.lastLogin,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
+      user: completeUser,
     });
   });
 } 

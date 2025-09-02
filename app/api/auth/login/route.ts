@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
         joinDate: true,
         paidDate: true,
         lastLogin: true,
+        isPasswordChanged: true,
         createdAt: true,
         updatedAt: true,
       },
