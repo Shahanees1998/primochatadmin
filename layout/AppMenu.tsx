@@ -90,11 +90,11 @@ const AppMenu = () => {
                 //     icon: "pi pi-fw pi-upload",
                 //     to: "/admin/documents/upload",
                 // },
-                // {
-                //     label: "Categories",
-                //     icon: "pi pi-fw pi-folder",
-                //     to: "/admin/documents/categories",
-                // },
+                {
+                    label: "Categories",
+                    icon: "pi pi-fw pi-folder",
+                    to: "/admin/documents/categories",
+                },
             ],
         },
         {

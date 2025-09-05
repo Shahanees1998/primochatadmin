@@ -1,6 +1,7 @@
 import prismadb from '@/configs/prismadb';
 import { pusherServer } from '@/lib/realtime';
 import { NotificationType } from '@prisma/client';
+import { LCMService, LCMPushNotification } from '@/lib/lcmService';
 
 export interface CreateNotificationData {
     userId: string;
@@ -10,6 +11,7 @@ export interface CreateNotificationData {
     relatedId?: string;
     relatedType?: string;
     metadata?: any;
+    sendPush?: boolean; // Whether to send push notification
 }
 
 export class NotificationService {
@@ -42,6 +44,30 @@ export class NotificationService {
                 metadata: notification.metadata
             });
 
+            // Send push notification if requested
+            if (data.sendPush !== false) { // Default to true unless explicitly set to false
+                try {
+                    const pushNotification: LCMPushNotification = {
+                        title: data.title,
+                        body: data.message,
+                        data: {
+                            notificationId: notification.id,
+                            type: data.type,
+                            relatedId: data.relatedId,
+                            relatedType: data.relatedType,
+                            ...data.metadata
+                        },
+                        badge: 1,
+                        priority: 'high'
+                    };
+
+                    await LCMService.sendToUser(data.userId, pushNotification);
+                } catch (pushError) {
+                    console.error('Error sending push notification:', pushError);
+                    // Don't fail the main notification creation if push fails
+                }
+            }
+
             return notification;
         } catch (error) {
             console.error('Error creating notification:', error);
@@ -64,7 +90,8 @@ export class NotificationService {
                 senderId: message.senderId,
                 chatRoomId: chatRoom.id,
                 chatRoomTitle: chatRoom.title
-            }
+            },
+            sendPush: true // Always send push for chat messages
         });
     }
 
@@ -76,7 +103,8 @@ export class NotificationService {
             type: NotificationType.MEAL_SELECTION,
             relatedId: mealData.festiveBoardId,
             relatedType: 'festive_board',
-            metadata: mealData
+            metadata: mealData,
+            sendPush: true
         });
     }
 
@@ -88,7 +116,8 @@ export class NotificationService {
             type: NotificationType.TRESTLE_BOARD_ADDED,
             relatedId: trestleBoardData.id,
             relatedType: 'trestle_board',
-            metadata: trestleBoardData
+            metadata: trestleBoardData,
+            sendPush: true
         });
     }
 
@@ -100,7 +129,8 @@ export class NotificationService {
             type: NotificationType.USER_JOINED,
             relatedId: userData.id,
             relatedType: 'user',
-            metadata: userData
+            metadata: userData,
+            sendPush: false // Don't send push for user joined notifications
         });
     }
 

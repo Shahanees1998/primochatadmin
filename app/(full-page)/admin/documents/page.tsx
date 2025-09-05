@@ -445,12 +445,12 @@ export default function DocumentsPage() {
                     />
                 )}
             </div>
+  
+            <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
             <div className="flex flex-column mb-4">
                 <h2 className="text-2xl font-bold m-0">Document Management</h2>
                 <span className="text-600">Upload, organize, and manage documents</span>
             </div>
-            <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
-
                 <div className="flex gap-2">
                     <span className="p-input-icon-left">
                         <i className="pi pi-search" />
@@ -491,13 +491,7 @@ export default function DocumentsPage() {
                         showClear
                     />
                     <Button
-                        label="Manage Categories"
-                        icon="pi pi-tags"
-                        onClick={() => router.push('/admin/documents/categories')}
-                        outlined
-                    />
-                    <Button
-                        label="Upload Document"
+                        label="Upload"
                         icon="pi pi-upload"
                         onClick={openNewDocumentDialog}
                         severity="success"

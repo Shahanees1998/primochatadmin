@@ -32,6 +32,9 @@ model User {
   resetToken           String?
   resetTokenExpiry     DateTime?
   isPasswordChanged    Boolean    @default(false)
+  // LCM (Local Cloud Messaging) for mobile push notifications
+  lcmDeviceTokens      String[]   @default([]) // Array of device tokens for push notifications
+  lcmEnabled           Boolean    @default(true) // Whether user has enabled push notifications
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 

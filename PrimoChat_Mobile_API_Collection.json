@@ -917,6 +917,112 @@
       ]
     },
     {
+      "name": "LCM Push Notifications",
+      "description": "Local Cloud Messaging for mobile push notifications",
+      "item": [
+        {
+          "name": "Register Device Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"device_token_here\",\n  \"platform\": \"ios\",\n  \"appVersion\": \"1.0.0\",\n  \"deviceModel\": \"iPhone 14\",\n  \"osVersion\": \"iOS 16.0\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/lcm/register",
+              "host": ["{{base_url}}"],
+              "path": ["lcm", "register"]
+            },
+            "description": "Register a device token for push notifications. Call this when the app starts or when the token is refreshed.\n\nPlatform options: ios, android, web\n\nThis endpoint should be called:\n- On app startup\n- When push token is refreshed\n- After user login"
+          },
+          "response": []
+        },
+        {
+          "name": "Unregister Device Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"device_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/lcm/unregister",
+              "host": ["{{base_url}}"],
+              "path": ["lcm", "unregister"]
+            },
+            "description": "Unregister a device token. Call this when the user logs out or uninstalls the app."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notification Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/lcm/status",
+              "host": ["{{base_url}}"],
+              "path": ["lcm", "status"]
+            },
+            "description": "Get user's push notification status and registered devices."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Notification Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/lcm/status",
+              "host": ["{{base_url}}"],
+              "path": ["lcm", "status"]
+            },
+            "description": "Enable or disable push notifications for the user."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Chat",
       "item": [
         {
@@ -1662,6 +1768,27 @@
               "host": ["{{base_url}}"],
               "path": ["socket", "mark-read"]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Send LCM Push Notification (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sendToAll\": true,\n  \"title\": \"Test Push Notification\",\n  \"body\": \"This is a test push notification from the admin panel\",\n  \"data\": {\n    \"type\": \"test\",\n    \"action\": \"open_app\"\n  },\n  \"badge\": 1,\n  \"priority\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/lcm/send",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "lcm", "send"]
+            },
+            "description": "Send push notification to users. Admin access required.\n\nOptions:\n- sendToAll: true (send to all users)\n- userIds: [\"user_id_1\", \"user_id_2\"] (send to specific users)\n\nNotification fields:\n- title: Notification title\n- body: Notification message\n- data: Custom data payload\n- image: URL to notification image\n- badge: Badge count\n- sound: Sound file name\n- priority: high/normal\n- ttl: Time to live in seconds"
           },
           "response": []
         },
