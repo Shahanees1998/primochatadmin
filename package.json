@@ -44,6 +44,7 @@
     "ejs": "^3.1.9",
     "emoji-picker-react": "^4.7.18",
     "encoding": "^0.1.13",
+    "firebase-admin": "^13.5.0",
     "fluent-ffmpeg": "^2.1.2",
     "formidable": "^2.0.1",
     "froala-editor": "^4.0.10",

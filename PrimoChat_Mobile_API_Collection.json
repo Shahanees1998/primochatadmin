@@ -1023,6 +1023,55 @@
       ]
     },
     {
+      "name": "LCM Test Endpoints",
+      "description": "Test endpoints for LCM functionality",
+      "item": [
+        {
+          "name": "Test LCM Push Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"title\": \"Test Notification\",\n  \"body\": \"This is a test push notification from LCM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test-lcm",
+              "host": ["{{base_url}}"],
+              "path": ["test-lcm"]
+            },
+            "description": "Send a test push notification to a specific user. Useful for testing LCM functionality."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Device Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/test-lcm?userId={{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["test-lcm"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{user_id}}"
+                }
+              ]
+            },
+            "description": "Get the number of registered devices for a user."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Chat",
       "item": [
         {

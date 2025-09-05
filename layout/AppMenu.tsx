@@ -126,6 +126,11 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-phone",
                     to: "/admin/phonebook",
                 },
+                {
+                    label: "LCM Test",
+                    icon: "pi pi-fw pi-mobile",
+                    to: "/admin/lcm-test",
+                },
             ],
         },
         {

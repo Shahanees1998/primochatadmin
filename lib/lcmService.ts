@@ -244,11 +244,6 @@ export class LCMService {
    */
   private static async sendViaFCM(tokens: string[], notification: LCMPushNotification): Promise<void> {
     try {
-      // Note: You need to install firebase-admin and initialize it
-      // npm install firebase-admin
-      
-      // Example implementation (uncomment and configure as needed):
-      /*
       const admin = require('firebase-admin');
       
       if (!admin.apps.length) {
@@ -292,13 +287,15 @@ export class LCMService {
 
       const response = await admin.messaging().sendMulticast(message);
       console.log('FCM Response:', response);
-      */
       
-      console.log('FCM notification would be sent:', {
-        tokens: tokens.length,
-        notification,
-        message: 'Install firebase-admin and configure FIREBASE_* environment variables to enable FCM'
-      });
+      // Handle failed tokens
+      if (response.failureCount > 0) {
+        console.log('Failed tokens:', response.responses
+          .map((resp: any, idx: number) => resp.success ? null : tokens[idx])
+          .filter(Boolean)
+        );
+      }
+      
     } catch (error) {
       console.error('Error sending via FCM:', error);
       throw error;
