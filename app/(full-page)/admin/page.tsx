@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { Toast } from "primereact/toast";
 import { useRef } from "react";
 import { apiClient } from "@/lib/apiClient";
+import { useAuth } from "@/hooks/useAuth";
+import { canAccessSection, getDefaultRedirectPath } from "@/lib/rolePermissions";
 
 interface DashboardStats {
     totalUsers: number;
@@ -41,6 +43,7 @@ interface GrowthData {
 export default function AdminDashboard() {
     const router = useRouter();
     const toast = useRef<Toast>(null);
+    const { user, loading: authLoading } = useAuth();
     const [stats, setStats] = useState<DashboardStats>({
         totalUsers: 0,
         pendingApprovals: 0,
@@ -60,8 +63,16 @@ export default function AdminDashboard() {
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
     useEffect(() => {
-        loadDashboardData();
-    }, []);
+        if (user) {
+            // Redirect non-admin users to their allowed section
+            if (!canAccessSection(user.role, 'canAccessAll')) {
+                const redirectPath = getDefaultRedirectPath(user.role);
+                router.push(redirectPath);
+                return;
+            }
+            loadDashboardData();
+        }
+    }, [user, router]);
 
     const loadDashboardData = async () => {
         setLoading(true);
@@ -173,6 +184,23 @@ export default function AdminDashboard() {
         }
     };
 
+    // Show loading state while checking auth
+    if (authLoading) {
+        return (
+            <div className="flex align-items-center justify-content-center min-h-screen">
+                <div className="text-center">
+                    <i className="pi pi-spinner pi-spin text-4xl mb-3"></i>
+                    <p>Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Redirect if not authenticated or not admin
+    if (!user || !canAccessSection(user.role, 'canAccessAll')) {
+        return null; // Will redirect in useEffect
+    }
+
     const quickActions = [
         {
             title: "Manage Members",
@@ -180,6 +208,7 @@ export default function AdminDashboard() {
             icon: "pi pi-users",
             route: "/admin/users",
             color: "blue",
+            canAccess: canAccessSection(user.role, 'canAccessUsers'),
         },
         {
             title: "Trestle Boards",
@@ -188,6 +217,7 @@ export default function AdminDashboard() {
             route: "/admin/trestle-board",
             color: "green",
             refreshAction: () => loadDashboardData(),
+            canAccess: canAccessSection(user.role, 'canAccessTrestleBoard'),
         },
         {
             title: "Festive Boards",
@@ -196,6 +226,7 @@ export default function AdminDashboard() {
             route: "/admin/festive-board",
             color: "orange",
             refreshAction: () => loadDashboardData(),
+            canAccess: canAccessSection(user.role, 'canAccessFestiveBoard'),
         },
         {
             title: "Send Announcement",
@@ -203,6 +234,7 @@ export default function AdminDashboard() {
             icon: "pi pi-bullhorn",
             route: "/admin/communications/announcement",
             color: "purple",
+            canAccess: canAccessSection(user.role, 'canAccessAnnouncements'),
         },
         {
             title: "Support Requests",
@@ -210,6 +242,7 @@ export default function AdminDashboard() {
             icon: "pi pi-question-circle",
             route: "/admin/support",
             color: "red",
+            canAccess: canAccessSection(user.role, 'canAccessSupport'),
         },
         {
             title: "Upload Documents",
@@ -217,8 +250,9 @@ export default function AdminDashboard() {
             icon: "pi pi-file-plus",
             route: "/admin/documents",
             color: "indigo",
+            canAccess: canAccessSection(user.role, 'canAccessDocuments'),
         },
-    ];
+    ].filter(action => action.canAccess);
 
     const cardData = [
         {
@@ -226,38 +260,44 @@ export default function AdminDashboard() {
             label: "Total Members",
             color: "text-blue-500",
             route: "/admin/users",
+            canAccess: canAccessSection(user.role, 'canAccessUsers'),
         },
         {
             value: stats.pendingApprovals,
             label: "Pending Approvals",
             color: "text-orange-500",
             route: "/admin/users/pending",
+            canAccess: canAccessSection(user.role, 'canAccessUsers'),
         },
         {
             value: stats.activeTrestleBoards,
             label: "Active TrestleBoards",
             color: "text-green-500",
             route: "/admin/trestle-board",
+            canAccess: canAccessSection(user.role, 'canAccessTrestleBoard'),
         },
         {
             value: stats.activeFestiveBoards,
             label: "Active FestiveBoards",
             color: "text-yellow-500",
             route: "/admin/festive-board",
+            canAccess: canAccessSection(user.role, 'canAccessFestiveBoard'),
         },
         {
             value: stats.supportRequests,
             label: "Support Requests",
             color: "text-red-500",
             route: "/admin/support",
+            canAccess: canAccessSection(user.role, 'canAccessSupport'),
         },
         {
             value: stats.documents,
             label: "Documents",
             color: "text-purple-500",
             route: "/admin/documents",
+            canAccess: canAccessSection(user.role, 'canAccessDocuments'),
         },
-    ];
+    ].filter(card => card.canAccess);
 
     return (
         <div className="grid">

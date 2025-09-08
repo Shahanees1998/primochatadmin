@@ -300,6 +300,8 @@ model Moderator {
 enum UserRole {
   MEMBER
   ADMIN
+  ADMINLEVELTWO
+  ADMINLEVELTHREE
 }
 
 enum UserStatus {

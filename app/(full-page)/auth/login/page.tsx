@@ -9,6 +9,7 @@ import { LayoutContext } from "../../../../layout/context/layoutcontext";
 import { useAuth } from "@/hooks/useAuth";
 import { Toast } from "primereact/toast";
 import { useRef } from "react";
+import { getDefaultRedirectPath } from "@/lib/rolePermissions";
 
 const LoginContent = () => {
     const [rememberMe, setRememberMe] = useState(false);
@@ -27,7 +28,7 @@ const LoginContent = () => {
 
     // Redirect if already logged in
     if (user) {
-        const callbackUrl = searchParams.get('callbackUrl') || '/admin';
+        const callbackUrl = searchParams.get('callbackUrl') || getDefaultRedirectPath(user.role);
         router.push(callbackUrl);
         return null;
     }
@@ -58,8 +59,8 @@ const LoginContent = () => {
 
         setLoading(true);
         try {
-            await login(email, password);
-            const callbackUrl = searchParams.get('callbackUrl') || '/admin';
+            const user = await login(email, password);
+            const callbackUrl = searchParams.get('callbackUrl') || getDefaultRedirectPath(user.role);
             router.push(callbackUrl);
         } catch (error) {
             console.error('Login error:', error);

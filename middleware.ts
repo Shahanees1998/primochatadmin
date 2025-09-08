@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { AuthService } from '@/lib/auth';
+import { canAccessSection, getDefaultRedirectPath, isAdminRole } from '@/lib/rolePermissions';
 
 const ignorePaths: string[] = [
   '/api/auth',
@@ -11,6 +12,37 @@ const ignorePaths: string[] = [
   '/api/public',
   '/public',
 ];
+
+function getSectionFromPath(pathname: string): string | null {
+  // Extract section from admin paths like /admin/festive-board, /admin/trestle-board, etc.
+  const adminMatch = pathname.match(/^\/admin\/([^\/]+)/);
+  if (adminMatch) {
+    const section = adminMatch[1];
+    // Map path sections to permission keys
+    const sectionMap: Record<string, string> = {
+      'festive-board': 'canAccessFestiveBoard',
+      'trestle-board': 'canAccessTrestleBoard',
+      'documents': 'canAccessDocuments',
+      'users': 'canAccessUsers',
+      'settings': 'canAccessSettings',
+      'support': 'canAccessSupport',
+      'lcm-test': 'canAccessLCMTest',
+    };
+    return sectionMap[section] || null;
+  }
+  
+  // Check for nested paths like /admin/communications/announcements
+  const nestedMatch = pathname.match(/^\/admin\/communications\/([^\/]+)/);
+  if (nestedMatch) {
+    const section = nestedMatch[1];
+    const nestedSectionMap: Record<string, string> = {
+      'announcements': 'canAccessAnnouncements',
+    };
+    return nestedSectionMap[section] || null;
+  }
+  
+  return null;
+}
 
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
@@ -42,21 +74,41 @@ export async function middleware(req: NextRequest) {
 
     try {
       // Verify the token
-      await AuthService.verifyToken(token);
+      const payload = await AuthService.verifyToken(token);
       
       // Check if user has admin role
-      // if (payload.role !== 'ADMIN') {
-      //   // For API routes, return 403 instead of redirecting
-      //   if (pathname.startsWith('/api/')) {
-      //     return NextResponse.json(
-      //       { error: 'Admin access required' },
-      //       { status: 403}
-      //     );
-      //   }
+      if (!isAdminRole(payload.role)) {
+        // For API routes, return 403 instead of redirecting
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.json(
+            { error: 'Admin access required' },
+            { status: 403}
+          );
+        }
         
-      //   // For frontend routes, redirect to access denied
-      //   return NextResponse.redirect(new URL('/auth/access', req.url));
-      // }
+        // For frontend routes, redirect to access denied
+        return NextResponse.redirect(new URL('/auth/access', req.url));
+      }
+
+      // Check role-based access for specific sections
+      if (!pathname.startsWith('/api/')) {
+        // Check if accessing main dashboard
+        if (pathname === '/admin') {
+          if (!canAccessSection(payload.role, 'canAccessAll')) {
+            // Redirect to user's allowed section
+            const redirectPath = getDefaultRedirectPath(payload.role);
+            return NextResponse.redirect(new URL(redirectPath, req.url));
+          }
+        } else {
+          // Check specific sections
+          const section = getSectionFromPath(pathname);
+          if (section && !canAccessSection(payload.role, section)) {
+            // Redirect to user's allowed section
+            const redirectPath = getDefaultRedirectPath(payload.role);
+            return NextResponse.redirect(new URL(redirectPath, req.url));
+          }
+        }
+      }
     } catch (error) {
       // Token is invalid or expired      
       // Clear invalid tokens

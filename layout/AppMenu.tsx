@@ -1,9 +1,18 @@
 import type { MenuModel } from "@/types/index";
 import AppSubMenu from "./AppSubMenu";
+import { useAuth } from "@/hooks/useAuth";
+import { canAccessSection } from "@/lib/rolePermissions";
 
 const AppMenu = () => {
+    const { user } = useAuth();
+    
+    if (!user) {
+        return null;
+    }
+    
     const model: MenuModel[] = [
-        {
+        // Member Management - Only for full admin
+        ...(canAccessSection(user.role, 'canAccessUsers') ? [{
             label: "Member Management",
             icon: "pi pi-users",
             items: [
@@ -23,8 +32,10 @@ const AppMenu = () => {
                 //     to: "/admin/users/cards",
                 // },
             ],
-        },
-        {
+        }] : []),
+        
+        // Festive Board - For AdminLevelTwo and full Admin
+        ...(canAccessSection(user.role, 'canAccessFestiveBoard') ? [{
             label: "Festive Board",
             icon: "pi pi-calendar-plus",
             items: [
@@ -44,8 +55,10 @@ const AppMenu = () => {
                     to: "/admin/meal/categories",
                 },
             ],
-        },
-        {
+        }] : []),
+        
+        // Trestle Board - For AdminLevelThree and full Admin
+        ...(canAccessSection(user.role, 'canAccessTrestleBoard') ? [{
             label: "Trestle Board",
             icon: "pi pi-calendar",
             items: [
@@ -75,8 +88,10 @@ const AppMenu = () => {
                 //     to: "/admin/trestle-board/categories",
                 // },
             ],
-        },
-        {
+        }] : []),
+        
+        // Documents - For AdminLevelThree and full Admin
+        ...(canAccessSection(user.role, 'canAccessDocuments') ? [{
             label: "Documents",
             icon: "pi pi-file",
             items: [
@@ -96,21 +111,26 @@ const AppMenu = () => {
                     to: "/admin/documents/categories",
                 },
             ],
-        },
-        {
-            label: "Communications",
-            icon: "pi pi-comments",
+        }] : []),
+        
+        // Announcements - For AdminLevelThree and full Admin
+        ...(canAccessSection(user.role, 'canAccessAnnouncements') ? [{
+            label: "Announcements",
+            icon: "pi pi-megaphone",
             items: [
                 {
-                    label: "Announcements",
+                    label: "All Announcements",
                     icon: "pi pi-fw pi-megaphone",
                     to: "/admin/communications/announcements",
                 },
-                // {
-                //     label: "Send Announcement",
-                //     icon: "pi pi-fw pi-send",
-                //     to: "/admin/communications/announcement",
-                // },
+            ],
+        }] : []),
+        
+        // Communications - Only for full admin
+        ...(canAccessSection(user.role, 'canAccessAll') ? [{
+            label: "Communications",
+            icon: "pi pi-comments",
+            items: [
                 {
                     label: "Messages",
                     icon: "pi pi-fw pi-comment",
@@ -132,8 +152,10 @@ const AppMenu = () => {
                     to: "/admin/lcm-test",
                 },
             ],
-        },
-        {
+        }] : []),
+        
+        // Support & Moderation - Only for full admin
+        ...(canAccessSection(user.role, 'canAccessSupport') ? [{
             label: "Support & Moderation",
             icon: "pi pi-shield",
             items: [
@@ -153,24 +175,25 @@ const AppMenu = () => {
                 //     to: "/admin/moderators",
                 // },
             ],
-        },
+        }] : []),
 
-        // {
-        //     label: "Settings",
-        //     icon: "pi pi-cog",
-        //     items: [
-        //         {
-        //             label: "General Settings",
-        //             icon: "pi pi-fw pi-cog",
-        //             to: "/admin/settings",
-        //         },
-        //         // {
-        //         //     label: "Permissions",
-        //         //     icon: "pi pi-fw pi-lock",
-        //         //     to: "/admin/settings/permissions",
-        //         // },
-        //     ],
-        // },
+        // Settings - Only for full admin
+        ...(canAccessSection(user.role, 'canAccessSettings') ? [{
+            label: "Settings",
+            icon: "pi pi-cog",
+            items: [
+                {
+                    label: "General Settings",
+                    icon: "pi pi-fw pi-cog",
+                    to: "/admin/settings",
+                },
+                // {
+                //     label: "Permissions",
+                //     icon: "pi pi-fw pi-lock",
+                //     to: "/admin/settings/permissions",
+                // },
+            ],
+        }] : []),
     ];
 
     return <AppSubMenu model={model} />;

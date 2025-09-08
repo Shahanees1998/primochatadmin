@@ -6,6 +6,7 @@ import LCMTestPanel from '@/components/LCMTestPanel';
 import { Card } from 'primereact/card';
 import { Message } from 'primereact/message';
 import { Divider } from 'primereact/divider';
+import { canAccessSection } from '@/lib/rolePermissions';
 
 export default function LCMTestPage() {
   const { user } = useAuth();
@@ -13,7 +14,7 @@ export default function LCMTestPage() {
 
   useEffect(() => {
     if (user) {
-      setIsAdmin(user.role === 'ADMIN');
+      setIsAdmin(canAccessSection(user.role, 'canAccessLCMTest'));
     }
   }, [user]);
 

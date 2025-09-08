@@ -21,7 +21,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -118,7 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Get user data after successful login
-      await checkAuth();
+      const userResponse = await fetch('/api/auth/me');
+      if (userResponse.ok) {
+        const data = await userResponse.json();
+        setUser(data.user);
+        return data.user;
+      } else {
+        throw new Error('Failed to get user data after login');
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -184,7 +191,7 @@ export function useRequireAdmin() {
       if (!user) {
         // Redirect to login if not authenticated
         window.location.href = '/auth/login';
-      } else if (user.role !== 'ADMIN') {
+      } else if (!['ADMIN', 'ADMINLEVELTWO', 'ADMINLEVELTHREE'].includes(user.role)) {
         // Redirect to access denied if not admin
         window.location.href = '/auth/access';
       }

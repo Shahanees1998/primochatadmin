@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Enforce admin-only login only when request is from admin web app
-    if (isAdminPanelRequest && (!user || user.role !== 'ADMIN')) {
+    if (isAdminPanelRequest && (!user || !['ADMIN', 'ADMINLEVELTWO', 'ADMINLEVELTHREE'].includes(user.role))) {
       return NextResponse.json(
         { error: 'You are unauthorized to login to the admin panel' },
         { status: 403 }

@@ -9,6 +9,7 @@ import { Dropdown } from "primereact/dropdown";
 import { Toast } from "primereact/toast";
 import { useRequireAdmin } from "@/hooks/useAuth";
 import { Skeleton } from "primereact/skeleton";
+import { canAccessSection } from "@/lib/rolePermissions";
 
 interface SettingsForm {
     siteName: string;
@@ -116,6 +117,8 @@ export default function SettingsPage() {
     const roleOptions = [
         { label: "Member", value: "MEMBER" },
         { label: "Admin", value: "ADMIN" },
+        { label: "Admin Level Two", value: "ADMINLEVELTWO" },
+        { label: "Admin Level Three", value: "ADMINLEVELTHREE" },
     ];
 
     useEffect(() => {
@@ -171,7 +174,7 @@ export default function SettingsPage() {
     if (authLoading || fetching) {
         return <SettingsSkeleton />;
     }
-    if (!user || user.role !== "ADMIN") {
+    if (!user || !canAccessSection(user.role, 'canAccessSettings')) {
         return <div className="flex justify-content-center align-items-center min-h-screen text-red-600">Access denied. Admins only.</div>;
     }
 
