@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { AuthService } from '@/lib/auth';
-import { canAccessSection, getDefaultRedirectPath, isAdminRole } from '@/lib/rolePermissions';
+import { canAccessSection, getDefaultRedirectPath, isAdminRole, ROLE_PERMISSIONS, UserRole, type RolePermissions } from '@/lib/rolePermissions';
 
 const ignorePaths: string[] = [
   '/api/auth',
@@ -102,10 +102,12 @@ export async function middleware(req: NextRequest) {
         } else {
           // Check specific sections
           const section = getSectionFromPath(pathname);
-          if (section && !canAccessSection(payload.role, section)) {
-            // Redirect to user's allowed section
-            const redirectPath = getDefaultRedirectPath(payload.role);
-            return NextResponse.redirect(new URL(redirectPath, req.url));
+          if (section && section in ROLE_PERMISSIONS[payload.role as UserRole]) {
+            if (!canAccessSection(payload.role, section as keyof RolePermissions)) {
+              // Redirect to user's allowed section
+              const redirectPath = getDefaultRedirectPath(payload.role);
+              return NextResponse.redirect(new URL(redirectPath, req.url));
+            }
           }
         }
       }
