@@ -86,9 +86,9 @@ export async function withAdminAuth(
   return withAuth(req, async (authenticatedReq) => {
     const user = authenticatedReq.user;
     
-    if (!user || !['ADMIN', 'ADMINLEVELTWO', 'ADMINLEVELTHREE'].includes(user.role)) {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: 'You are unauthorized to access this page' },
         { status: 403 }
       );
     }
