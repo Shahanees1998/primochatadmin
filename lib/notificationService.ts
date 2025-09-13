@@ -47,16 +47,25 @@ export class NotificationService {
             // Send push notification if requested
             if (data.sendPush !== false) { // Default to true unless explicitly set to false
                 try {
+                    // Convert all data values to strings for FCM compatibility
+                    const notificationData: Record<string, string> = {
+                        notificationId: notification.id,
+                        type: data.type,
+                        relatedId: data.relatedId || '',
+                        relatedType: data.relatedType || ''
+                    };
+
+                    // Add metadata values as strings
+                    if (data.metadata) {
+                        Object.entries(data.metadata).forEach(([key, value]) => {
+                            notificationData[key] = typeof value === 'string' ? value : JSON.stringify(value);
+                        });
+                    }
+
                     const pushNotification: LCMPushNotification = {
                         title: data.title,
                         body: data.message,
-                        data: {
-                            notificationId: notification.id,
-                            type: data.type,
-                            relatedId: data.relatedId,
-                            relatedType: data.relatedType,
-                            ...data.metadata
-                        },
+                        data: notificationData,
                         badge: 1,
                         priority: 'high'
                     };
@@ -77,6 +86,16 @@ export class NotificationService {
 
     static async createChatMessageNotification(userId: string, message: any, chatRoom: any) {
         const senderName = message.sender ? `${message.sender.firstName} ${message.sender.lastName}` : 'Someone';
+        
+        // Log the data being passed to help debug FCM issues
+        console.log('Chat message notification data:', {
+            messageId: message.id,
+            senderId: message.senderId,
+            chatRoomId: chatRoom.id,
+            chatRoomTitle: chatRoom.title,
+            messageType: typeof message.id,
+            senderIdType: typeof message.senderId
+        });
         
         return this.createNotification({
             userId,
@@ -171,5 +190,56 @@ export class NotificationService {
         });
 
         return result;
+    }
+
+    static async createCustomNotification(userId: string, title: string, message: string, type: NotificationType, relatedId?: string, relatedType?: string, metadata?: any) {
+        return this.createNotification({
+            userId,
+            title,
+            message,
+            type,
+            relatedId,
+            relatedType,
+            metadata,
+            sendPush: true // Send FCM push notification by default
+        });
+    }
+
+    static async createSupportRequestNotification(userId: string, supportRequestData: any) {
+        return this.createNotification({
+            userId,
+            title: 'New Support Request',
+            message: `Support request: "${supportRequestData.subject}" from ${supportRequestData.userName}`,
+            type: NotificationType.SYSTEM_ALERT,
+            relatedId: supportRequestData.id,
+            relatedType: 'support_request',
+            metadata: {
+                supportRequestId: supportRequestData.id,
+                subject: supportRequestData.subject,
+                priority: supportRequestData.priority,
+                requesterId: supportRequestData.userId,
+                requesterName: supportRequestData.userName
+            },
+            sendPush: true // Send FCM push notification to admins
+        });
+    }
+
+    static async createSupportReplyNotification(userId: string, supportRequestData: any) {
+        return this.createNotification({
+            userId,
+            title: 'Support Request Reply',
+            message: `Your support request "${supportRequestData.subject}" has been replied to`,
+            type: NotificationType.SUPPORT_RESPONSE,
+            relatedId: supportRequestData.id,
+            relatedType: 'support_request',
+            metadata: {
+                supportRequestId: supportRequestData.id,
+                subject: supportRequestData.subject,
+                status: supportRequestData.status,
+                priority: supportRequestData.priority,
+                adminResponse: supportRequestData.adminResponse
+            },
+            sendPush: true // Send FCM push notification to user
+        });
     }
 } 

@@ -556,6 +556,48 @@
           "response": []
         },
         {
+          "name": "Get All My Meal Selections",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/meal-selections",
+              "host": ["{{base_url}}"],
+              "path": ["users", "meal-selections"]
+            },
+            "description": "Retrieves all meal selections for the authenticated user across all festive boards.\n\n**Response:** Returns both grouped selections (organized by festive board) and a flat list of all selections. Includes meal details, category information, festive board details, and selection status (completed/not completed).\n\n**Data Structure:**\n- groupedSelections: Array of festive boards with their meal selections\n- allSelections: Flat array of all meal selections\n- totalSelections: Total count of meal selections\n\n**Sorting:** Festive boards are sorted by year/month (most recent first), and meals within each board are sorted by selection date (most recent first)."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{access_token}}" }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/users/meal-selections",
+                  "host": ["{{base_url}}"],
+                  "path": ["users", "meal-selections"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"totalSelections\": 5,\n    \"groupedSelections\": [\n      {\n        \"festiveBoard\": {\n          \"id\": \"festive_board_id\",\n          \"month\": 12,\n          \"year\": 2024,\n          \"title\": \"December 2024 Festive Board\",\n          \"description\": \"Holiday celebrations\",\n          \"createdAt\": \"2024-12-01T00:00:00.000Z\"\n        },\n        \"meals\": [\n          {\n            \"id\": \"selection_id\",\n            \"meal\": {\n              \"id\": \"meal_id\",\n              \"title\": \"Turkey Dinner\",\n              \"description\": \"Traditional holiday turkey\",\n              \"imageUrl\": \"https://example.com/turkey.jpg\",\n              \"category\": {\n                \"id\": \"category_id\",\n                \"name\": \"Main Course\",\n                \"description\": \"Main dish category\"\n              },\n              \"createdAt\": \"2024-12-01T00:00:00.000Z\"\n            },\n            \"isCompleted\": false,\n            \"completedAt\": null,\n            \"selectedAt\": \"2024-12-15T10:30:00.000Z\"\n          }\n        ]\n      }\n    ],\n    \"allSelections\": [\n      {\n        \"id\": \"selection_id\",\n        \"isCompleted\": false,\n        \"completedAt\": null,\n        \"selectedAt\": \"2024-12-15T10:30:00.000Z\",\n        \"festiveBoard\": {\n          \"id\": \"festive_board_id\",\n          \"month\": 12,\n          \"year\": 2024,\n          \"title\": \"December 2024 Festive Board\",\n          \"description\": \"Holiday celebrations\",\n          \"createdAt\": \"2024-12-01T00:00:00.000Z\"\n        },\n        \"meal\": {\n          \"id\": \"meal_id\",\n          \"title\": \"Turkey Dinner\",\n          \"description\": \"Traditional holiday turkey\",\n          \"imageUrl\": \"https://example.com/turkey.jpg\",\n          \"category\": {\n            \"id\": \"category_id\",\n            \"name\": \"Main Course\",\n            \"description\": \"Main dish category\"\n          },\n          \"createdAt\": \"2024-12-01T00:00:00.000Z\"\n        }\n      }\n    ]\n  },\n  \"message\": \"Found 5 meal selections across 3 festive boards\"\n}"
+            }
+          ]
+        },
+        {
           "name": "Deselect Meal for Festive Board",
           "request": {
             "method": "POST",
@@ -793,6 +835,25 @@
                 }
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unread Notifications Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/unread-count",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "unread-count"]
+            },
+            "description": "Get the count of unread notifications for the authenticated user. This is useful for displaying badge counts in the UI.\n\n**Response:**\n```json\n{\n  \"unreadCount\": 5,\n  \"userId\": \"user_id_here\"\n}\n```\n\n**Usage:**\n- Call this endpoint to get real-time unread count\n- Use for notification badge display\n- More efficient than fetching all notifications just for count"
           },
           "response": []
         },

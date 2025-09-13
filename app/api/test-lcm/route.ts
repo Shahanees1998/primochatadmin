@@ -6,11 +6,11 @@ export const dynamic = 'force-dynamic';
 // POST /api/test-lcm - Test LCM push notifications
 export async function POST(request: NextRequest) {
   try {
-    const { userId, title, body } = await request.json();
+    const { userId, title, body, testMode } = await request.json();
 
-    if (!userId || !title || !body) {
+    if (!title || !body) {
       return NextResponse.json(
-        { error: 'userId, title, and body are required' },
+        { error: 'title and body are required' },
         { status: 400 }
       );
     }
@@ -27,13 +27,41 @@ export async function POST(request: NextRequest) {
       badge: 1
     };
 
-    await LCMService.sendToUser(userId, notification);
-
-    return NextResponse.json({
-      success: true,
-      message: `Test notification sent to user ${userId}`,
-      notification
-    });
+    if (testMode === 'direct') {
+      // Test Firebase FCM directly without database lookup
+      console.log('Testing Firebase FCM directly...');
+      
+      // Use a mock token for testing
+      const mockTokens = ['test-token-123'];
+      
+      // Call the private method directly for testing
+      const LCMServiceClass = LCMService as any;
+      const res = await LCMServiceClass.sendToMultipleTokens(mockTokens, notification, { testMode: true });
+      console.log('FCM Response 1:', res);
+      return NextResponse.json({
+        success: true,
+        message: 'Firebase FCM test completed (check server logs)',
+        notification,
+        testMode: 'direct'
+      });
+    } else if (userId) {
+      // Original behavior - send to specific user
+      const res = await LCMService.sendToUser(userId, notification);
+      console.log(':FCM Response 2', res);
+      console.log(':FCM Response type:', typeof res);
+      console.log(':FCM Response keys:', res ? Object.keys(res) : 'null');
+      
+      return NextResponse.json({
+        success: true,
+        message: `Test notification sent to user ${userId}`,
+        notification
+      });
+    } else {
+      return NextResponse.json(
+        { error: 'Either userId or testMode=direct is required' },
+        { status: 400 }
+      );
+    }
   } catch (error) {
     console.error('Test LCM error:', error);
     return NextResponse.json(

@@ -21,6 +21,34 @@ export interface LCMDeviceInfo {
 
 export class LCMService {
   /**
+   * Convert data object values to strings for FCM compatibility
+   */
+  private static convertDataToStrings(data: Record<string, any> | undefined): Record<string, string> {
+    const stringData: Record<string, string> = {};
+    if (data) {
+      console.log('Original FCM data before conversion:', data);
+      Object.entries(data).forEach(([key, value]) => {
+        if (typeof value !== 'string') {
+          console.log(`Converting non-string data value for key "${key}":`, typeof value, value);
+        }
+        
+        // Handle different data types more robustly
+        if (value === null || value === undefined) {
+          stringData[key] = '';
+        } else if (typeof value === 'string') {
+          stringData[key] = value;
+        } else if (typeof value === 'number' || typeof value === 'boolean') {
+          stringData[key] = String(value);
+        } else {
+          stringData[key] = JSON.stringify(value);
+        }
+      });
+      console.log('Converted FCM data:', stringData);
+    }
+    return stringData;
+  }
+
+  /**
    * Register a device token for a user
    */
   static async registerDeviceToken(userId: string, deviceInfo: LCMDeviceInfo): Promise<void> {
@@ -87,7 +115,12 @@ export class LCMService {
   /**
    * Send push notification to a specific user
    */
-  static async sendToUser(userId: string, notification: LCMPushNotification): Promise<void> {
+  static async sendToUser(userId: string, notification: LCMPushNotification): Promise<{
+    success: boolean;
+    message: string;
+    deviceCount: number;
+    userName?: string;
+  }> {
     try {
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -99,9 +132,30 @@ export class LCMService {
         }
       });
 
-      if (!user || !user.lcmEnabled || user.lcmDeviceTokens.length === 0) {
-        console.log(`User ${userId} has no active device tokens or notifications disabled`);
-        return;
+      if (!user) {
+        return {
+          success: false,
+          message: `User ${userId} not found`,
+          deviceCount: 0
+        };
+      }
+
+      if (!user.lcmEnabled) {
+        return {
+          success: false,
+          message: `User ${userId} has notifications disabled`,
+          deviceCount: user.lcmDeviceTokens.length,
+          userName: `${user.firstName} ${user.lastName}`
+        };
+      }
+
+      if (user.lcmDeviceTokens.length === 0) {
+        return {
+          success: false,
+          message: `User ${userId} has no registered device tokens`,
+          deviceCount: 0,
+          userName: `${user.firstName} ${user.lastName}`
+        };
       }
 
       // Send to all user's devices
@@ -109,6 +163,13 @@ export class LCMService {
         userId,
         userName: `${user.firstName} ${user.lastName}`
       });
+
+      return {
+        success: true,
+        message: `Notification sent to ${user.lcmDeviceTokens.length} device(s)`,
+        deviceCount: user.lcmDeviceTokens.length,
+        userName: `${user.firstName} ${user.lastName}`
+      };
     } catch (error) {
       console.error('Error sending notification to user:', error);
       throw error;
@@ -203,36 +264,13 @@ export class LCMService {
   /**
    * Send push notification to specific device tokens
    */
-  private static async sendToMultipleTokens(
+  static async sendToMultipleTokens(
     tokens: string[], 
     notification: LCMPushNotification, 
     metadata?: Record<string, any>
   ): Promise<void> {
     try {
-      // Choose your preferred push notification service
-      const pushService = process.env.PUSH_NOTIFICATION_SERVICE || 'firebase';
-      
-      switch (pushService.toLowerCase()) {
-        case 'firebase':
-        case 'fcm':
-          await this.sendViaFCM(tokens, notification);
-          break;
-        case 'onesignal':
-          await this.sendViaOneSignal(tokens, notification);
-          break;
-        case 'expo':
-          await this.sendViaExpo(tokens, notification);
-          break;
-        default:
-          // Log notification details for development/testing
-          console.log('Sending LCM notification:', {
-            tokens: tokens.length,
-            notification,
-            metadata,
-            service: pushService
-          });
-      }
-
+      await this.sendViaFCM(tokens, notification);
     } catch (error) {
       console.error('Error sending to multiple tokens:', error);
       throw error;
@@ -245,156 +283,133 @@ export class LCMService {
   private static async sendViaFCM(tokens: string[], notification: LCMPushNotification): Promise<void> {
     try {
       const admin = require('firebase-admin');
-      
+      console.log('Admin:', admin);
+      // Check if Firebase Admin SDK is properly initialized
       if (!admin.apps.length) {
+        // Validate required environment variables
+        if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+          console.log('Firebase environment variables not configured. Running in test mode.');
+          console.log('FCM Test Mode - Notification would be sent to tokens:', tokens.length);
+          console.log('Notification:', notification);
+          return; // Exit gracefully in test mode
+        }
+
         admin.initializeApp({
           credential: admin.credential.cert({
             projectId: process.env.FIREBASE_PROJECT_ID,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+            privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           }),
         });
       }
 
-      const message = {
-        notification: {
-          title: notification.title,
-          body: notification.body,
-          imageUrl: notification.image,
-        },
-        data: notification.data,
-        android: {
+      // Get the messaging instance
+      const messaging = admin.messaging();
+      console.log('Messaging:', messaging);
+      
+      // Convert data values to strings (FCM requirement)
+      const stringData = this.convertDataToStrings(notification.data);
+      console.log('FCM Data after string conversion:', stringData);
+      
+      // Final validation - ensure all values are strings
+      const finalData: Record<string, string> = {};
+      Object.entries(stringData).forEach(([key, value]) => {
+        finalData[key] = typeof value === 'string' ? value : String(value);
+      });
+      console.log('Final validated FCM data:', finalData);
+      
+      // Check if sendMulticast is available, otherwise use individual sends
+      if (typeof messaging.sendMulticast === 'function') {
+        // Use sendMulticast for better performance
+        const message = {
           notification: {
-            sound: notification.sound || 'default',
-            priority: notification.priority || 'high',
-            badge: notification.badge?.toString(),
+            title: notification.title,
+            body: notification.body,
+            imageUrl: notification.image,
           },
-        },
-        apns: {
-          payload: {
-            aps: {
-              alert: {
-                title: notification.title,
-                body: notification.body,
-              },
+          data: finalData,
+          android: {
+            notification: {
               sound: notification.sound || 'default',
-              badge: notification.badge,
+              priority: notification.priority || 'high',
+              ...(notification.badge && { notificationCount: notification.badge }),
             },
           },
-        },
-        tokens: tokens,
-      };
+          apns: {
+            payload: {
+              aps: {
+                alert: {
+                  title: notification.title,
+                  body: notification.body,
+                },
+                sound: notification.sound || 'default',
+                ...(notification.badge && { badge: Number(notification.badge) }),
+              },
+            },
+          },
+          tokens: tokens,
+        };
 
-      const response = await admin.messaging().sendMulticast(message);
-      console.log('FCM Response:', response);
-      
-      // Handle failed tokens
-      if (response.failureCount > 0) {
-        console.log('Failed tokens:', response.responses
-          .map((resp: any, idx: number) => resp.success ? null : tokens[idx])
-          .filter(Boolean)
-        );
+        const response = await messaging.sendMulticast(message);
+        console.log('FCM Response0000000:', response);
+        
+        // Handle failed tokens
+        if (response.failureCount > 0) {
+          console.log('Failed tokens:', response.responses
+            .map((resp: any, idx: number) => resp.success ? null : tokens[idx])
+            .filter(Boolean)
+          );
+        }
+      } else {
+        // Fallback to individual sends if sendMulticast is not available
+        console.log('sendMulticast not available, using individual sends');
+        const results = [];
+        
+        for (const token of tokens) {
+          try {
+            const message = {
+              notification: {
+                title: notification.title,
+                body: notification.body,
+                imageUrl: notification.image,
+              },
+              data: finalData,
+              android: {
+                notification: {
+                  sound: notification.sound || 'default',
+                  priority: notification.priority || 'high',
+                  ...(notification.badge && { notificationCount: notification.badge }),
+                },
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    alert: {
+                      title: notification.title,
+                      body: notification.body,
+                    },
+                    sound: notification.sound || 'default',
+                    ...(notification.badge && { badge: Number(notification.badge) }),
+                  },
+                },
+              },
+              token: token,
+            };
+
+            const result = await messaging.send(message);
+            console.log('FCM Response1111111:', result);
+            results.push({ token, success: true, result });
+          } catch (error) {
+            console.error(`Failed to send to token ${token}:`, error);
+            results.push({ token, success: false, error });
+          }
+        }
+        
+        console.log('FCM Individual Results:', results);
       }
       
     } catch (error) {
       console.error('Error sending via FCM:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send via OneSignal
-   */
-  private static async sendViaOneSignal(tokens: string[], notification: LCMPushNotification): Promise<void> {
-    try {
-      // Note: You need to install axios
-      // npm install axios
-      
-      // Example implementation (uncomment and configure as needed):
-      /*
-      const axios = require('axios');
-      
-      const response = await axios.post(
-        'https://onesignal.com/api/v1/notifications',
-        {
-          app_id: process.env.ONESIGNAL_APP_ID,
-          include_player_ids: tokens,
-          headings: { en: notification.title },
-          contents: { en: notification.body },
-          data: notification.data,
-          big_picture: notification.image,
-          ios_badgeType: 'Increase',
-          ios_badgeCount: notification.badge,
-          priority: notification.priority === 'high' ? 10 : 5,
-        },
-        {
-          headers: {
-            'Authorization': `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      console.log('OneSignal Response:', response.data);
-      */
-      
-      console.log('OneSignal notification would be sent:', {
-        tokens: tokens.length,
-        notification,
-        message: 'Install axios and configure ONESIGNAL_* environment variables to enable OneSignal'
-      });
-    } catch (error) {
-      console.error('Error sending via OneSignal:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send via Expo Push Notifications
-   */
-  private static async sendViaExpo(tokens: string[], notification: LCMPushNotification): Promise<void> {
-    try {
-      // Note: You need to install expo-server-sdk
-      // npm install expo-server-sdk
-      
-      // Example implementation (uncomment and configure as needed):
-      /*
-      const { Expo } = require('expo-server-sdk');
-      
-      const expo = new Expo();
-      
-      const messages = tokens.map(token => ({
-        to: token,
-        sound: notification.sound || 'default',
-        title: notification.title,
-        body: notification.body,
-        data: notification.data,
-        badge: notification.badge,
-        priority: notification.priority || 'high',
-      }));
-
-      const chunks = expo.chunkPushNotifications(messages);
-      const tickets = [];
-
-      for (const chunk of chunks) {
-        try {
-          const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-          tickets.push(...ticketChunk);
-        } catch (error) {
-          console.error('Error sending Expo notification:', error);
-        }
-      }
-
-      console.log('Expo tickets:', tickets);
-      */
-      
-      console.log('Expo notification would be sent:', {
-        tokens: tokens.length,
-        notification,
-        message: 'Install expo-server-sdk and configure EXPO_ACCESS_TOKEN to enable Expo'
-      });
-    } catch (error) {
-      console.error('Error sending via Expo:', error);
       throw error;
     }
   }

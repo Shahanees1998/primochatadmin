@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { NotificationService } from '@/lib/notificationService';
 
 export async function GET(
     request: NextRequest,
@@ -46,6 +47,12 @@ export async function PUT(
         const body = await request.json();
         const { status, priority, adminResponse } = body;
 
+        // Get the original support request to check if adminResponse is being added
+        const originalRequest = await prisma.supportRequest.findUnique({
+            where: { id: params.id },
+            select: { adminResponse: true, userId: true, subject: true },
+        });
+
         const supportRequest = await prisma.supportRequest.update({
             where: { id: params.id },
             data: {
@@ -56,12 +63,34 @@ export async function PUT(
             include: {
                 user: {
                     select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
                         role: true,
                         status: true,
                     },
                 },
             },
         });
+
+        // Send notification to user if admin added a response (new reply)
+        if (adminResponse && (!originalRequest?.adminResponse || originalRequest.adminResponse !== adminResponse)) {
+            try {
+                await NotificationService.createSupportReplyNotification(supportRequest.userId, {
+                    id: supportRequest.id,
+                    subject: supportRequest.subject,
+                    status: supportRequest.status,
+                    priority: supportRequest.priority,
+                    adminResponse: supportRequest.adminResponse
+                });
+
+                console.log(`Sent support reply notification to user ${supportRequest.userId}`);
+            } catch (notificationError) {
+                console.error('Error sending support reply notification:', notificationError);
+                // Don't fail the support request update if notification fails
+            }
+        }
 
         return NextResponse.json(supportRequest);
     } catch (error) {
