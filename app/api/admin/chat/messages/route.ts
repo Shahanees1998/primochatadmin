@@ -24,6 +24,8 @@ export async function POST(request: NextRequest) {
                 );
             }
 
+            // Don't automatically restore deleted chats - let users see only new messages
+
             // Create the message
             const message = await prismadb.message.create({
                 data: {

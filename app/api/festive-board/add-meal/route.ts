@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
+import { fcmService } from '@/lib/fcmService';
 
 export async function POST(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
@@ -101,6 +102,21 @@ export async function POST(request: NextRequest) {
           }
         }
       });
+
+      // Send FCM notification for meal selection
+      try {
+        await fcmService.sendUserChangeNotification(
+          'festive_board',
+          'meal_selected',
+          festiveBoardId,
+          festiveBoard.title,
+          `${mealSelection.user.firstName} ${mealSelection.user.lastName}`,
+          userId
+        );
+      } catch (fcmError) {
+        console.error('FCM notification failed:', fcmError);
+        // Don't fail the request if FCM fails
+      }
 
       // Return the created meal with selection info
       const result = {

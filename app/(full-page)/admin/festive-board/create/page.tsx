@@ -10,6 +10,7 @@ import { MultiSelect } from 'primereact/multiselect';
 import { Checkbox } from 'primereact/checkbox';
 import { Toast } from 'primereact/toast';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import { Calendar } from 'primereact/calendar';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 
@@ -59,6 +60,7 @@ export default function CreateFestiveBoardPage() {
   const [formData, setFormData] = useState({
     month: null as number | null,
     year: currentYear,
+    date: null as Date | null,
     title: '',
     mainCourse: '',
     description: '',
@@ -155,8 +157,12 @@ export default function CreateFestiveBoardPage() {
   };
 
   const handleYearChange = (newYear: number) => {
-    setFormData({ ...formData, year: newYear, month: null }); // Reset month when year changes
+    setFormData({ ...formData, year: newYear, month: null, date: null }); // Reset month and date when year changes
     loadAvailableMonths(newYear);
+  };
+
+  const handleMonthChange = (newMonth: number) => {
+    setFormData({ ...formData, month: newMonth, date: null }); // Reset date when month changes
   };
 
   const searchMeals = async (search: string = searchTerm) => {
@@ -221,6 +227,7 @@ export default function CreateFestiveBoardPage() {
       const response = await apiClient.createFestiveBoard({
         month: formData.month,
         year: formData.year,
+        date: formData.date,
         title: formData.title,
         mainCourse: formData.mainCourse,
         description: formData.description,
@@ -347,7 +354,7 @@ export default function CreateFestiveBoardPage() {
               id="month"
               value={formData.month}
               options={availableMonths}
-              onChange={(e) => setFormData({ ...formData, month: e.value })}
+              onChange={(e) => handleMonthChange(e.value)}
               placeholder="Select Month"
               className="w-full"
               disabled={availableMonths.length === 0}
@@ -367,6 +374,29 @@ export default function CreateFestiveBoardPage() {
               placeholder="Select Year"
               className="w-full"
             />
+          </div>
+
+          <div className="col-12 md:col-6">
+            <label htmlFor="date" className="block font-bold mb-2">Specific Date (Optional)</label>
+            <Calendar
+              id="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.value as Date })}
+              placeholder={formData.month && formData.year ? "Select specific date" : "Select month and year first"}
+              className="w-full"
+              showIcon
+              dateFormat="dd/mm/yy"
+              showButtonBar
+              disabled={!formData.month || !formData.year}
+              minDate={formData.month && formData.year ? new Date(formData.year, formData.month - 1, 1) : undefined}
+              maxDate={formData.month && formData.year ? new Date(formData.year, formData.month, 0) : undefined}
+            />
+            <small className="text-600">
+              {!formData.month || !formData.year 
+                ? "Please select month and year first" 
+                : "Leave empty to use the entire month"
+              }
+            </small>
           </div>
 
           <div className="col-12">

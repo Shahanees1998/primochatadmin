@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
 import { NotificationService } from '@/lib/notificationService';
+import { fcmService } from '@/lib/fcmService';
 
 export async function POST(
   request: NextRequest,
@@ -83,6 +84,21 @@ export async function POST(
         // Don't fail the request if notification creation fails
       }
 
+      // Send FCM notification for user joining trestle board
+      try {
+        await fcmService.sendUserChangeNotification(
+          'trestle_board',
+          'joined',
+          params.id,
+          trestleBoard.title,
+          `${signup.user.firstName} ${signup.user.lastName}`,
+          authenticatedReq.user.userId
+        );
+      } catch (fcmError) {
+        console.error('FCM notification failed:', fcmError);
+        // Don't fail the request if FCM fails
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Successfully signed up for trestle board',
@@ -122,9 +138,37 @@ export async function DELETE(
         );
       }
 
+      // Get trestle board and user info before deletion
+      const trestleBoard = await prisma.trestleBoard.findUnique({
+        where: { id: params.id },
+        select: { title: true },
+      });
+
+      const user = await prisma.user.findUnique({
+        where: { id: authenticatedReq.user.userId },
+        select: { firstName: true, lastName: true },
+      });
+
       await prisma.trestleBoardMember.delete({
         where: { id: signup.id },
       });
+
+      // Send FCM notification for user leaving trestle board
+      if (trestleBoard && user) {
+        try {
+          await fcmService.sendUserChangeNotification(
+            'trestle_board',
+            'left',
+            params.id,
+            trestleBoard.title,
+            `${user.firstName} ${user.lastName}`,
+            authenticatedReq.user.userId
+          );
+        } catch (fcmError) {
+          console.error('FCM notification failed:', fcmError);
+          // Don't fail the request if FCM fails
+        }
+      }
 
       return NextResponse.json({ message: 'Signup cancelled successfully' });
     } catch (error) {

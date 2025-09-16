@@ -126,8 +126,8 @@ const AppMenu = () => {
             ],
         }] : []),
         
-        // Communications - Only for full admin
-        ...(canAccessSection(user.role, 'canAccessAll') ? [{
+        // Communications - For Admin Level Two, Three, and full Admin
+        ...(canAccessSection(user.role, 'canAccessChat') ? [{
             label: "Communications",
             icon: "pi pi-comments",
             items: [
@@ -136,21 +136,24 @@ const AppMenu = () => {
                     icon: "pi pi-fw pi-comment",
                     to: "/admin/communications/messages",
                 },
-                {
-                    label: "Notifications",
-                    icon: "pi pi-fw pi-bell",
-                    to: "/admin/communications/notifications",
-                },
-                {
-                    label: "Phone Book",
-                    icon: "pi pi-fw pi-phone",
-                    to: "/admin/phonebook",
-                },
-                {
-                    label: "LCM Test",
-                    icon: "pi pi-fw pi-mobile",
-                    to: "/admin/lcm-test",
-                },
+                // Only full admin can access these additional features
+                ...(canAccessSection(user.role, 'canAccessAll') ? [
+                    {
+                        label: "Notifications",
+                        icon: "pi pi-fw pi-bell",
+                        to: "/admin/communications/notifications",
+                    },
+                    {
+                        label: "Phone Book",
+                        icon: "pi pi-fw pi-phone",
+                        to: "/admin/phonebook",
+                    },
+                    {
+                        label: "LCM Test",
+                        icon: "pi pi-fw pi-mobile",
+                        to: "/admin/lcm-test",
+                    },
+                ] : []),
             ],
         }] : []),
         

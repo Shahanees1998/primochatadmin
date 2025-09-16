@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
+import { fcmService } from '@/lib/fcmService';
 
 // GET /api/admin/events - Get all events (admin only)
 export async function GET(request: NextRequest) {
@@ -152,6 +153,18 @@ export async function POST(request: NextRequest) {
           },
         },
       });
+
+      // Send FCM notification for new trestle board
+      try {
+        await fcmService.sendTrestleBoardNotification(
+          event.id,
+          'created',
+          event.title
+        );
+      } catch (fcmError) {
+        console.error('FCM notification failed:', fcmError);
+        // Don't fail the request if FCM fails
+      }
 
       return NextResponse.json(event, { status: 201 });
     } catch (error) {

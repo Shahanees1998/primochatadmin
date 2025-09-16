@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
             }
 
         // Get all chat rooms where the user is a participant
-        const chatRooms = await prisma.chatRoom.findMany({
+        const allChatRooms = await prisma.chatRoom.findMany({
             where: {
                 participants: {
                     some: {
@@ -70,14 +70,46 @@ export async function GET(request: NextRequest) {
                         },
                     },
                 },
+                userDeletions: {
+                    where: {
+                        userId: currentUserId
+                    }
+                },
             },
             orderBy: {
                 updatedAt: 'desc',
             },
         });
 
+        // Filter out chats that were deleted by user and have no new messages after deletion
+        const filteredChatRooms = [];
+        for (const chatRoom of allChatRooms) {
+            const userDeletion = chatRoom.userDeletions[0];
+            
+            if (!userDeletion) {
+                // Chat not deleted by user - include it
+                filteredChatRooms.push(chatRoom);
+            } else {
+                // Chat was deleted by user - check if there are new messages after deletion
+                const hasNewMessages = await prisma.message.findFirst({
+                    where: {
+                        chatRoomId: chatRoom.id,
+                        createdAt: {
+                            gt: userDeletion.deletedAt
+                        }
+                    }
+                });
+                
+                if (hasNewMessages) {
+                    // Has new messages after deletion - include it
+                    filteredChatRooms.push(chatRoom);
+                }
+                // If no new messages after deletion, exclude the chat
+            }
+        }
+
         // Transform the data to match the frontend expectations
-        const transformedChatRooms = chatRooms.map(room => ({
+        const transformedChatRooms = filteredChatRooms.map(room => ({
             id: room.id,
             isGroup: room.isGroupChat,
             name: room.name,

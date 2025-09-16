@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
+import { fcmService } from '@/lib/fcmService';
 
 export async function GET(
   request: NextRequest,
@@ -203,6 +204,21 @@ export async function POST(
           },
         });
 
+        // Send FCM notification for meal selection
+        try {
+          await fcmService.sendUserChangeNotification(
+            'festive_board',
+            'meal_selected',
+            params.id,
+            festiveBoard.title,
+            `${selection.user.firstName} ${selection.user.lastName}`,
+            userId
+          );
+        } catch (fcmError) {
+          console.error('FCM notification failed:', fcmError);
+          // Don't fail the request if FCM fails
+        }
+
         return NextResponse.json(selection, { status: 201 });
       } else if (action === 'deselect') {
         // Check if this user has selected this meal
@@ -227,6 +243,21 @@ export async function POST(
             festiveBoardMealId: festiveBoardMeal.id,
           },
         });
+
+        // Send FCM notification for meal deselection
+        try {
+          await fcmService.sendUserChangeNotification(
+            'festive_board',
+            'meal_deselected',
+            params.id,
+            festiveBoard.title,
+            `${user.firstName} ${user.lastName}`,
+            userId
+          );
+        } catch (fcmError) {
+          console.error('FCM notification failed:', fcmError);
+          // Don't fail the request if FCM fails
+        }
 
         return NextResponse.json({ message: 'Meal deselected successfully' });
       } else {

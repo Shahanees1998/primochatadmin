@@ -543,7 +543,7 @@ export default function MessagesPage() {
             } else {
                 // Chat room might be new or might exist but not in our current list
                 // Add it to the list and select it
-                setChatRooms(prev => [chatRoom, ...prev]);
+                // setChatRooms(prev => [chatRoom, ...prev]);
                 setSelectedChat(chatRoom);
                 showToast("success", "Success", "Chat room created successfully");
             }
@@ -559,6 +559,30 @@ export default function MessagesPage() {
 
     const showToast = (severity: "success" | "error" | "warn" | "info", summary: string, detail: string) => {
         toast.current?.show({ severity, summary, detail, life: 3000 });
+    };
+
+    const handleDeleteChat = async (chatRoomId: string) => {
+        try {
+            const response = await apiClient.deleteChatRoom(chatRoomId);
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            // Remove chat from the list
+            setChatRooms(prev => prev.filter(chat => chat.id !== chatRoomId));
+            
+            // Clear selected chat if it was the deleted one
+            if (selectedChat?.id === chatRoomId) {
+                setSelectedChat(null);
+                setMessages([]);
+            }
+
+            showToast("success", "Success", "Chat deleted successfully");
+        } catch (error) {
+            console.error('Delete chat error:', error);
+            showToast("error", "Error", error instanceof Error ? error.message : "Failed to delete chat");
+        }
     };
 
     const getChatName = (chat: ChatRoom) => {
@@ -791,20 +815,18 @@ export default function MessagesPage() {
                                                 }
                                             </p>
                                         </div>
-                                        {/* <div className="flex gap-2">
-                                            <Button
-                                                icon="pi pi-search"
-                                                size="small"
-                                                text
-                                                tooltip="Search"
-                                            />
-                                            <Button
-                                                icon="pi pi-ellipsis-v"
-                                                size="small"
-                                                text
-                                                tooltip="More options"
-                                            />
-                                        </div> */}
+                                        <div className="flex gap-2">
+                                            {!selectedChat.isGroup && (
+                                                <Button
+                                                    icon="pi pi-trash"
+                                                    size="small"
+                                                    text
+                                                    severity="danger"
+                                                    tooltip="Delete chat"
+                                                    onClick={() => handleDeleteChat(selectedChat.id)}
+                                                />
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 

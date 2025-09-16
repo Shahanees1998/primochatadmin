@@ -656,6 +656,24 @@ class ApiClient {
         return this.delete(`/admin/chat/messages/${messageId}`);
     }
 
+    async deleteChatRoom(chatRoomId: string) {
+        return this.delete(`/admin/chat/rooms/${chatRoomId}/delete`);
+    }
+
+    async restoreChatRoom(chatRoomId: string) {
+        return this.post(`/admin/chat/rooms/${chatRoomId}/restore`, {});
+    }
+
+    async getUnreadMessagesCount() {
+        return this.get<{
+            totalUnreadCount: number;
+            chatRoomUnreadCounts: Array<{
+                chatRoomId: string;
+                unreadCount: number;
+            }>;
+        }>('/admin/chat/unread-count');
+    }
+
     // Moderation methods
     async getFlaggedMessages(params?: {
         page?: number;
@@ -886,6 +904,7 @@ class ApiClient {
     async createFestiveBoard(boardData: {
         month: number;
         year: number;
+        date?: Date | null;
         title: string;
         mainCourse?: string;
         description?: string;

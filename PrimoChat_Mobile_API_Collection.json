@@ -478,6 +478,26 @@
           "response": []
         },
         {
+          "name": "Create Festive Board",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"month\": 12,\n  \"year\": 2024,\n  \"date\": \"2024-12-25T00:00:00.000Z\",\n  \"title\": \"Christmas Festive Board\",\n  \"mainCourse\": \"Turkey Dinner\",\n  \"description\": \"Holiday celebration meal selection\",\n  \"mealIds\": [\"{{meal_id_1}}\", \"{{meal_id_2}}\", \"{{meal_id_3}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/festive-board",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "festive-board"]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Get Festive Board Details with Meals",
           "request": {
             "method": "GET",
@@ -1307,6 +1327,51 @@
               "raw": "{{base_url}}/admin/support",
               "host": ["{{base_url}}"],
               "path": ["admin", "support"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Chat Room",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/chat/rooms/{{room_id}}/delete",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "chat", "rooms", "{{room_id}}", "delete"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Restore Chat Room",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/chat/rooms/{{room_id}}/restore",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "chat", "rooms", "{{room_id}}", "restore"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unread Messages Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/chat/unread-count",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "chat", "unread-count"]
             }
           },
           "response": []

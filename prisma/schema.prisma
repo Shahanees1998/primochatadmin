@@ -45,6 +45,7 @@ model User {
   notifications        Notification[]
   messages             Message[]
   chatParticipants     ChatParticipant[]
+  chatUserDeletions    ChatUserDeletion[]
   supportRequests      SupportRequest[]
   documents            Document[]
   documentCategories   DocumentCategory[]
@@ -194,6 +195,7 @@ model ChatRoom {
   // Relations
   participants ChatParticipant[]
   messages     Message[]
+  userDeletions ChatUserDeletion[]
 
   @@map("chat_rooms")
 }
@@ -210,6 +212,20 @@ model ChatParticipant {
 
   @@unique([chatRoomId, userId])
   @@map("chat_participants")
+}
+
+model ChatUserDeletion {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  chatRoomId String   @db.ObjectId
+  userId     String   @db.ObjectId
+  deletedAt  DateTime @default(now())
+
+  // Relations
+  chatRoom ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatRoomId, userId])
+  @@map("chat_user_deletions")
 }
 
 model Message {
@@ -452,6 +468,7 @@ model FestiveBoard {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   month       Int // 1-12 for January to December
   year        Int
+  date        DateTime? // Specific date for the festive board
   title       String
   mainCourse  String?
   description String?

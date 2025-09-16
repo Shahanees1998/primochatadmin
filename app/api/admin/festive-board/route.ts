@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { fcmService } from '@/lib/fcmService';
 
 // GET - List all festive boards
 export async function GET(request: NextRequest) {
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
   return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       const body = await request.json();
-      const { month, year, title, mainCourse, description, mealIds } = body;
+      const { month, year, date, title, mainCourse, description, mealIds } = body;
 
       // Validate required fields
       if (!month || !year || !title || !mealIds || !Array.isArray(mealIds)) {
@@ -155,6 +156,7 @@ export async function POST(request: NextRequest) {
         data: {
           month: parseInt(month),
           year: parseInt(year),
+          date: date ? new Date(date) : null,
           title,
           mainCourse,
           description,
@@ -185,6 +187,18 @@ export async function POST(request: NextRequest) {
           },
         },
       });
+
+      // Send FCM notification for new festive board
+      try {
+        await fcmService.sendFestiveBoardNotification(
+          board.id,
+          'created',
+          board.title
+        );
+      } catch (fcmError) {
+        console.error('FCM notification failed:', fcmError);
+        // Don't fail the request if FCM fails
+      }
 
       return NextResponse.json({
         data: board,

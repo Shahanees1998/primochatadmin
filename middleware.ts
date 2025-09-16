@@ -37,6 +37,8 @@ function getSectionFromPath(pathname: string): string | null {
     const section = nestedMatch[1];
     const nestedSectionMap: Record<string, string> = {
       'announcements': 'canAccessAnnouncements',
+      'messages': 'canAccessChat',
+      'notifications': 'canAccessAll', // Only full admin can access notifications
     };
     return nestedSectionMap[section] || null;
   }

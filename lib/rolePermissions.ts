@@ -14,6 +14,7 @@ export interface RolePermissions {
   canAccessSettings: boolean;
   canAccessSupport: boolean;
   canAccessLCMTest: boolean;
+  canAccessChat: boolean;
   canAccessAll: boolean;
 }
 
@@ -27,6 +28,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessSettings: false,
     canAccessSupport: false,
     canAccessLCMTest: false,
+    canAccessChat: false,
     canAccessAll: false,
   },
   [UserRole.ADMIN]: {
@@ -38,6 +40,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessSettings: true,
     canAccessSupport: true,
     canAccessLCMTest: true,
+    canAccessChat: true,
     canAccessAll: true,
   },
   [UserRole.ADMINLEVELTWO]: {
@@ -49,6 +52,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessSettings: false,
     canAccessSupport: false,
     canAccessLCMTest: false,
+    canAccessChat: true,
     canAccessAll: false,
   },
   [UserRole.ADMINLEVELTHREE]: {
@@ -60,6 +64,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessSettings: false,
     canAccessSupport: false,
     canAccessLCMTest: false,
+    canAccessChat: true,
     canAccessAll: false,
   },
 };
