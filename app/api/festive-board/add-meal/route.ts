@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
-import { fcmService } from '@/lib/fcmService';
+import { LCMService } from '@/lib/lcmService';
 
 export async function POST(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
@@ -105,14 +105,64 @@ export async function POST(request: NextRequest) {
 
       // Send FCM notification for meal selection
       try {
-        await fcmService.sendUserChangeNotification(
-          'festive_board',
-          'meal_selected',
-          festiveBoardId,
-          festiveBoard.title,
-          `${mealSelection.user.firstName} ${mealSelection.user.lastName}`,
-          userId
-        );
+        // Send to admins
+        const adminUsers = await prisma.user.findMany({
+          where: { role: 'ADMIN', lcmEnabled: true },
+          select: { id: true },
+        });
+        
+        if (adminUsers.length > 0) {
+          await LCMService.sendToUsers(adminUsers.map(u => u.id), {
+            title: 'Festive Board Update',
+            body: `${mealSelection.user.firstName} ${mealSelection.user.lastName} selected a meal in ${festiveBoard.title}`,
+            data: {
+              type: 'festive_board_user_change',
+              action: 'meal_selected',
+              festiveBoardId: festiveBoardId,
+              itemTitle: festiveBoard.title,
+              userName: `${mealSelection.user.firstName} ${mealSelection.user.lastName}`,
+              userId: userId,
+            },
+            priority: 'high',
+          });
+        }
+
+        // Send to other users who have meal selections for this festive board
+        const otherUsersWithSelections = await prisma.userMealSelection.findMany({
+          where: {
+            festiveBoardId: festiveBoardId,
+            userId: { not: userId },
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                lcmEnabled: true,
+              },
+            },
+          },
+          distinct: ['userId'],
+        });
+
+        const eligibleUserIds = otherUsersWithSelections
+          .filter(selection => selection.user.lcmEnabled)
+          .map(selection => selection.user.id);
+
+        if (eligibleUserIds.length > 0) {
+          await LCMService.sendToUsers(eligibleUserIds, {
+            title: 'Festive Board Update',
+            body: `${mealSelection.user.firstName} ${mealSelection.user.lastName} selected a meal in ${festiveBoard.title}`,
+            data: {
+              type: 'festive_board_user_change',
+              action: 'meal_selected',
+              festiveBoardId: festiveBoardId,
+              itemTitle: festiveBoard.title,
+              userName: `${mealSelection.user.firstName} ${mealSelection.user.lastName}`,
+              userId: userId,
+            },
+            priority: 'high',
+          });
+        }
       } catch (fcmError) {
         console.error('FCM notification failed:', fcmError);
         // Don't fail the request if FCM fails

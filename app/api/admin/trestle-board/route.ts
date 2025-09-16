@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
-import { fcmService } from '@/lib/fcmService';
+import { LCMService } from '@/lib/lcmService';
 
 // GET /api/admin/events - Get all events (admin only)
 export async function GET(request: NextRequest) {
@@ -156,11 +156,37 @@ export async function POST(request: NextRequest) {
 
       // Send FCM notification for new trestle board
       try {
-        await fcmService.sendTrestleBoardNotification(
-          event.id,
-          'created',
-          event.title
-        );
+        // Get all members of this trestle board
+        const members = await prisma.trestleBoardMember.findMany({
+          where: { trestleBoardId: event.id },
+          include: {
+            user: {
+              select: {
+                id: true,
+                lcmEnabled: true,
+              },
+            },
+          },
+        });
+
+        // Filter users with enabled notifications
+        const eligibleUserIds = members
+          .filter(member => member.user.lcmEnabled)
+          .map(member => member.user.id);
+
+        if (eligibleUserIds.length > 0) {
+          await LCMService.sendToUsers(eligibleUserIds, {
+            title: 'Trestle Board Update',
+            body: `A new trestle board "${event.title}" has been created`,
+            data: {
+              type: 'trestle_board_update',
+              trestleBoardId: event.id,
+              action: 'created',
+              title: event.title,
+            },
+            priority: 'high',
+          });
+        }
       } catch (fcmError) {
         console.error('FCM notification failed:', fcmError);
         // Don't fail the request if FCM fails

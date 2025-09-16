@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
           where,
           include: {
             user: {
-              select: { id: true, firstName: true, lastName: true, email: true, role: true, membershipNumber: true },
+              select: { id: true, firstName: true, lastName: true, email: true, role: true, membershipNumber: true, profileImage: true },
             },
           },
           skip,

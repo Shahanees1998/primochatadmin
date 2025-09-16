@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
 import { NotificationService } from '@/lib/notificationService';
-import { fcmService } from '@/lib/fcmService';
+import { LCMService } from '@/lib/lcmService';
 
 export async function POST(
   request: NextRequest,
@@ -86,14 +86,63 @@ export async function POST(
 
       // Send FCM notification for user joining trestle board
       try {
-        await fcmService.sendUserChangeNotification(
-          'trestle_board',
-          'joined',
-          params.id,
-          trestleBoard.title,
-          `${signup.user.firstName} ${signup.user.lastName}`,
-          authenticatedReq.user.userId
-        );
+        // Send to admins
+        const adminUsers = await prisma.user.findMany({
+          where: { role: 'ADMIN', lcmEnabled: true },
+          select: { id: true },
+        });
+        
+        if (adminUsers.length > 0) {
+          await LCMService.sendToUsers(adminUsers.map(u => u.id), {
+            title: 'Trestle Board Update',
+            body: `${signup.user.firstName} ${signup.user.lastName} joined ${trestleBoard.title}`,
+            data: {
+              type: 'trestle_board_user_change',
+              action: 'joined',
+              trestleBoardId: params.id,
+              itemTitle: trestleBoard.title,
+              userName: `${signup.user.firstName} ${signup.user.lastName}`,
+              userId: authenticatedReq.user.userId,
+            },
+            priority: 'high',
+          });
+        }
+
+        // Send to other members of this trestle board
+        const otherMembers = await prisma.trestleBoardMember.findMany({
+          where: {
+            trestleBoardId: params.id,
+            userId: { not: authenticatedReq.user.userId },
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                lcmEnabled: true,
+              },
+            },
+          },
+        });
+
+        const eligibleMemberIds = otherMembers
+          .filter(member => member.user.lcmEnabled)
+          .map(member => member.user.id);
+
+        if (eligibleMemberIds.length > 0) {
+          await LCMService.sendToUsers(eligibleMemberIds, {
+            title: 'Trestle Board Update',
+            body: `${signup.user.firstName} ${signup.user.lastName} joined ${trestleBoard.title}`,
+            data: {
+              type: 'trestle_board_user_change',
+              action: 'joined',
+              trestleBoardId: params.id,
+              itemTitle: trestleBoard.title,
+              userName: `${signup.user.firstName} ${signup.user.lastName}`,
+              userId: authenticatedReq.user.userId,
+            },
+            priority: 'high',
+          });
+        }
       } catch (fcmError) {
         console.error('FCM notification failed:', fcmError);
         // Don't fail the request if FCM fails
@@ -156,14 +205,63 @@ export async function DELETE(
       // Send FCM notification for user leaving trestle board
       if (trestleBoard && user) {
         try {
-          await fcmService.sendUserChangeNotification(
-            'trestle_board',
-            'left',
-            params.id,
-            trestleBoard.title,
-            `${user.firstName} ${user.lastName}`,
-            authenticatedReq.user.userId
-          );
+          // Send to admins
+          const adminUsers = await prisma.user.findMany({
+            where: { role: 'ADMIN', lcmEnabled: true },
+            select: { id: true },
+          });
+          
+          if (adminUsers.length > 0) {
+            await LCMService.sendToUsers(adminUsers.map(u => u.id), {
+              title: 'Trestle Board Update',
+              body: `${user.firstName} ${user.lastName} left ${trestleBoard.title}`,
+              data: {
+                type: 'trestle_board_user_change',
+                action: 'left',
+                trestleBoardId: params.id,
+                itemTitle: trestleBoard.title,
+                userName: `${user.firstName} ${user.lastName}`,
+                userId: authenticatedReq.user.userId,
+              },
+              priority: 'high',
+            });
+          }
+
+          // Send to other members of this trestle board
+          const otherMembers = await prisma.trestleBoardMember.findMany({
+            where: {
+              trestleBoardId: params.id,
+              userId: { not: authenticatedReq.user.userId },
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  lcmEnabled: true,
+                },
+              },
+            },
+          });
+
+          const eligibleMemberIds = otherMembers
+            .filter(member => member.user.lcmEnabled)
+            .map(member => member.user.id);
+
+          if (eligibleMemberIds.length > 0) {
+            await LCMService.sendToUsers(eligibleMemberIds, {
+              title: 'Trestle Board Update',
+              body: `${user.firstName} ${user.lastName} left ${trestleBoard.title}`,
+              data: {
+                type: 'trestle_board_user_change',
+                action: 'left',
+                trestleBoardId: params.id,
+                itemTitle: trestleBoard.title,
+                userName: `${user.firstName} ${user.lastName}`,
+                userId: authenticatedReq.user.userId,
+              },
+              priority: 'high',
+            });
+          }
         } catch (fcmError) {
           console.error('FCM notification failed:', fcmError);
           // Don't fail the request if FCM fails
