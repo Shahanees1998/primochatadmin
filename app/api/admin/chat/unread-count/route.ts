@@ -15,66 +15,67 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Get all chat rooms where user is a participant and not deleted by this user
-      const userChatRooms = await prisma.chatRoom.findMany({
+      // Get all chat rooms where user is a participant
+      const allUserChatRooms = await prisma.chatRoom.findMany({
         where: {
           participants: {
             some: {
               userId: userId,
             },
           },
-          // Exclude chats that this user has deleted
-          userDeletions: {
-            none: {
-              userId: userId,
-            },
-          },
         },
         select: {
           id: true,
+          userDeletions: {
+            where: {
+              userId: userId,
+            },
+            select: {
+              deletedAt: true,
+            },
+          },
         },
       });
 
-      const chatRoomIds = userChatRooms.map((room) => room.id);
+      // Filter chat rooms and calculate unread counts
+      let totalUnreadCount = 0;
+      const chatRoomUnreadCounts: Array<{ chatRoomId: string; unreadCount: number }> = [];
 
-      // Count unread messages across all user's chat rooms
-      const unreadCount = await prisma.message.count({
-        where: {
-          chatRoomId: {
-            in: chatRoomIds,
-          },
+      for (const room of allUserChatRooms) {
+        const userDeletion = room.userDeletions[0];
+        
+        // Build message filter conditions
+        const messageFilter: any = {
+          chatRoomId: room.id,
           senderId: {
             not: userId, // Exclude messages sent by the user
           },
           isRead: false,
-        },
-      });
+        };
 
-      // Get unread count per chat room
-      const unreadCountsPerRoom = await prisma.message.groupBy({
-        by: ['chatRoomId'],
-        where: {
-          chatRoomId: {
-            in: chatRoomIds,
-          },
-          senderId: {
-            not: userId,
-          },
-          isRead: false,
-        },
-        _count: {
-          id: true,
-        },
-      });
+        // If user deleted this chat, only count messages after deletion
+        if (userDeletion) {
+          messageFilter.createdAt = {
+            gt: userDeletion.deletedAt,
+          };
+        }
 
-      // Format the response
-      const chatRoomUnreadCounts = unreadCountsPerRoom.map((item) => ({
-        chatRoomId: item.chatRoomId,
-        unreadCount: item._count.id,
-      }));
+        // Count unread messages for this room
+        const roomUnreadCount = await prisma.message.count({
+          where: messageFilter,
+        });
+
+        if (roomUnreadCount > 0) {
+          totalUnreadCount += roomUnreadCount;
+          chatRoomUnreadCounts.push({
+            chatRoomId: room.id,
+            unreadCount: roomUnreadCount,
+          });
+        }
+      }
 
       return NextResponse.json({
-        totalUnreadCount: unreadCount,
+        totalUnreadCount: totalUnreadCount,
         chatRoomUnreadCounts: chatRoomUnreadCounts,
       });
     } catch (error) {
