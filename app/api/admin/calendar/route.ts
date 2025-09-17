@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
+import { LCMService } from '@/lib/lcmService';
 
 export async function GET(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
@@ -328,6 +329,30 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        // Send FCM notification to the user about trestle board added to their calendar
+        try {
+          await LCMService.sendToUsers([targetUserId], {
+            title: 'Trestle Board Added to Your Calendar',
+            body: `A trestle board "${trestleBoard.title}" has been added to your calendar for ${trestleBoard.date.toLocaleDateString()}`,
+            data: {
+              type: 'calendar_event_added',
+              eventType: 'TRESTLE_BOARD',
+              trestleBoardId: trestleBoardId,
+              title: trestleBoard.title,
+              description: trestleBoard.description,
+              date: trestleBoard.date.toISOString(),
+              time: trestleBoard.time,
+              location: trestleBoard.location,
+              addedBy: authenticatedReq.user?.firstName + ' ' + authenticatedReq.user?.lastName,
+              addedByUserId: authenticatedReq.user?.userId,
+            },
+            priority: 'high',
+          });
+        } catch (fcmError) {
+          console.error('FCM notification for trestle board calendar addition failed:', fcmError);
+          // Don't fail the request if FCM fails
+        }
+
         return NextResponse.json({
           id: updatedUserCalendar.id,
           title: trestleBoard.title,
@@ -387,6 +412,28 @@ export async function POST(request: NextRequest) {
           },
         },
       });
+
+      // Send FCM notification to the user about custom event added to their calendar
+      try {
+        await LCMService.sendToUsers([targetUserId], {
+          title: 'Custom Event Added to Your Calendar',
+          body: `A custom event "${customEvent.title}" has been added to your calendar for ${customEvent.date.toLocaleDateString()}`,
+          data: {
+            type: 'calendar_event_added',
+            eventType: 'CUSTOM',
+            customEventId: customEvent.id,
+            title: customEvent.title,
+            date: customEvent.date.toISOString(),
+            time: customEvent.time,
+            addedBy: authenticatedReq.user?.firstName + ' ' + authenticatedReq.user?.lastName,
+            addedByUserId: authenticatedReq.user?.userId,
+          },
+          priority: 'high',
+        });
+      } catch (fcmError) {
+        console.error('FCM notification for custom event calendar addition failed:', fcmError);
+        // Don't fail the request if FCM fails
+      }
 
       return NextResponse.json({
         id: customEvent.id,
@@ -449,6 +496,11 @@ export async function DELETE(request: NextRequest) {
       }
 
       if (eventType === 'TRESTLE_BOARD') {
+        // Get trestle board details for notification
+        const trestleBoard = await prisma.trestleBoard.findUnique({
+          where: { id: eventId },
+        });
+
         // Remove trestle board from user's calendar
         const updatedTrestleBoardIds = userCalendar.trestleBoardIds.filter(id => id !== eventId);
 
@@ -458,7 +510,34 @@ export async function DELETE(request: NextRequest) {
             trestleBoardIds: updatedTrestleBoardIds
           }
         });
+
+        // Send FCM notification to the user about trestle board removed from their calendar
+        if (trestleBoard) {
+          try {
+            await LCMService.sendToUsers([userId], {
+              title: 'Trestle Board Removed from Your Calendar',
+              body: `The trestle board "${trestleBoard.title}" has been removed from your calendar`,
+              data: {
+                type: 'calendar_event_removed',
+                eventType: 'TRESTLE_BOARD',
+                trestleBoardId: eventId,
+                title: trestleBoard.title,
+                removedBy: authenticatedReq.user?.firstName + ' ' + authenticatedReq.user?.lastName,
+                removedByUserId: authenticatedReq.user?.userId,
+              },
+              priority: 'high',
+            });
+          } catch (fcmError) {
+            console.error('FCM notification for trestle board calendar removal failed:', fcmError);
+            // Don't fail the request if FCM fails
+          }
+        }
       } else if (eventType === 'CUSTOM') {
+        // Get custom event details for notification before deletion
+        const customEvent = await prisma.customEvent.findUnique({
+          where: { id: eventId },
+        });
+
         // Delete custom event and remove from user's calendar
         await prisma.customEvent.delete({
           where: { id: eventId },
@@ -472,6 +551,28 @@ export async function DELETE(request: NextRequest) {
             customEventIds: updatedCustomEventIds
           }
         });
+
+        // Send FCM notification to the user about custom event removed from their calendar
+        if (customEvent) {
+          try {
+            await LCMService.sendToUsers([userId], {
+              title: 'Custom Event Removed from Your Calendar',
+              body: `The custom event "${customEvent.title}" has been removed from your calendar`,
+              data: {
+                type: 'calendar_event_removed',
+                eventType: 'CUSTOM',
+                customEventId: eventId,
+                title: customEvent.title,
+                removedBy: authenticatedReq.user?.firstName + ' ' + authenticatedReq.user?.lastName,
+                removedByUserId: authenticatedReq.user?.userId,
+              },
+              priority: 'high',
+            });
+          } catch (fcmError) {
+            console.error('FCM notification for custom event calendar removal failed:', fcmError);
+            // Don't fail the request if FCM fails
+          }
+        }
       }
 
       return NextResponse.json({ message: 'Calendar event deleted successfully' }, { status: 200 });

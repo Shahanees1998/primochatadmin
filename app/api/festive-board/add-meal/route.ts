@@ -103,6 +103,30 @@ export async function POST(request: NextRequest) {
         }
       });
 
+      // Send FCM notification for new meal added to festive board
+      try {
+        // Send notification to ALL users about new meal being added
+
+        console.log('Sending FCM notification to all users');
+        await LCMService.sendToAllUsers({
+          title: 'New Meal Added to Festive Board',
+          body: `A new meal "${newMeal.title}" has been added to ${festiveBoard.title}`,
+          data: {
+            type: 'festive_board_meal_added',
+            festiveBoardId: festiveBoardId,
+            mealId: newMeal.id,
+            mealTitle: newMeal.title,
+            festiveBoardTitle: festiveBoard.title,
+            addedBy: `${mealSelection.user.firstName} ${mealSelection.user.lastName}`,
+            addedByUserId: userId,
+          },
+          priority: 'high',
+        });
+      } catch (fcmError) {
+        console.error('FCM notification for new meal failed:', fcmError);
+        // Don't fail the request if FCM fails
+      }
+
       // Send FCM notification for meal selection
       try {
         // Send to admins
@@ -164,7 +188,7 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (fcmError) {
-        console.error('FCM notification failed:', fcmError);
+        console.error('FCM notification for meal selection failed:', fcmError);
         // Don't fail the request if FCM fails
       }
 

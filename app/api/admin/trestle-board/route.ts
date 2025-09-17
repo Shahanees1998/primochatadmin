@@ -156,37 +156,21 @@ export async function POST(request: NextRequest) {
 
       // Send FCM notification for new trestle board
       try {
-        // Get all members of this trestle board
-        const members = await prisma.trestleBoardMember.findMany({
-          where: { trestleBoardId: event.id },
-          include: {
-            user: {
-              select: {
-                id: true,
-                lcmEnabled: true,
-              },
-            },
+        // For new trestle boards, send notification to ALL users with LCM enabled
+        // since there are no members yet
+        await LCMService.sendToAllUsers({
+          title: 'New Trestle Board Created',
+          body: `A new trestle board "${event.title}" has been created for ${event.date}`,
+          data: {
+            type: 'trestle_board_update',
+            trestleBoardId: event.id,
+            action: 'created',
+            title: event.title,
+            date: event.date.toISOString(),
+            location: event.location,
           },
+          priority: 'high',
         });
-
-        // Filter users with enabled notifications
-        const eligibleUserIds = members
-          .filter(member => member.user.lcmEnabled)
-          .map(member => member.user.id);
-
-        if (eligibleUserIds.length > 0) {
-          await LCMService.sendToUsers(eligibleUserIds, {
-            title: 'Trestle Board Update',
-            body: `A new trestle board "${event.title}" has been created`,
-            data: {
-              type: 'trestle_board_update',
-              trestleBoardId: event.id,
-              action: 'created',
-              title: event.title,
-            },
-            priority: 'high',
-          });
-        }
       } catch (fcmError) {
         console.error('FCM notification failed:', fcmError);
         // Don't fail the request if FCM fails

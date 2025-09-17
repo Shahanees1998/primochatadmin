@@ -190,38 +190,21 @@ export async function POST(request: NextRequest) {
 
       // Send FCM notification for new festive board
       try {
-        // Get all users who have meal selections for this festive board
-        const usersWithSelections = await prisma.userMealSelection.findMany({
-          where: { festiveBoardId: board.id },
-          include: {
-            user: {
-              select: {
-                id: true,
-                lcmEnabled: true,
-              },
-            },
+        // For new festive boards, send notification to ALL users with LCM enabled
+        // since there are no existing meal selections yet
+        await LCMService.sendToAllUsers({
+          title: 'New Festive Board Created',
+          body: `A new festive board "${board.title}" has been created for ${board.month}/${board.year}`,
+          data: {
+            type: 'festive_board_update',
+            festiveBoardId: board.id,
+            action: 'created',
+            title: board.title,
+            month: board.month.toString(),
+            year: board.year.toString(),
           },
-          distinct: ['userId'],
+          priority: 'high',
         });
-
-        // Filter users with enabled notifications
-        const eligibleUserIds = usersWithSelections
-          .filter(selection => selection.user.lcmEnabled)
-          .map(selection => selection.user.id);
-
-        if (eligibleUserIds.length > 0) {
-          await LCMService.sendToUsers(eligibleUserIds, {
-            title: 'Festive Board Update',
-            body: `A new festive board "${board.title}" has been created`,
-            data: {
-              type: 'festive_board_update',
-              festiveBoardId: board.id,
-              action: 'created',
-              title: board.title,
-            },
-            priority: 'high',
-          });
-        }
       } catch (fcmError) {
         console.error('FCM notification failed:', fcmError);
         // Don't fail the request if FCM fails

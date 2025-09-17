@@ -235,7 +235,7 @@ export class LCMService {
           lcmDeviceTokens: true 
         }
       });
-
+      console.log('Users:', users?.length);
       if (users.length === 0) {
         console.log('No users with active device tokens found');
         return;
@@ -246,15 +246,17 @@ export class LCMService {
       users.forEach(user => {
         allTokens.push(...user.lcmDeviceTokens);
       });
-
+      console.log('All tokens:', allTokens?.length);
       if (allTokens.length === 0) {
         console.log('No device tokens found');
         return;
       }
 
-      await this.sendToMultipleTokens(allTokens, notification, {
+     const res = await this.sendToMultipleTokens(allTokens, notification, {
         userCount: users.length
       });
+
+      console.log('FCM Response:', res);
     } catch (error) {
       console.error('Error sending notification to all users:', error);
       throw error;
