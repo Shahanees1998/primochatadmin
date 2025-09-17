@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { LCMService } from '@/lib/lcmService';
+import { NotificationService } from '@/lib/notificationService';
+import { NotificationType } from '@prisma/client';
 
 // GET - List all festive boards
 export async function GET(request: NextRequest) {
@@ -188,7 +190,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Send FCM notification for new festive board
+      // Send FCM notification and create database notification records for new festive board
       try {
         // For new festive boards, send notification to ALL users with LCM enabled
         // since there are no existing meal selections yet
@@ -205,9 +207,39 @@ export async function POST(request: NextRequest) {
           },
           priority: 'high',
         });
+
+        // Create notification database records for all users
+        const allUsers = await prisma.user.findMany({
+          where: { isDeleted: false },
+          select: { id: true },
+        });
+
+        // Create notification records for each user
+        const notificationPromises = allUsers.map(user =>
+          NotificationService.createNotification({
+            userId: user.id,
+            title: 'New Festive Board Created',
+            message: `A new festive board "${board.title}" has been created for ${board.month}/${board.year}`,
+            type: NotificationType.MEAL_SELECTION, // Using meal selection type for festive boards
+            relatedId: board.id,
+            relatedType: 'festive_board',
+            metadata: {
+              festiveBoardId: board.id,
+              action: 'created',
+              title: board.title,
+              month: board.month.toString(),
+              year: board.year.toString(),
+              createdBy: authenticatedReq.user!.firstName + ' ' + authenticatedReq.user!.lastName,
+              createdByUserId: authenticatedReq.user!.userId,
+            },
+            sendPush: false, // FCM already sent above
+          })
+        );
+
+        await Promise.all(notificationPromises);
       } catch (fcmError) {
-        console.error('FCM notification failed:', fcmError);
-        // Don't fail the request if FCM fails
+        console.error('FCM notification or database notification creation failed:', fcmError);
+        // Don't fail the request if notifications fail
       }
 
       return NextResponse.json({

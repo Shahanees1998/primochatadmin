@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { LCMService } from '@/lib/lcmService';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { NotificationService } from '@/lib/notificationService';
+import { NotificationType } from '@prisma/client';
 
 // GET /api/admin/events/[id] - Get specific event (admin only)
 export async function GET(
@@ -127,7 +129,7 @@ export async function PUT(
       },
     });
 
-    // Send FCM notification for trestle board update
+    // Send FCM notification and create database notification records for trestle board update
     try {
       // Get all users who have this trestle board in their calendar or are members
       const usersWithCalendar = await prisma.userCalendar.findMany({
@@ -175,10 +177,42 @@ export async function PUT(
           },
           priority: 'high',
         });
+
+        // Create notification database records for ALL users (not just affected users)
+        const allUsers = await prisma.user.findMany({
+          where: { isDeleted: false },
+          select: { id: true },
+        });
+
+        const notificationPromises = allUsers.map(user =>
+          NotificationService.createNotification({
+            userId: user.id,
+            title: 'Trestle Board Updated',
+            message: `The trestle board "${updatedEvent.title}" has been updated by admin`,
+            type: NotificationType.TRESTLE_BOARD_ADDED, // Using same type as creation for now
+            relatedId: updatedEvent.id,
+            relatedType: 'trestle_board',
+            metadata: {
+              trestleBoardId: updatedEvent.id,
+              action: 'updated',
+              title: updatedEvent.title,
+              description: updatedEvent.description,
+              date: updatedEvent.date.toISOString(),
+              time: updatedEvent.time,
+              location: updatedEvent.location,
+              category: updatedEvent.category,
+              updatedBy: authenticatedReq.user?.firstName + ' ' + authenticatedReq.user?.lastName,
+              updatedByUserId: authenticatedReq.user?.userId,
+            },
+            sendPush: false, // FCM already sent above
+          })
+        );
+
+        await Promise.all(notificationPromises);
       }
     } catch (fcmError) {
-      console.error('FCM notification for trestle board update failed:', fcmError);
-      // Don't fail the request if FCM fails
+      console.error('FCM notification or database notification creation for trestle board update failed:', fcmError);
+      // Don't fail the request if notifications fail
     }
 
     return NextResponse.json(updatedEvent);
@@ -232,7 +266,7 @@ export async function DELETE(
         );
       }
 
-      // Send FCM notification for trestle board deletion
+      // Send FCM notification and create database notification records for trestle board deletion
       try {
         await LCMService.sendToAllUsers({
           title: 'Trestle Board Deleted',
@@ -252,9 +286,42 @@ export async function DELETE(
           },
           priority: 'high',
         });
+
+        // Create notification database records for all users
+        const allUsers = await prisma.user.findMany({
+          where: { isDeleted: false },
+          select: { id: true },
+        });
+
+        // Create notification records for each user
+        const notificationPromises = allUsers.map(user =>
+          NotificationService.createNotification({
+            userId: user.id,
+            title: 'Trestle Board Deleted',
+            message: `The trestle board "${existingEvent.title}" has been deleted by admin`,
+            type: NotificationType.TRESTLE_BOARD_ADDED, // Using same type as creation for now
+            relatedId: existingEvent.id,
+            relatedType: 'trestle_board',
+            metadata: {
+              trestleBoardId: existingEvent.id,
+              action: 'deleted',
+              title: existingEvent.title,
+              description: existingEvent.description,
+              date: existingEvent.date.toISOString(),
+              time: existingEvent.time,
+              location: existingEvent.location,
+              category: existingEvent.category,
+              deletedBy: authenticatedReq.user?.firstName + ' ' + authenticatedReq.user?.lastName,
+              deletedByUserId: authenticatedReq.user?.userId,
+            },
+            sendPush: false, // FCM already sent above
+          })
+        );
+
+        await Promise.all(notificationPromises);
       } catch (fcmError) {
-        console.error('FCM notification for trestle board deletion failed:', fcmError);
-        // Don't fail the request if FCM fails
+        console.error('FCM notification or database notification creation for trestle board deletion failed:', fcmError);
+        // Don't fail the request if notifications fail
       }
 
       // Delete event (this will cascade delete related records)

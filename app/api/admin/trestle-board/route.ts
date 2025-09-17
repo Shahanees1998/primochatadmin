@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
 import { LCMService } from '@/lib/lcmService';
+import { NotificationService } from '@/lib/notificationService';
+import { NotificationType } from '@prisma/client';
 
 // GET /api/admin/events - Get all events (admin only)
 export async function GET(request: NextRequest) {
@@ -154,7 +156,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Send FCM notification for new trestle board
+      // Send FCM notification and create database notification records for new trestle board
       try {
         // For new trestle boards, send notification to ALL users with LCM enabled
         // since there are no members yet
@@ -171,9 +173,40 @@ export async function POST(request: NextRequest) {
           },
           priority: 'high',
         });
+
+        // Create notification database records for all users
+        const allUsers = await prisma.user.findMany({
+          where: { isDeleted: false },
+          select: { id: true },
+        });
+
+        // Create notification records for each user
+        const notificationPromises = allUsers.map(user =>
+          NotificationService.createNotification({
+            userId: user.id,
+            title: 'New Trestle Board Created',
+            message: `A new trestle board "${event.title}" has been created for ${event.date.toLocaleDateString()}`,
+            type: NotificationType.TRESTLE_BOARD_ADDED,
+            relatedId: event.id,
+            relatedType: 'trestle_board',
+            metadata: {
+              trestleBoardId: event.id,
+              action: 'created',
+              title: event.title,
+              date: event.date.toISOString(),
+              location: event.location,
+              category: event.category,
+              createdBy: authenticatedReq?.user?.firstName + ' ' + authenticatedReq?.user?.lastName,
+              createdByUserId: authenticatedReq?.user?.userId,
+            },
+            sendPush: false, // FCM already sent above
+          })
+        );
+
+        await Promise.all(notificationPromises);
       } catch (fcmError) {
-        console.error('FCM notification failed:', fcmError);
-        // Don't fail the request if FCM fails
+        console.error('FCM notification or database notification creation failed:', fcmError);
+        // Don't fail the request if notifications fail
       }
 
       return NextResponse.json(event, { status: 201 });

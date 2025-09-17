@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { LCMService } from '@/lib/lcmService';
+import { NotificationService } from '@/lib/notificationService';
+import { NotificationType } from '@prisma/client';
 
 // GET - Get a specific Festive board
 export async function GET(
@@ -184,8 +186,14 @@ export async function PUT(
       },
     });
 
-    // Send FCM notifications for festive board update and meal changes
+    // Send FCM notifications and create database notification records for festive board update and meal changes
     try {
+      // Get all users for notification records
+      const allUsers = await prisma.user.findMany({
+        where: { isDeleted: false },
+        select: { id: true },
+      });
+
       // 1. Send notification for festive board update to all users
       await LCMService.sendToAllUsers({
         title: 'Festive Board Updated',
@@ -202,6 +210,30 @@ export async function PUT(
         },
         priority: 'high',
       });
+
+      // Create notification database records for festive board update
+      const updateNotificationPromises = allUsers.map(user =>
+        NotificationService.createNotification({
+          userId: user.id,
+          title: 'Festive Board Updated',
+          message: `The festive board "${board.title}" has been updated by admin`,
+          type: NotificationType.MEAL_SELECTION,
+          relatedId: board.id,
+          relatedType: 'festive_board',
+          metadata: {
+            festiveBoardId: board.id,
+            action: 'updated',
+            title: board.title,
+            month: board.month.toString(),
+            year: board.year.toString(),
+            updatedBy: authenticatedReq.user!.firstName + ' ' + authenticatedReq.user!.lastName,
+            updatedByUserId: authenticatedReq.user!.userId,
+          },
+          sendPush: false, // FCM already sent above
+        })
+      );
+
+      await Promise.all(updateNotificationPromises);
 
       // 2. Send separate notification for meals added (if any)
       if (addedMeals.length > 0) {
@@ -221,6 +253,31 @@ export async function PUT(
           },
           priority: 'high',
         });
+
+        // Create notification database records for meals added
+        const mealsAddedNotificationPromises = allUsers.map(user =>
+          NotificationService.createNotification({
+            userId: user.id,
+            title: 'New Meals Added to Festive Board',
+            message: `New meals have been added to "${board.title}": ${mealTitles}`,
+            type: NotificationType.MEAL_SELECTION,
+            relatedId: board.id,
+            relatedType: 'festive_board',
+            metadata: {
+              festiveBoardId: board.id,
+              action: 'meals_added',
+              festiveBoardTitle: board.title,
+              mealCount: addedMeals.length.toString(),
+              mealIds: addedMeals.map(meal => meal.id).join(','),
+              mealTitles: mealTitles,
+              addedBy: authenticatedReq.user!.firstName + ' ' + authenticatedReq.user!.lastName,
+              addedByUserId: authenticatedReq.user!.userId,
+            },
+            sendPush: false, // FCM already sent above
+          })
+        );
+
+        await Promise.all(mealsAddedNotificationPromises);
       }
 
       // 3. Send separate notification for meals removed (if any)
@@ -241,10 +298,35 @@ export async function PUT(
           },
           priority: 'high',
         });
+
+        // Create notification database records for meals removed
+        const mealsRemovedNotificationPromises = allUsers.map(user =>
+          NotificationService.createNotification({
+            userId: user.id,
+            title: 'Meals Removed from Festive Board',
+            message: `Meals have been removed from "${board.title}": ${mealTitles}`,
+            type: NotificationType.MEAL_SELECTION,
+            relatedId: board.id,
+            relatedType: 'festive_board',
+            metadata: {
+              festiveBoardId: board.id,
+              action: 'meals_removed',
+              festiveBoardTitle: board.title,
+              mealCount: removedMeals.length.toString(),
+              mealIds: removedMeals.map(meal => meal.id).join(','),
+              mealTitles: mealTitles,
+              removedBy: authenticatedReq.user!.firstName + ' ' + authenticatedReq.user!.lastName,
+              removedByUserId: authenticatedReq.user!.userId,
+            },
+            sendPush: false, // FCM already sent above
+          })
+        );
+
+        await Promise.all(mealsRemovedNotificationPromises);
       }
     } catch (fcmError) {
-      console.error('FCM notification for festive board update failed:', fcmError);
-      // Don't fail the request if FCM fails
+      console.error('FCM notification or database notification creation for festive board update failed:', fcmError);
+      // Don't fail the request if notifications fail
     }
 
     return NextResponse.json({
@@ -290,7 +372,7 @@ export async function DELETE(
       );
     }
 
-    // Send FCM notification for festive board deletion
+    // Send FCM notification and create database notification records for festive board deletion
     try {
       await LCMService.sendToAllUsers({
         title: 'Festive Board Deleted',
@@ -307,9 +389,39 @@ export async function DELETE(
         },
         priority: 'high',
       });
+
+      // Create notification database records for all users
+      const allUsers = await prisma.user.findMany({
+        where: { isDeleted: false },
+        select: { id: true },
+      });
+
+      // Create notification records for each user
+      const notificationPromises = allUsers.map(user =>
+        NotificationService.createNotification({
+          userId: user.id,
+          title: 'Festive Board Deleted',
+          message: `The festive board "${existingBoard.title}" has been deleted by admin`,
+          type: NotificationType.MEAL_SELECTION,
+          relatedId: existingBoard.id,
+          relatedType: 'festive_board',
+          metadata: {
+            festiveBoardId: existingBoard.id,
+            action: 'deleted',
+            title: existingBoard.title,
+            month: existingBoard.month.toString(),
+            year: existingBoard.year.toString(),
+            deletedBy: authenticatedReq.user!.firstName + ' ' + authenticatedReq.user!.lastName,
+            deletedByUserId: authenticatedReq.user!.userId,
+          },
+          sendPush: false, // FCM already sent above
+        })
+      );
+
+      await Promise.all(notificationPromises);
     } catch (fcmError) {
-      console.error('FCM notification for festive board deletion failed:', fcmError);
-      // Don't fail the request if FCM fails
+      console.error('FCM notification or database notification creation for festive board deletion failed:', fcmError);
+      // Don't fail the request if notifications fail
     }
 
     // Delete the Festive board (cascade will handle related records)

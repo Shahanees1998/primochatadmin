@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import { prisma } from '@/lib/prisma';
 import { LCMService } from '@/lib/lcmService';
+import { NotificationService } from '@/lib/notificationService';
+import { NotificationType } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // Send FCM notification for new meal added to festive board
+      // Send FCM notification and create database notification records for new meal added to festive board
       try {
         // Send notification to ALL users about new meal being added
 
@@ -122,9 +124,38 @@ export async function POST(request: NextRequest) {
           },
           priority: 'high',
         });
+
+        // Create notification database records for all users
+        const allUsers = await prisma.user.findMany({
+          where: { isDeleted: false },
+          select: { id: true },
+        });
+
+        // Create notification records for each user
+        const notificationPromises = allUsers.map(user =>
+          NotificationService.createNotification({
+            userId: user.id,
+            title: 'New Meal Added to Festive Board',
+            message: `A new meal "${newMeal.title}" has been added to ${festiveBoard.title}`,
+            type: NotificationType.MEAL_SELECTION,
+            relatedId: festiveBoardId,
+            relatedType: 'festive_board',
+            metadata: {
+              festiveBoardId: festiveBoardId,
+              mealId: newMeal.id,
+              mealTitle: newMeal.title,
+              festiveBoardTitle: festiveBoard.title,
+              addedBy: `${mealSelection.user.firstName} ${mealSelection.user.lastName}`,
+              addedByUserId: userId,
+            },
+            sendPush: false, // FCM already sent above
+          })
+        );
+
+        await Promise.all(notificationPromises);
       } catch (fcmError) {
-        console.error('FCM notification for new meal failed:', fcmError);
-        // Don't fail the request if FCM fails
+        console.error('FCM notification or database notification creation for new meal failed:', fcmError);
+        // Don't fail the request if notifications fail
       }
 
       // Send FCM notification for meal selection
