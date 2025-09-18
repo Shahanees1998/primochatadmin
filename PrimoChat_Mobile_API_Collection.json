@@ -812,6 +812,77 @@
             "description": "Fetch details for a specific calendar event (trestle board or custom) belonging to the authenticated user. One of 'trestleBoard' or 'customEvent' is populated; the other is null."
           },
           "response": []
+        },
+        {
+          "name": "Remove Event from My Calendar",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/calendar/{{event_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["calendar", "{{event_id}}"]
+            },
+            "description": "Remove an event (custom or trestle board) from the authenticated user's calendar. For custom events, this will also delete the event permanently. For trestle boards, it only removes them from the user's calendar."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All User Events (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/calendar/user-events?userId={{user_id}}&eventType=&startDate=2024-01-01&endDate=2024-12-31",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "calendar", "user-events"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{user_id}}"
+                },
+                {
+                  "key": "eventType",
+                  "value": ""
+                },
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-12-31"
+                }
+              ]
+            },
+            "description": "Get all user events for admin management. Requires ADMINLEVELTWO or ADMINLEVELTHREE role. Can filter by user, event type, and date range."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Event from User Calendar (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{event_id}}\",\n  \"eventType\": \"CUSTOM\",\n  \"userId\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/calendar/remove-event",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "calendar", "remove-event"]
+            },
+            "description": "Remove any user's event from their calendar. Requires ADMINLEVELTWO or ADMINLEVELTHREE role. The user will be notified of the removal. For custom events, this will also delete the event permanently."
+          },
+          "response": []
         }
       ]
     },

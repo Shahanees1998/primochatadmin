@@ -175,26 +175,90 @@ export async function DELETE(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      // Check if event exists and belongs to user
-      const existingEvent = await prismadb.customEvent.findFirst({
-        where: {
-          id: params.id,
-          userId: authenticatedReq.user.userId,
-        },
+      const userId = authenticatedReq.user.userId;
+
+      // Get user's calendar to check if event exists
+      const userCalendar = await prismadb.userCalendar.findUnique({
+        where: { userId },
       });
 
-      if (!existingEvent) {
+      if (!userCalendar) {
         return NextResponse.json(
-          { error: 'Event not found' },
+          { error: 'Calendar not found' },
           { status: 404 }
         );
       }
 
-      await prismadb.customEvent.delete({
-        where: { id: params.id },
-      });
+      const isTrestle = userCalendar.trestleBoardIds.includes(params.id);
+      const isCustom = userCalendar.customEventIds.includes(params.id);
 
-      return NextResponse.json({ message: 'Event deleted successfully' });
+      if (!isTrestle && !isCustom) {
+        return NextResponse.json(
+          { error: 'Event not found in your calendar' },
+          { status: 404 }
+        );
+      }
+
+      // Handle trestle board removal from calendar
+      if (isTrestle) {
+        // Remove trestle board from user's calendar
+        await prismadb.userCalendar.update({
+          where: { userId },
+          data: {
+            trestleBoardIds: {
+              set: userCalendar.trestleBoardIds.filter(id => id !== params.id)
+            }
+          }
+        });
+
+        return NextResponse.json({ 
+          message: 'Trestle board removed from calendar successfully',
+          eventType: 'TRESTLE_BOARD'
+        });
+      }
+
+      // Handle custom event removal
+      if (isCustom) {
+        // Verify the custom event belongs to the user
+        const existingEvent = await prismadb.customEvent.findFirst({
+          where: {
+            id: params.id,
+            userId: authenticatedReq.user.userId,
+          },
+        });
+
+        if (!existingEvent) {
+          return NextResponse.json(
+            { error: 'Custom event not found or access denied' },
+            { status: 404 }
+          );
+        }
+
+        // Remove custom event from user's calendar
+        await prismadb.userCalendar.update({
+          where: { userId },
+          data: {
+            customEventIds: {
+              set: userCalendar.customEventIds.filter(id => id !== params.id)
+            }
+          }
+        });
+
+        // Delete the custom event itself
+        await prismadb.customEvent.delete({
+          where: { id: params.id },
+        });
+
+        return NextResponse.json({ 
+          message: 'Custom event removed from calendar successfully',
+          eventType: 'CUSTOM'
+        });
+      }
+
+      return NextResponse.json(
+        { error: 'Event not found' },
+        { status: 404 }
+      );
     } catch (error) {
       console.error('Error deleting calendar event:', error);
       return NextResponse.json(

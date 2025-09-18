@@ -21,7 +21,7 @@ interface CalendarEvent {
   title: string;
   description?: string;
   date: string;
-  eventType: 'PERSONAL' | 'TRESTLE_BOARD';
+  eventType: 'PERSONAL' | 'TRESTLE_BOARD' | 'CUSTOM';
   location?: string;
   user: {
     id: string;
@@ -31,6 +31,8 @@ interface CalendarEvent {
   };
   createdAt: string;
   updatedAt: string;
+  trestleBoardId?: string;
+  customEventId?: string;
 }
 
 interface TrestleBoardSignup {
@@ -65,6 +67,7 @@ const eventTypes = [
   { label: 'All Events', value: '' },
   { label: 'Personal Events', value: 'PERSONAL' },
   { label: 'Trestle Boards', value: 'TRESTLE_BOARD' },
+  { label: 'Custom Events', value: 'CUSTOM' },
 ];
 
 const signupStatuses = [
@@ -86,6 +89,8 @@ export default function AdminCalendarPage() {
   });
   const [selectedTrestleBoard, setSelectedTrestleBoard] = useState<TrestleBoard | null>(null);
   const [showSignupDialog, setShowSignupDialog] = useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [eventToRemove, setEventToRemove] = useState<CalendarEvent | null>(null);
 
   const { showToast } = useToast();
 
@@ -98,7 +103,7 @@ export default function AdminCalendarPage() {
       if (filters.eventType) params.eventType = filters.eventType;
       if (filters.userId) params.userId = filters.userId;
 
-      const response = await apiClient.get('/admin/calendar', params);
+      const response = await apiClient.get('/admin/calendar/user-events', params);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -181,11 +186,56 @@ export default function AdminCalendarPage() {
     }
   };
 
-  const eventTypeTemplate = (rowData: CalendarEvent) => (
-    <Chip
-      label={rowData.eventType === 'PERSONAL' ? 'Personal' : 'Trestle Board'}
-    />
-  );
+  const handleRemoveEvent = (event: CalendarEvent) => {
+    setEventToRemove(event);
+    setShowRemoveDialog(true);
+  };
+
+  const confirmRemoveEvent = async () => {
+    if (!eventToRemove) return;
+
+    try {
+      const response = await apiClient.post('/admin/calendar/remove-event', {
+        eventId: eventToRemove.id,
+        eventType: eventToRemove.eventType,
+        userId: eventToRemove.user.id,
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      showToast('success', 'Success', 'Event removed from user calendar successfully');
+      setShowRemoveDialog(false);
+      setEventToRemove(null);
+      fetchEvents();
+    } catch (error) {
+      console.error('Error removing event:', error);
+      showToast('error', 'Error', 'Failed to remove event from calendar');
+    }
+  };
+
+  const eventTypeTemplate = (rowData: CalendarEvent) => {
+    const getEventTypeLabel = (eventType: string) => {
+      switch (eventType) {
+        case 'PERSONAL':
+          return 'Personal';
+        case 'TRESTLE_BOARD':
+          return 'Trestle Board';
+        case 'CUSTOM':
+          return 'Custom';
+        default:
+          return eventType;
+      }
+    };
+
+    return (
+      <Chip
+        label={getEventTypeLabel(rowData.eventType)}
+        severity={rowData.eventType === 'CUSTOM' ? 'warning' : 'info'}
+      />
+    );
+  };
 
   const dateTemplate = (rowData: CalendarEvent) => (
     <span>{new Date(rowData.date).toLocaleDateString()}</span>
@@ -206,6 +256,13 @@ export default function AdminCalendarPage() {
         size="small"
         severity="info"
         tooltip="View Details"
+      />
+      <Button
+        icon="pi pi-trash"
+        size="small"
+        severity="danger"
+        tooltip="Remove from Calendar"
+        onClick={() => handleRemoveEvent(rowData)}
       />
     </div>
   );
@@ -529,6 +586,59 @@ export default function AdminCalendarPage() {
               <Column field="admin" header="Approved By" body={(rowData) => rowData.admin?.name || '-'} />
               <Column header="Actions" body={signupActionTemplate} />
             </DataTable>
+          </div>
+        )}
+      </Dialog>
+
+      {/* Remove Event Confirmation Dialog */}
+      <Dialog
+        visible={showRemoveDialog}
+        onHide={() => setShowRemoveDialog(false)}
+        header="Remove Event from Calendar"
+        modal
+        className="w-full max-w-md"
+        footer={
+          <div className="flex gap-2">
+            <Button
+              label="Cancel"
+              severity="secondary"
+              onClick={() => setShowRemoveDialog(false)}
+            />
+            <Button
+              label="Remove"
+              severity="danger"
+              onClick={confirmRemoveEvent}
+            />
+          </div>
+        }
+      >
+        {eventToRemove && (
+          <div>
+            <p className="mb-4">
+              Are you sure you want to remove this event from the user's calendar?
+            </p>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-semibold mb-2">{eventToRemove.title}</h4>
+              <div className="space-y-1 text-sm text-gray-600">
+                <div>
+                  <strong>Type:</strong> {eventToRemove.eventType}
+                </div>
+                <div>
+                  <strong>Date:</strong> {new Date(eventToRemove.date).toLocaleDateString()}
+                </div>
+                <div>
+                  <strong>User:</strong> {eventToRemove.user.name} ({eventToRemove.user.email})
+                </div>
+                {eventToRemove.location && (
+                  <div>
+                    <strong>Location:</strong> {eventToRemove.location}
+                  </div>
+                )}
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-red-600">
+              This action cannot be undone. The user will be notified of the removal.
+            </p>
           </div>
         )}
       </Dialog>
