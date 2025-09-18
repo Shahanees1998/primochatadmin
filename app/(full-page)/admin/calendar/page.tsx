@@ -232,7 +232,7 @@ export default function AdminCalendarPage() {
     return (
       <Chip
         label={getEventTypeLabel(rowData.eventType)}
-        severity={rowData.eventType === 'CUSTOM' ? 'warning' : 'info'}
+        className={rowData.eventType === 'CUSTOM' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}
       />
     );
   };
