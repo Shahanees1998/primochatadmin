@@ -619,7 +619,7 @@ export default function TrestleBoardPage() {
                 </div>
             </div>
         </>
-    ), [globalFilterValue]);
+    ), [globalFilterValue, selectedTrestleBoards]);
 
     return (
         <div className="grid">
