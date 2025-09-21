@@ -114,6 +114,43 @@ export class NotificationService {
         });
     }
 
+    static async sendChatMessageFCMOnly(userId: string, message: any, chatRoom: any) {
+        const senderName = message.sender ? `${message.sender.firstName} ${message.sender.lastName}` : 'Someone';
+        
+        try {
+            // Get user's LCM device tokens
+            const user = await prismadb.user.findUnique({
+                where: { id: userId },
+                select: { lcmDeviceTokens: true, lcmEnabled: true }
+            });
+
+            if (!user?.lcmDeviceTokens || user.lcmDeviceTokens.length === 0 || !user.lcmEnabled) {
+                console.log(`No LCM device tokens found for user ${userId} or LCM disabled`);
+                return;
+            }
+
+            // Send FCM notification directly without creating database record
+            const { LCMService } = await import('@/lib/lcmService');
+            await LCMService.sendToUser(userId, {
+                title: 'New Message',
+                body: `${senderName}: ${message.content}`,
+                data: {
+                    type: 'chat_message',
+                    messageId: message.id,
+                    senderId: message.senderId,
+                    chatRoomId: chatRoom.id,
+                    chatRoomTitle: chatRoom.name || 'Chat',
+                    senderName: senderName
+                },
+                priority: 'high'
+            });
+
+            console.log(`FCM sent for chat message to user ${userId}`);
+        } catch (error) {
+            console.error(`Error sending FCM for chat message to user ${userId}:`, error);
+        }
+    }
+
     static async createMealSelectionNotification(userId: string, mealData: any) {
         return this.createNotification({
             userId,

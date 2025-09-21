@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
         festiveBoardMealId,
         isCompleted,
         completedAt: isCompleted ? new Date() : null,
+        selectedAt: new Date(), // Set the selection date when creating
       },
       include: {
         user: {

@@ -298,6 +298,10 @@ class ApiClient {
         return this.delete(`/admin/trestle-board/${id}`);
     }
 
+    async bulkDeleteTrestleBoards(ids: string[]) {
+        return this.post<any>('/admin/trestle-board/bulk-delete', { ids });
+    }
+
     // Document methods
     async getDocuments(params?: {
         page?: number;
@@ -636,6 +640,10 @@ class ApiClient {
         return this.post<any>('/admin/chat/rooms', data);
     }
 
+    async getGroupChat() {
+        return this.get<any>('/admin/chat/rooms/group-chat');
+    }
+
     async sendMessage(data: {
         chatRoomId: string;
         content: string;
@@ -924,6 +932,10 @@ class ApiClient {
 
     async deleteFestiveBoard(id: string) {
         return this.delete(`/admin/festive-board/${id}`);
+    }
+
+    async bulkDeleteFestiveBoards(ids: string[]) {
+        return this.post<any>('/admin/festive-board/bulk-delete', { ids });
     }
 
     async searchMeals(params?: {

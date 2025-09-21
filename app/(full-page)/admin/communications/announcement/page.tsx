@@ -11,6 +11,7 @@ import { Calendar } from "primereact/calendar";
 import { Toast } from "primereact/toast";
 import { useRouter } from "next/navigation";
 import { Tag } from "primereact/tag";
+import { apiClient } from "@/lib/apiClient";
 
 interface AnnouncementFormData {
     title: string;
@@ -126,71 +127,59 @@ export default function AnnouncementPage() {
 
     const sendAnnouncementToChatRooms = async (announcement: any) => {
         try {
-            // Get all active users based on target audience
-            let userQuery = '';
-            if (formData.targetAudience.includes('ALL')) {
-                userQuery = '?status=ACTIVE';
-            } else if (formData.targetAudience.includes('ADMINS')) {
-                userQuery = '?status=ACTIVE&role=ADMIN';
-            } else if (formData.targetAudience.includes('MEMBERS')) {
-                userQuery = '?status=ACTIVE&role=MEMBER';
-            } else if (formData.targetAudience.includes('NEW_MEMBERS')) {
-                // For new members, we'll get all active members and filter by creation date in the frontend
-                userQuery = '?status=ACTIVE';
-            }
-            const usersResponse = await fetch(`/api/admin/users${userQuery}`);
-            if (!usersResponse.ok) {
-                throw new Error('Failed to fetch users');
-            }
-            const usersData = await usersResponse.json();
-            let filteredUsers = usersData.users;
+            // Get the existing "Group Chat" room
+            const groupChatResponse = await apiClient.getGroupChat();
             
-            // Filter for new members if needed
-            if (formData.targetAudience.includes('NEW_MEMBERS')) {
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                filteredUsers = usersData.users.filter((user: any) => {
-                    const userCreatedAt = new Date(user.createdAt);
-                    return userCreatedAt >= thirtyDaysAgo;
-                });
+            if (groupChatResponse.error) {
+                throw new Error(groupChatResponse.error);
             }
             
-            const userIds = filteredUsers.map((user: any) => user.id);
-            if (userIds.length === 0) {
-                showToast("warn", "Warning", "No users found for target audience");
-                return;
-            }
-            // Create a group chat room with all target users
-            const chatRoomResponse = await fetch('/api/admin/chat/rooms', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    participantIds: userIds,
-                    isGroup: true,
-                    name: `Announcement: ${announcement.title}`
-                }),
+            const groupChat = groupChatResponse.data;
+            
+            // Send announcement message to the existing Group Chat
+            const messageResponse = await apiClient.sendMessage({
+                chatRoomId: groupChat.id,
+                content: `📢 **${announcement.title}**\n\n${announcement.content}\n\n*Sent by Hashim*`,
+                type: 'TEXT'
             });
-            if (!chatRoomResponse.ok) {
-                throw new Error('Failed to create chat room');
+            
+            if (messageResponse.error) {
+                throw new Error(messageResponse.error);
             }
-            const chatRoom = await chatRoomResponse.json();
-            // Send announcement message to the chat room
-            const messageResponse = await fetch('/api/admin/chat/messages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chatRoomId: chatRoom.id,
-                    content: `📢 **${announcement.title}**\n\n${announcement.content}\n\n*Sent by Admin*`,
-                    type: 'TEXT'
-                }),
-            });
-            if (!messageResponse.ok) {
-                throw new Error('Failed to send message');
-            }
-            showToast("success", "Success", "Announcement also sent to users in chat rooms!");
+            
+            showToast("success", "Success", "Announcement sent to Group Chat!");
         } catch (error) {
-            console.error('Error sending announcement to chat rooms:', error);
-            showToast("warn", "Warning", "Announcement saved but failed to send to chat rooms");
+            console.error('Error sending announcement to Group Chat:', error);
+            showToast("warn", "Warning", "Announcement saved but failed to send to Group Chat");
+        }
+    };
+
+    const sendAnnouncementUpdateToChatRooms = async (announcement: any) => {
+        try {
+            // Get the existing "Group Chat" room
+            const groupChatResponse = await apiClient.getGroupChat();
+            
+            if (groupChatResponse.error) {
+                throw new Error(groupChatResponse.error);
+            }
+            
+            const groupChat = groupChatResponse.data;
+            
+            // Send announcement update message to the existing Group Chat
+            const messageResponse = await apiClient.sendMessage({
+                chatRoomId: groupChat.id,
+                content: `🔄 **Announcement Updated: ${announcement.title}**\n\n${announcement.content}\n\n*Updated by Admin*`,
+                type: 'TEXT'
+            });
+            
+            if (messageResponse.error) {
+                throw new Error(messageResponse.error);
+            }
+            
+            showToast("success", "Success", "Announcement update sent to Group Chat!");
+        } catch (error) {
+            console.error('Error sending announcement update to Group Chat:', error);
+            showToast("warn", "Warning", "Announcement updated but failed to send to Group Chat");
         }
     };
 
@@ -229,7 +218,13 @@ export default function AnnouncementPage() {
                     throw new Error('Failed to update announcement');
                 }
 
+                const updatedAnnouncement = await response.json();
                 showToast("success", "Success", "Announcement updated successfully!");
+                
+                // Send announcement update to Group Chat if delivery options are checked
+                if (formData.includeEmail || formData.includePushNotification) {
+                    await sendAnnouncementUpdateToChatRooms(updatedAnnouncement);
+                }
             } else {
                 // Create new announcement
                 const response = await fetch('/api/admin/announcements', {

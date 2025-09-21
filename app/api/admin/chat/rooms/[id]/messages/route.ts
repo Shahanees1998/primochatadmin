@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             // Try to find the first available chat room or create a default one
             let defaultRoom = await prisma.chatRoom.findFirst({
                 where: {
-                    name: 'General'
+                    name: 'Group Chat'
                 }
             });
 
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                 if (adminUser) {
                     defaultRoom = await prisma.chatRoom.create({
                         data: {
-                            name: 'General',
+                            name: 'Group Chat',
                             isGroup: true,
                             participants: {
                                 create: {

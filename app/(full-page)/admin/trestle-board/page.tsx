@@ -433,8 +433,11 @@ export default function TrestleBoardPage() {
         if (selectedTrestleBoards.length === 0) return;
         
         try {
-            const deletePromises = selectedTrestleBoards.map(board => apiClient.deleteTrestleBoard(board.id));
-            await Promise.all(deletePromises);
+            const response = await apiClient.bulkDeleteTrestleBoards(selectedTrestleBoards.map(board => board.id));
+            
+            if (response.error) {
+                throw new Error(response.error);
+            }
             
             setSelectedTrestleBoards([]);
             showToast("success", "Success", `${selectedTrestleBoards.length} trestle board(s) deleted successfully`);

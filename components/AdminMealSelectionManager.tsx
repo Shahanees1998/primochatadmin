@@ -43,6 +43,7 @@ interface MealSelection {
     userId: string;
     user: User;
     createdAt: string;
+    selectedAt: string;
   }[];
   selectionCount: number;
 }
@@ -261,6 +262,9 @@ export default function AdminMealSelectionManager({
           </div>
           <div className="text-xs text-gray-500">
             #{rowData.selections[0]?.user.membershipNumber}
+          </div>
+          <div className="text-xs text-gray-400">
+            Selected: {new Date(rowData.selections[0]?.selectedAt).toLocaleDateString()}
           </div>
         </div>
       ) : (

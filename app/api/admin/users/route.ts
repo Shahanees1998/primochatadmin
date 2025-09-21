@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
 
                 // Ensure default group chat exists and include the new user
                 try {
-                    const groupName = 'General';
+                    const groupName = 'Group Chat';
                     // Try to find existing default group with participants
                     let groupRoom = await prisma.chatRoom.findFirst({
                         where: { isGroupChat: true, name: groupName },

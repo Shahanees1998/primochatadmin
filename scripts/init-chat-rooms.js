@@ -29,14 +29,14 @@ async function initializeChatRooms() {
 
         // Check if General chat room exists
         let generalRoom = await prisma.chatRoom.findFirst({
-            where: { name: 'General' }
+            where: { name: 'Group Chat' }
         });
 
         if (!generalRoom) {
             console.log('Creating General chat room...');
             generalRoom = await prisma.chatRoom.create({
                 data: {
-                    name: 'General',
+                    name: 'Group Chat',
                     isGroup: true,
                     participants: {
                         create: {

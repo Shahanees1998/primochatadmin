@@ -72,11 +72,11 @@ const AppMenu = () => {
                 //     icon: "pi pi-fw pi-calendar-plus",
                 //     to: "/admin/calendar",
                 // },
-                {
-                    label: "User Calendars",
-                    icon: "pi pi-fw pi-users",
-                    to: "/admin/user-calendars",
-                },
+                // {
+                //     label: "User Calendars",
+                //     icon: "pi pi-fw pi-users",
+                //     to: "/admin/user-calendars",
+                // },
                 // {
                 //     label: "Create Board",
                 //     icon: "pi pi-fw pi-plus",

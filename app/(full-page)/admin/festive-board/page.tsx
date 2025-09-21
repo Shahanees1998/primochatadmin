@@ -157,8 +157,11 @@ export default function FestiveBoardPage() {
     if (selectedBoards.length === 0) return;
     
     try {
-      const deletePromises = selectedBoards.map(board => apiClient.deleteFestiveBoard(board.id));
-      await Promise.all(deletePromises);
+      const response = await apiClient.bulkDeleteFestiveBoards(selectedBoards.map(board => board.id));
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
       
       setSelectedBoards([]);
       toast.current?.show({

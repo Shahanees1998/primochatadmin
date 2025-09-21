@@ -190,6 +190,7 @@ export async function POST(
             userId: userId,
             festiveBoardMealId: festiveBoardMeal.id,
             festiveBoardId: params.id,
+            selectedAt: new Date(), // Explicitly set the selection date
           },
           include: {
             user: {

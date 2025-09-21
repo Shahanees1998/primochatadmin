@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
                 console.error('Pusher emit error:', error);
             }
 
-            // Create notifications for other participants
+            // Send FCM notifications for other participants (no database records)
             if (chatRoom) {
                 const otherParticipants = chatRoom.participants
                     .map(p => p.user)
@@ -89,13 +89,13 @@ export async function POST(request: NextRequest) {
 
                 for (const participant of otherParticipants) {
                     try {
-                        await NotificationService.createChatMessageNotification(
+                        await NotificationService.sendChatMessageFCMOnly(
                             participant.id,
                             message,
                             chatRoom
                         );
                     } catch (error) {
-                        console.error(`Error creating notification for user ${participant.id}:`, error);
+                        console.error(`Error sending FCM for user ${participant.id}:`, error);
                     }
                 }
             }

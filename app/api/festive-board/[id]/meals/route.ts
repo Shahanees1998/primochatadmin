@@ -59,7 +59,7 @@ export async function GET(
         festiveBoardId: festiveBoardMeal.festiveBoardId,
         meal: festiveBoardMeal.meal,
         isSelected: festiveBoardMeal.userSelections.length > 0,
-        selectedAt: festiveBoardMeal.userSelections[0]?.createdAt || null,
+        selectedAt: festiveBoardMeal.userSelections[0]?.selectedAt || null,
       }));
 
       return NextResponse.json({
@@ -136,6 +136,7 @@ export async function POST(
             userId: authenticatedReq.user.userId,
             festiveBoardMealId: festiveBoardMeal.id,
             festiveBoardId: params.id,
+            selectedAt: new Date(), // Explicitly set the selection date
           },
           include: {
             user: {

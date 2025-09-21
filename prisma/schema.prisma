@@ -507,6 +507,7 @@ model UserMealSelection {
   festiveBoardMealId String    @db.ObjectId
   isCompleted        Boolean   @default(false)
   completedAt        DateTime?
+  selectedAt         DateTime  @default(now()) // Date when the meal was selected
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

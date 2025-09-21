@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { LCMService } from '@/lib/lcmService';
+import { NotificationService } from '@/lib/notificationService';
+import { NotificationType } from '@prisma/client';
 
 export async function PUT(
     request: NextRequest,
@@ -16,6 +19,23 @@ export async function PUT(
                 return NextResponse.json(
                     { error: 'Title, content, and type are required' },
                     { status: 400 }
+                );
+            }
+
+            // Get the original announcement for comparison
+            const originalAnnouncement = await prisma.announcement.findUnique({
+                where: { id: params.id },
+                select: {
+                    title: true,
+                    content: true,
+                    type: true,
+                },
+            });
+
+            if (!originalAnnouncement) {
+                return NextResponse.json(
+                    { error: 'Announcement not found' },
+                    { status: 404 }
                 );
             }
 
@@ -38,6 +58,66 @@ export async function PUT(
                     },
                 },
             });
+
+            // Check if there are any changes
+            const hasChanges = 
+                originalAnnouncement.title !== title ||
+                originalAnnouncement.content !== content ||
+                originalAnnouncement.type !== type;
+
+            // Send notifications only if there are changes
+            if (hasChanges) {
+                try {
+                    // Send FCM notification to all active users
+                    await LCMService.sendToAllUsers({
+                        title: 'Announcement Updated',
+                        body: `"${title}" has been updated by admin`,
+                        data: {
+                            type: 'announcement_update',
+                            announcementId: announcement.id,
+                            action: 'updated',
+                            title: title,
+                            content: content,
+                            announcementType: type,
+                            updatedBy: authenticatedReq.user!.firstName + ' ' + authenticatedReq.user!.lastName,
+                            updatedByUserId: authenticatedReq.user!.userId,
+                        },
+                        priority: 'high',
+                    });
+
+                    // Create notification database records for all active users
+                    const allUsers = await prisma.user.findMany({
+                        where: { status: 'ACTIVE' },
+                        select: { id: true },
+                    });
+
+                    const notificationPromises = allUsers.map(user =>
+                        NotificationService.createNotification({
+                            userId: user.id,
+                            title: 'Announcement Updated',
+                            message: `"${title}" has been updated by admin`,
+                            type: NotificationType.BROADCAST,
+                            relatedId: announcement.id,
+                            relatedType: 'announcement',
+                            metadata: {
+                                announcementId: announcement.id,
+                                action: 'updated',
+                                title: title,
+                                content: content,
+                                announcementType: type,
+                                updatedBy: authenticatedReq.user!.firstName + ' ' + authenticatedReq.user!.lastName,
+                                updatedByUserId: authenticatedReq.user!.userId,
+                            },
+                            sendPush: false, // FCM already sent above
+                        })
+                    );
+
+                    await Promise.all(notificationPromises);
+                } catch (notificationError) {
+                    console.error('Error sending announcement update notifications:', notificationError);
+                    // Don't fail the update if notifications fail
+                }
+            }
 
             return NextResponse.json({
                 ...announcement,
