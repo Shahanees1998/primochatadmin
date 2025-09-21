@@ -19,10 +19,8 @@ interface TrestleBoard {
     id: string;
     title: string;
     description?: string;
-    startDate: string;
-    endDate?: string;
-    startTime?: string;
-    endTime?: string;
+    date: string;
+    time?: string;
     location?: string;
     category: 'REGULAR_MEETING' | 'DISTRICT' | 'EMERGENT' | 'PRACTICE' | 'CGP' | 'SOCIAL';
     isRSVP: boolean;
@@ -241,20 +239,6 @@ export default function TrestleBoardViewPage() {
         });
     };
 
-    const getDuration = (startDate: string, endDate?: string) => {
-        if (!endDate) return "No end time specified";
-        
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const diffMs = end.getTime() - start.getTime();
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        
-        if (diffHours > 0) {
-            return `${diffHours}h ${diffMinutes}m`;
-        }
-        return `${diffMinutes}m`;
-    };
 
     const memberBodyTemplate = (rowData: TrestleBoardMember) => {
         return (
@@ -392,27 +376,15 @@ export default function TrestleBoardViewPage() {
                                         <h3 className="text-lg font-semibold mb-2">Trestle Board Information</h3>
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="font-bold text-600">Start Date & Time</label>
-                                                <p className="text-lg">{formatDate(trestleBoard.startDate)}</p>
+                                                <label className="font-bold text-600">Date</label>
+                                                <p className="text-lg">{formatDate(trestleBoard.date)}</p>
                                             </div>
-                                            <div>
-                                                <label className="font-bold text-600">Start Time</label>
-                                                <p className="text-lg">{trestleBoard.startTime || '-'}</p>
-                                            </div>
-                                            {trestleBoard.endDate && (
+                                            {trestleBoard.time && (
                                                 <div>
-                                                    <label className="font-bold text-600">End Date & Time</label>
-                                                    <p className="text-lg">{formatDate(trestleBoard.endDate)}</p>
+                                                    <label className="font-bold text-600">Time</label>
+                                                    <p className="text-lg">{trestleBoard.time}</p>
                                                 </div>
                                             )}
-                                            <div>
-                                                <label className="font-bold text-600">End Time</label>
-                                                <p className="text-lg">{trestleBoard.endTime || '-'}</p>
-                                            </div>
-                                            <div>
-                                                <label className="font-bold text-600">Duration</label>
-                                                <p className="text-lg">{getDuration(trestleBoard.startDate, trestleBoard.endDate)}</p>
-                                            </div>
                                             {trestleBoard.location && (
                                                 <div>
                                                     <label className="font-bold text-600">Location</label>
