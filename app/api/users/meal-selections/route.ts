@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
               year: true,
               title: true,
               description: true,
+              date: true,
               createdAt: true
             }
           },
@@ -62,7 +63,8 @@ export async function GET(request: NextRequest) {
           year: selection.festiveBoard.year,
           title: selection.festiveBoard.title,
           description: selection.festiveBoard.description,
-          createdAt: selection.festiveBoard.createdAt
+          createdAt: selection.festiveBoard.createdAt,
+          festiveBoardDate:selection.festiveBoard.date
         },
         meal: {
           id: selection.festiveBoardMeal.meal.id,

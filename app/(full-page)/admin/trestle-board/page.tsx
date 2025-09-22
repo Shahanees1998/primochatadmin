@@ -102,6 +102,14 @@ export default function TrestleBoardPage() {
     const [bulkUploadProgress, setBulkUploadProgress] = useState(0);
     const [bulkUploadStatus, setBulkUploadStatus] = useState<string>("");
 
+    // Utility function to format date as YYYY-MM-DD to avoid timezone issues
+    const formatDateForAPI = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     // Effect to trigger search when debounced term changes
     useEffect(() => {
         if (debouncedSearchTerm) {
@@ -264,10 +272,20 @@ export default function TrestleBoardPage() {
             const item = csvData[i];
             setBulkUploadStatus(`Processing ${item.title} (${i + 1}/${csvData.length})`);
             try {
+                // Ensure date is in YYYY-MM-DD format to avoid timezone issues
+                let formattedDate = item.date;
+                if (item.date && !item.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    // If date is not in YYYY-MM-DD format, try to parse and format it
+                    const parsedDate = new Date(item.date);
+                    if (!isNaN(parsedDate.getTime())) {
+                        formattedDate = formatDateForAPI(parsedDate);
+                    }
+                }
+
                 const response = await apiClient.createTrestleBoard({
                     title: item.title,
                     description: item.description || undefined,
-                    date: item.date,
+                    date: formattedDate,
                     time: item.time || undefined,
                     location: item.location || undefined,
                     category: item.category,
@@ -353,7 +371,7 @@ export default function TrestleBoardPage() {
             const trestleBoardData = {
                 title: trestleBoardForm.title,
                 description: trestleBoardForm.description,
-                date: trestleBoardForm.date.toISOString(),
+                date: formatDateForAPI(trestleBoardForm.date),
                 time: trestleBoardForm.time,
                 location: trestleBoardForm.location,
                 category: trestleBoardForm.category,
@@ -544,7 +562,7 @@ export default function TrestleBoardPage() {
                 userId: selectedUser,
                 title: selectedTrestleBoard.title,
                 description: selectedTrestleBoard.description || '',
-                startDate: selectedTrestleBoard.date,
+                startDate: formatDateForAPI(new Date(selectedTrestleBoard.date)),
                 endDate: undefined,
                 startTime: selectedTrestleBoard.time || undefined,
                 endTime: undefined,
