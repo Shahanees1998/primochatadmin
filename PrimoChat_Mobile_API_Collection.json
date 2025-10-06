@@ -511,8 +511,55 @@
             "url": {
               "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}",
               "host": ["{{base_url}}"],
-              "path": ["admin", "festive-board", "{{festive_board_id}}", "meals"]
-            }
+              "path": ["admin", "festive-board", "{{festive_board_id}}"]
+            },
+            "description": "Get a specific festive board by ID with all related data (Admin only).\n\n**Response includes:**\n- Complete festive board details\n- Created by user information\n- All meals with categories\n- User meal selections\n- RSVP members and status\n- Board metadata (month, year, date, etc.)\n\n**Admin features:**\n- View complete board information\n- See all user selections\n- Access RSVP participant data\n- View board creation details"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Festive Board",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Festive Board Title\",\n  \"mainCourse\": \"Updated Main Course\",\n  \"description\": \"Updated description\",\n  \"mealIds\": [\"{{meal_id_1}}\", \"{{meal_id_2}}\", \"{{meal_id_3}}\"],\n  \"isRSVP\": true,\n  \"maxAttendees\": 100,\n  \"date\": \"2024-12-25T00:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "festive-board", "{{festive_board_id}}"]
+            },
+            "description": "Update an existing festive board (Admin only).\n\n**Required fields:**\n- title: Updated festive board title\n- mealIds: Array of meal IDs to include\n\n**Optional fields:**\n- mainCourse: Main course description\n- description: Detailed description\n- isRSVP: Enable/disable RSVP functionality\n- maxAttendees: Maximum number of attendees\n- date: Specific event date\n\n**Features:**\n- Updates all festive board properties\n- Replaces existing meals with new selection\n- Maintains user selections for retained meals\n- Sends notifications to all users about updates\n- Tracks meal additions/removals separately"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Festive Board",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "festive-board", "{{festive_board_id}}"]
+            },
+            "description": "Delete a festive board (Admin only).\n\n**Warning:** This action is irreversible and will:\n- Delete the festive board and all associated data\n- Remove all user meal selections for this board\n- Remove all RSVP entries for this board\n- Send notifications to all users about the deletion\n\n**Use with caution:** Consider if users need advance notice before deletion"
           },
           "response": []
         },

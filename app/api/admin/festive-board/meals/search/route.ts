@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { withAdminAuth, AuthenticatedRequest, withAuth } from '@/lib/authMiddleware';
 
 // GET - Search meals for Festive board
 export async function GET(request: NextRequest) {
-  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+  return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';

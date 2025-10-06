@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { withAdminAuth, AuthenticatedRequest, withAuth } from '@/lib/authMiddleware';
 import { LCMService } from '@/lib/lcmService';
 import { NotificationService } from '@/lib/notificationService';
 import { NotificationType } from '@prisma/client';
@@ -10,7 +10,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+  return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
 
     const board = await prisma.festiveBoard.findUnique({
@@ -86,7 +86,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+  return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
 
     const body = await request.json();
@@ -362,7 +362,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+  return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
 
     // Check if board exists and get details for notification

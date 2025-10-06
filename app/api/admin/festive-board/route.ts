@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withAdminAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { withAdminAuth, AuthenticatedRequest, withAuth } from '@/lib/authMiddleware';
 import { LCMService } from '@/lib/lcmService';
 import { NotificationService } from '@/lib/notificationService';
 import { NotificationType } from '@prisma/client';
 
 // GET - List all festive boards
 export async function GET(request: NextRequest) {
-  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+  return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       const { searchParams } = new URL(request.url);
       const page = parseInt(searchParams.get('page') || '1');
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
 
 // POST - Create a new Festive board
 export async function POST(request: NextRequest) {
-  return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
+  return withAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       const body = await request.json();
       const { month, year, date, title, mainCourse, description, mealIds, isRSVP, maxAttendees } = body;
