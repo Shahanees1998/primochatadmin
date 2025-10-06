@@ -9,6 +9,7 @@ import { Skeleton } from 'primereact/skeleton';
 import { useRouter, useParams } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 import AdminMealSelectionManager from '@/components/AdminMealSelectionManager';
+import FestiveBoardRSVPManager from '@/components/FestiveBoardRSVPManager';
 
 export default function FestiveBoardViewPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function FestiveBoardViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMealSelections, setShowMealSelections] = useState(false);
+  const [showRSVPManager, setShowRSVPManager] = useState(false);
   const toast = React.useRef<Toast>(null);
 
   const boardId = params?.id as string;
@@ -165,6 +167,18 @@ export default function FestiveBoardViewPage() {
     );
   }
 
+  if (showRSVPManager) {
+    return (
+      <div className="p-4">
+        <Toast ref={toast} />
+        <FestiveBoardRSVPManager 
+          festiveBoardId={boardId} 
+          onClose={() => setShowRSVPManager(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4">
       <Toast ref={toast} />
@@ -178,6 +192,13 @@ export default function FestiveBoardViewPage() {
             <span className="text-600">Board ID: {board.id}</span>
           </div>
           <div className="flex gap-2">
+            <Button
+              label="Manage RSVP"
+              icon="pi pi-calendar-plus"
+              className="p-button-warning"
+              onClick={() => setShowRSVPManager(true)}
+              disabled={!board?.isRSVP}
+            />
             <Button
               label="Reporting and Manage Meal Selections"
               icon="pi pi-users"
@@ -230,6 +251,54 @@ export default function FestiveBoardViewPage() {
                   <div className="mb-3">
                     <label className="font-bold text-600">Description</label>
                     <div className="text-lg">{board.description}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RSVP Information */}
+          <div className="col-12">
+            <h3 className="text-lg font-semibold mb-3">RSVP Information</h3>
+            <div className="grid">
+              <div className="col-12 md:col-6">
+                <div className="mb-3">
+                  <label className="font-bold text-600">RSVP Enabled</label>
+                  <div className="text-lg">
+                    {board.isRSVP ? (
+                      <span className="text-green-600 font-semibold">
+                        <i className="pi pi-check-circle mr-2"></i>
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="text-red-600 font-semibold">
+                        <i className="pi pi-times-circle mr-2"></i>
+                        No
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {board.isRSVP && board.maxAttendees && (
+                <div className="col-12 md:col-6">
+                  <div className="mb-3">
+                    <label className="font-bold text-600">Maximum Attendees</label>
+                    <div className="text-lg">{board.maxAttendees}</div>
+                  </div>
+                </div>
+              )}
+              {board.date && (
+                <div className="col-12 md:col-6">
+                  <div className="mb-3">
+                    <label className="font-bold text-600">Event Date</label>
+                    <div className="text-lg">
+                      {new Date(board.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </div>
                   </div>
                 </div>
               )}

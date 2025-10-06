@@ -54,6 +54,8 @@ model User {
   moderator            Moderator?
   festiveBoards        FestiveBoard[]
   userMealSelections   UserMealSelection[]
+  festiveBoardRSVPs    FestiveBoardRSVP[]
+  festiveBoardAdminSignups FestiveBoardRSVP[] @relation("FestiveBoardAdminSignups")
   adminSignups         TrestleBoardMember[] @relation("AdminSignups")
   createdTrestleBoards TrestleBoard[]       @relation("CreatedTrestleBoards")
 
@@ -472,6 +474,8 @@ model FestiveBoard {
   title       String
   mainCourse  String?
   description String?
+  isRSVP      Boolean  @default(false) // Enable RSVP for this festive board
+  maxAttendees Int?    // Maximum number of attendees allowed
   createdById String   @db.ObjectId
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -480,6 +484,7 @@ model FestiveBoard {
   createdBy      User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
   meals          FestiveBoardMeal[]
   userSelections UserMealSelection[]
+  rsvpMembers    FestiveBoardRSVP[]
 
   @@unique([month, year], name: "month_year")
   @@map("festive_boards")
@@ -518,4 +523,22 @@ model UserMealSelection {
 
   @@unique([userId, festiveBoardMealId])
   @@map("user_meal_selections")
+}
+
+model FestiveBoardRSVP {
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  festiveBoardId String     @db.ObjectId
+  userId         String     @db.ObjectId
+  status         RSVPStatus @default(PENDING)
+  signedUpBy     String?    @db.ObjectId // Admin who signed up the user (if applicable)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Relations
+  festiveBoard   FestiveBoard @relation(fields: [festiveBoardId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signedUpByUser User?        @relation("FestiveBoardAdminSignups", fields: [signedUpBy], references: [id])
+
+  @@unique([festiveBoardId, userId])
+  @@map("festive_board_rsvps")
 }

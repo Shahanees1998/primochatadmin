@@ -8,6 +8,7 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { Dropdown } from 'primereact/dropdown';
 import { MultiSelect } from 'primereact/multiselect';
 import { Checkbox } from 'primereact/checkbox';
+import { InputNumber } from 'primereact/inputnumber';
 import { Toast } from 'primereact/toast';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { useRouter, useParams } from 'next/navigation';
@@ -68,6 +69,9 @@ export default function EditFestiveBoardPage() {
     mainCourse: '',
     description: '',
     mealIds: [] as string[],
+    isRSVP: false,
+    maxAttendees: null as number | null,
+    date: null as string | null,
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -140,6 +144,9 @@ export default function EditFestiveBoardPage() {
           mainCourse: boardData.mainCourse || '',
           description: boardData.description || '',
           mealIds: mealIds,
+          isRSVP: boardData.isRSVP || false,
+          maxAttendees: boardData.maxAttendees || null,
+          date: boardData.date ? new Date(boardData.date).toISOString().split('T')[0] : null,
         });
 
         // Set selected meals for display
@@ -274,6 +281,9 @@ export default function EditFestiveBoardPage() {
         mainCourse: formData.mainCourse,
         description: formData.description,
         mealIds: validMealIds,
+        isRSVP: formData.isRSVP,
+        maxAttendees: formData.maxAttendees,
+        date: formData.date,
       });
 
       if (response.error) {
@@ -505,6 +515,73 @@ export default function EditFestiveBoardPage() {
               placeholder="Enter board description (optional)"
               className="w-full"
             />
+          </div>
+
+          {/* RSVP Settings */}
+          <div className="col-12">
+            <h3 className="text-lg font-bold mb-3">RSVP Settings</h3>
+            
+            <div className="grid">
+              <div className="col-12 md:col-6">
+                <div className="flex align-items-center gap-2 mb-3">
+                  <Checkbox
+                    inputId="isRSVP"
+                    checked={formData.isRSVP}
+                    onChange={(e) => setFormData({ ...formData, isRSVP: e.checked || false })}
+                  />
+                  <label htmlFor="isRSVP" className="font-bold">Enable RSVP for this Festive Board</label>
+                </div>
+              </div>
+
+              <div className="col-12 md:col-6">
+                <label htmlFor="date" className="block font-bold mb-2">Event Date (Optional)</label>
+                <InputText
+                  id="date"
+                  type="date"
+                  value={formData.date || ''}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value || null })}
+                  className="w-full"
+                />
+                <small className="text-600">Specify the actual date for the festive board event</small>
+              </div>
+
+              {formData.isRSVP && (
+                <div className="col-12 md:col-6">
+                  <label htmlFor="maxAttendees" className="block font-bold mb-2">Maximum Attendees</label>
+                  <InputNumber
+                    id="maxAttendees"
+                    value={formData.maxAttendees}
+                    onValueChange={(e) => setFormData({ ...formData, maxAttendees: e.value || null })}
+                    placeholder="Enter maximum number of attendees"
+                    className="w-full"
+                    min={1}
+                    max={1000}
+                    showButtons
+                    buttonLayout="horizontal"
+                    incrementButtonIcon="pi pi-plus"
+                    decrementButtonIcon="pi pi-minus"
+                  />
+                  <small className="text-600">Leave empty for unlimited attendees</small>
+                </div>
+              )}
+            </div>
+
+            {formData.isRSVP && (
+              <div className="mt-3 p-3 bg-blue-50 border-round">
+                <div className="flex align-items-center gap-2">
+                  <i className="pi pi-info-circle text-blue-500"></i>
+                  <span className="text-blue-700 font-medium">RSVP Features Enabled</span>
+                </div>
+                <ul className="mt-2 text-sm text-blue-600 list-none p-0 m-0">
+                  <li className="mb-1">• Users can RSVP with status: Confirmed, Maybe, or Declined</li>
+                  <li className="mb-1">• Admins can manage all RSVPs and see participant lists</li>
+                  <li className="mb-1">• Automatic notifications will be sent for RSVP updates</li>
+                  {formData.maxAttendees && (
+                    <li className="mb-1">• Maximum attendees limit: {formData.maxAttendees}</li>
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
 
           <div className="col-12">

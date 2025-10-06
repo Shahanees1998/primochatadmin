@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
   return withAdminAuth(request, async (authenticatedReq: AuthenticatedRequest) => {
     try {
       const body = await request.json();
-      const { month, year, date, title, mainCourse, description, mealIds } = body;
+      const { month, year, date, title, mainCourse, description, mealIds, isRSVP, maxAttendees } = body;
 
       // Validate required fields
       if (!month || !year || !title || !mealIds || !Array.isArray(mealIds)) {
@@ -162,6 +162,8 @@ export async function POST(request: NextRequest) {
           title,
           mainCourse,
           description,
+          isRSVP: isRSVP || false,
+          maxAttendees: maxAttendees || null,
           createdById: authenticatedReq.user!.userId,
           meals: {
             create: validMealIds.map((mealId: string) => ({

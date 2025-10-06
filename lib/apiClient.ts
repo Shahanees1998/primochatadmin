@@ -917,6 +917,8 @@ class ApiClient {
         mainCourse?: string;
         description?: string;
         mealIds: string[];
+        isRSVP?: boolean;
+        maxAttendees?: number | null;
     }) {
         return this.post<any>('/admin/festive-board', boardData);
     }
@@ -926,6 +928,9 @@ class ApiClient {
         mainCourse?: string;
         description?: string;
         mealIds: string[];
+        isRSVP?: boolean;
+        maxAttendees?: number | null;
+        date?: string | null;
     }) {
         return this.put<any>(`/admin/festive-board/${id}`, boardData);
     }
@@ -1060,6 +1065,32 @@ class ApiClient {
 
     async removeCustomEventFromCalendar(userId: string, customEventId: string) {
         return this.delete<any>(`/admin/user-calendars/${userId}/custom-events/${customEventId}`);
+    }
+
+    // Festive Board RSVP Methods
+    async getFestiveBoardRSVP(festiveBoardId: string) {
+        return this.get<any>(`/festive-board/${festiveBoardId}/rsvp`);
+    }
+
+    async updateFestiveBoardRSVP(festiveBoardId: string, data: { status: string }) {
+        return this.post<any>(`/festive-board/${festiveBoardId}/rsvp`, data);
+    }
+
+    async removeFestiveBoardRSVP(festiveBoardId: string) {
+        return this.delete<any>(`/festive-board/${festiveBoardId}/rsvp`);
+    }
+
+    // Admin Festive Board RSVP Methods
+    async getFestiveBoardRSVPAdmin(festiveBoardId: string) {
+        return this.get<any>(`/admin/festive-board/${festiveBoardId}/rsvp`);
+    }
+
+    async updateFestiveBoardRSVPAdmin(festiveBoardId: string, data: { userId: string; status: string }) {
+        return this.post<any>(`/admin/festive-board/${festiveBoardId}/rsvp`, data);
+    }
+
+    async removeFestiveBoardRSVPAdmin(festiveBoardId: string, userId: string) {
+        return this.delete<any>(`/admin/festive-board/${festiveBoardId}/rsvp?userId=${userId}`);
     }
 }
 

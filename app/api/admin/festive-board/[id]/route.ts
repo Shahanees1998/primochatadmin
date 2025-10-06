@@ -49,6 +49,17 @@ export async function GET(
             },
           },
         },
+        rsvpMembers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -79,7 +90,7 @@ export async function PUT(
     try {
 
     const body = await request.json();
-    const { title, mainCourse, description, mealIds } = body;
+    const { title, mainCourse, description, mealIds, isRSVP, maxAttendees, date } = body;
 
     // Validate required fields
     if (!title || !mealIds || !Array.isArray(mealIds)) {
@@ -158,6 +169,9 @@ export async function PUT(
         title,
         mainCourse,
         description,
+        isRSVP: isRSVP || false,
+        maxAttendees: maxAttendees || null,
+        date: date ? new Date(date) : null,
         meals: {
           deleteMany: {},
           create: newMealIds.map((mealId: string) => ({
