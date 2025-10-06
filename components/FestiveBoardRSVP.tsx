@@ -92,7 +92,7 @@ export default function FestiveBoardRSVP({ festiveBoardId }: FestiveBoardRSVPPro
       setLoading(true);
       setError(null);
       
-      const response = await apiClient.get(`/api/festive-board/${festiveBoardId}/rsvp`);
+      const response = await apiClient.get(`/festive-board/${festiveBoardId}/rsvp`);
       
       if (response.error) {
         throw new Error(response.error);
@@ -122,7 +122,7 @@ export default function FestiveBoardRSVP({ festiveBoardId }: FestiveBoardRSVPPro
 
     setSaving(true);
     try {
-      const response = await apiClient.post(`/api/festive-board/${festiveBoardId}/rsvp`, {
+      const response = await apiClient.post(`/festive-board/${festiveBoardId}/rsvp`, {
         status: selectedStatus,
       });
 
@@ -145,7 +145,7 @@ export default function FestiveBoardRSVP({ festiveBoardId }: FestiveBoardRSVPPro
   const handleRemoveRSVP = async () => {
     setSaving(true);
     try {
-      const response = await apiClient.delete(`/api/festive-board/${festiveBoardId}/rsvp`);
+      const response = await apiClient.delete(`/festive-board/${festiveBoardId}/rsvp`);
 
       if (response.error) {
         throw new Error(response.error);

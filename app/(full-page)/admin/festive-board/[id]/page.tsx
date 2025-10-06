@@ -40,13 +40,20 @@ export default function FestiveBoardViewPage() {
       const response = await apiClient.getFestiveBoard(boardId);      
       if (response.error) {
         console.error('API error:', response.error);
-        setError(response.error);
+        // Check if it's an authentication error
+        if (response.error.includes('Session expired') || response.error.includes('Authentication required')) {
+          setError('Your session has expired. Please log in again.');
+        } else if (response.error.includes('Admin privileges required')) {
+          setError('You do not have admin privileges to access this page.');
+        } else {
+          setError(response.error);
+        }
         return;
       }
       
       // Handle double nesting: response.data.data
       const boardData = (response.data as any)?.data || response.data;
-      console.log(boardData,'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+      console.log('Board data:', boardData);
       if (boardData) {
         setBoard(boardData);
       } else {
@@ -136,19 +143,42 @@ export default function FestiveBoardViewPage() {
   }
 
   if (error || !board) {
+    const isAuthError = error?.includes('session has expired') || error?.includes('Authentication required');
+    const isPrivilegeError = error?.includes('Admin privileges required');
+    
     return (
       <div className="p-4">
         <Toast ref={toast} />
         <Card>
           <div className="text-center p-4">
             <i className="pi pi-exclamation-triangle text-4xl text-red-500 mb-3"></i>
-            <h2 className="text-xl font-semibold mb-2">Festive Board Not Found</h2>
+            <h2 className="text-xl font-semibold mb-2">
+              {isAuthError ? 'Authentication Required' : 
+               isPrivilegeError ? 'Access Denied' : 
+               'Festive Board Not Found'}
+            </h2>
             <p className="text-600 mb-4">{error || 'The requested Festive board could not be found.'}</p>
-            <Button
-              label="Back to Boards"
-              icon="pi pi-arrow-left"
-              onClick={() => router.push('/admin/festive-board')}
-            />
+            <div className="flex gap-2 justify-content-center">
+              {isAuthError ? (
+                <Button
+                  label="Login"
+                  icon="pi pi-sign-in"
+                  onClick={() => router.push('/auth/login')}
+                />
+              ) : isPrivilegeError ? (
+                <Button
+                  label="Back to Dashboard"
+                  icon="pi pi-arrow-left"
+                  onClick={() => router.push('/admin/dashboard')}
+                />
+              ) : (
+                <Button
+                  label="Back to Boards"
+                  icon="pi pi-arrow-left"
+                  onClick={() => router.push('/admin/festive-board')}
+                />
+              )}
+            </div>
           </div>
         </Card>
       </div>
@@ -184,7 +214,7 @@ export default function FestiveBoardViewPage() {
       <Toast ref={toast} />
 
       <Card>
-        <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3 mb-4">
+        <div className="flex flex-column md:justify-content-between gap-3 mb-4">
           <div className="flex flex-column">
             <h2 className="text-2xl font-bold m-0">
               Festive Board Details

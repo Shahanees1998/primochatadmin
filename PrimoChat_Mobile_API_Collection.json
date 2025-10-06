@@ -487,13 +487,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"month\": 12,\n  \"year\": 2024,\n  \"date\": \"2024-12-25T00:00:00.000Z\",\n  \"title\": \"Christmas Festive Board\",\n  \"mainCourse\": \"Turkey Dinner\",\n  \"description\": \"Holiday celebration meal selection\",\n  \"mealIds\": [\"{{meal_id_1}}\", \"{{meal_id_2}}\", \"{{meal_id_3}}\"]\n}"
+              "raw": "{\n  \"month\": 12,\n  \"year\": 2024,\n  \"date\": \"2024-12-25T00:00:00.000Z\",\n  \"title\": \"Christmas Festive Board\",\n  \"mainCourse\": \"Turkey Dinner\",\n  \"description\": \"Holiday celebration meal selection\",\n  \"mealIds\": [\"{{meal_id_1}}\", \"{{meal_id_2}}\", \"{{meal_id_3}}\"],\n  \"isRSVP\": true,\n  \"maxAttendees\": 50\n}"
             },
             "url": {
               "raw": "{{base_url}}/admin/festive-board",
               "host": ["{{base_url}}"],
               "path": ["admin", "festive-board"]
-            }
+            },
+            "description": "Create a new festive board with optional RSVP functionality.\n\n**Required fields:**\n- month: Month (1-12)\n- year: Year\n- title: Festive board title\n- mealIds: Array of meal IDs to include\n\n**Optional fields:**\n- date: Specific event date\n- mainCourse: Main course description\n- description: Detailed description\n- isRSVP: Enable RSVP functionality (default: false)\n- maxAttendees: Maximum number of attendees (optional, unlimited if not set)\n\n**RSVP Features:**\n- When isRSVP is true, users can RSVP with statuses: CONFIRMED, MAYBE, DECLINED\n- maxAttendees limits the number of CONFIRMED RSVPs\n- Admins can manage all RSVPs and view participant lists"
           },
           "response": []
         },
@@ -634,6 +635,115 @@
               "host": ["{{base_url}}"],
               "path": ["admin", "festive-board", "{{festive_board_id}}", "selections"]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User RSVP for Festive Board",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/festive-board/{{festive_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["festive-board", "{{festive_board_id}}", "rsvp"]
+            },
+            "description": "Get current user's RSVP status and list of all RSVP participants for a festive board.\n\n**Response includes:**\n- Current user's RSVP status (if any)\n- RSVP counts by status (CONFIRMED, PENDING, DECLINED, MAYBE)\n- List of all participants with their details\n- Whether max attendees limit is reached\n- Festive board RSVP settings"
+          },
+          "response": []
+        },
+        {
+          "name": "Submit RSVP for Festive Board",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/festive-board/{{festive_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["festive-board", "{{festive_board_id}}", "rsvp"]
+            },
+            "description": "Submit or update RSVP for the current user.\n\n**Valid status values:**\n- CONFIRMED: User will attend\n- MAYBE: User might attend\n- DECLINED: User will not attend\n- PENDING: Default status\n\n**Business rules:**\n- Only CONFIRMED RSVPs count toward max attendees limit\n- System prevents overbooking when limit is reached\n- User gets notifications for RSVP updates"
+          },
+          "response": []
+        },
+        {
+          "name": "Remove RSVP for Festive Board",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/festive-board/{{festive_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["festive-board", "{{festive_board_id}}", "rsvp"]
+            },
+            "description": "Remove current user's RSVP from the festive board.\n\n**Response:** Success message confirming RSVP removal"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All RSVP Participants (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "festive-board", "{{festive_board_id}}", "rsvp"]
+            },
+            "description": "Get all RSVP participants for a festive board (Admin only).\n\n**Response includes:**\n- RSVP counts by status\n- Participants grouped by status\n- Complete participant list with user details\n- Festive board RSVP settings\n\n**Admin features:**\n- View all participants regardless of status\n- See who signed up users (admin vs self)\n- Track RSVP trends"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User RSVP (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"status\": \"CONFIRMED\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "festive-board", "{{festive_board_id}}", "rsvp"]
+            },
+            "description": "Update any user's RSVP status (Admin only).\n\n**Required fields:**\n- userId: ID of the user to update\n- status: New RSVP status (CONFIRMED, MAYBE, DECLINED, PENDING)\n\n**Admin features:**\n- Can RSVP for any user\n- Can change any user's status\n- User gets notified of admin changes\n- Tracks which admin made the change"
+          },
+          "response": []
+        },
+        {
+          "name": "Remove User RSVP (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/festive-board/{{festive_board_id}}/rsvp?userId={{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "festive-board", "{{festive_board_id}}", "rsvp"],
+              "query": [
+                { "key": "userId", "value": "{{user_id}}" }
+              ]
+            },
+            "description": "Remove any user's RSVP from the festive board (Admin only).\n\n**Query parameters:**\n- userId: ID of the user to remove RSVP for\n\n**Response:** Success message confirming RSVP removal\n\n**Admin features:**\n- Can remove any user's RSVP\n- User gets notified of removal\n- Useful for managing overbooked events"
           },
           "response": []
         }

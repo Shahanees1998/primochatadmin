@@ -88,7 +88,15 @@ export async function withAdminAuth(
     
     if (!user) {
       return NextResponse.json(
-        { error: 'You are unauthorized to access this page' },
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has admin role
+    if (!['ADMIN', 'ADMINLEVELTWO', 'ADMINLEVELTHREE'].includes(user.role)) {
+      return NextResponse.json(
+        { error: 'You are unauthorized to access this page. Admin privileges required.' },
         { status: 403 }
       );
     }

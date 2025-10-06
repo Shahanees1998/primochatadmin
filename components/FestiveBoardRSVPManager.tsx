@@ -112,7 +112,7 @@ export default function FestiveBoardRSVPManager({
       setLoading(true);
       setError(null);
       
-      const response = await apiClient.get(`/api/admin/festive-board/${festiveBoardId}/rsvp`);
+      const response = await apiClient.getFestiveBoardRSVPAdmin(festiveBoardId);
       
       if (response.error) {
         throw new Error(response.error);
@@ -143,7 +143,7 @@ export default function FestiveBoardRSVPManager({
 
     setSaveLoading(true);
     try {
-      const response = await apiClient.post(`/api/admin/festive-board/${festiveBoardId}/rsvp`, {
+      const response = await apiClient.updateFestiveBoardRSVPAdmin(festiveBoardId, {
         userId: selectedParticipant.user.id,
         status: rsvpStatus,
       });
@@ -167,7 +167,7 @@ export default function FestiveBoardRSVPManager({
   const deleteRSVP = async (participant: FestiveBoardRSVP) => {
     setDeleteLoading(participant.id);
     try {
-      const response = await apiClient.delete(`/api/admin/festive-board/${festiveBoardId}/rsvp?userId=${participant.user.id}`);
+      const response = await apiClient.removeFestiveBoardRSVPAdmin(festiveBoardId, participant.user.id);
 
       if (response.error) {
         throw new Error(response.error);

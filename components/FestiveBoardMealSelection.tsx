@@ -60,7 +60,7 @@ export default function FestiveBoardMealSelection({
   const fetchMeals = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/festive-board/${festiveBoardId}/meals`);
+      const response = await apiClient.get(`/festive-board/${festiveBoardId}/meals`);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -80,7 +80,7 @@ export default function FestiveBoardMealSelection({
       setSaving(true);
       const action = isSelected ? 'deselect' : 'select';
       
-      const response = await apiClient.post(`/api/festive-board/${festiveBoardId}/meals`, {
+      const response = await apiClient.post(`/festive-board/${festiveBoardId}/meals`, {
         mealId,
         action,
       });
