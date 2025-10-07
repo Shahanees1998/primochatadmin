@@ -14,6 +14,7 @@ import { Dialog } from "primereact/dialog";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Dropdown } from "primereact/dropdown";
 import { apiClient } from "@/lib/apiClient";
+import TrestleBoardRSVPManager from "@/components/TrestleBoardRSVPManager";
 
 interface TrestleBoard {
     id: string;
@@ -87,6 +88,7 @@ export default function TrestleBoardViewPage() {
     const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
     const [calendarLoading, setCalendarLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+    const [showRSVPManager, setShowRSVPManager] = useState(false);
     const toast = useRef<Toast>(null);
 
     const trestleBoardId = params.id as string;
@@ -336,6 +338,30 @@ export default function TrestleBoardViewPage() {
         );
     }
 
+    // Show RSVP Manager if enabled
+    if (showRSVPManager && trestleBoard.isRSVP) {
+        return (
+            <div className="grid">
+                <div className="col-12">
+                    <div className="flex justify-content-between align-items-center mb-3">
+                        <h1 className="text-3xl font-bold m-0">Manage RSVP - {trestleBoard.title}</h1>
+                        <Button
+                            label="Back to Details"
+                            icon="pi pi-arrow-left"
+                            onClick={() => setShowRSVPManager(false)}
+                            severity="secondary"
+                        />
+                    </div>
+                    <TrestleBoardRSVPManager
+                        trestleBoardId={trestleBoardId}
+                        onClose={() => setShowRSVPManager(false)}
+                    />
+                </div>
+                <Toast ref={toast} />
+            </div>
+        );
+    }
+
     return (
         <div className="grid">
             <div className="col-12">
@@ -346,11 +372,19 @@ export default function TrestleBoardViewPage() {
                         <div className="flex align-items-center gap-2 mt-2">
                             <Tag value={trestleBoard.category} severity={getCategorySeverity(trestleBoard.category)} />
                             {trestleBoard.isRSVP && (
-                                <Tag value="RSVP Required" severity="warning" />
+                                <Tag value="RSVP Enabled" severity="warning" />
                             )}
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {trestleBoard.isRSVP && (
+                            <Button
+                                label="Manage RSVP"
+                                icon="pi pi-calendar-plus"
+                                onClick={() => setShowRSVPManager(true)}
+                                severity="warning"
+                            />
+                        )}
                         <Button
                             label="Back to Trestle Board"
                             icon="pi pi-arrow-left"

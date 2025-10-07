@@ -44,6 +44,11 @@
       "key": "document_id",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "trestle_board_id",
+      "value": "",
+      "type": "string"
     }
   ],
   "auth": {
@@ -852,6 +857,115 @@
               "host": ["{{base_url}}"],
               "path": ["admin", "calendar"]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User RSVP for Trestle Board",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trestle-board/{{trestle_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["trestle-board", "{{trestle_board_id}}", "rsvp"]
+            },
+            "description": "Get current user's RSVP status and list of all RSVP participants for a trestle board.\n\n**Available RSVP Statuses:**\n- CONFIRMED: User confirmed attendance\n- MAYBE: User might attend\n- DECLINED: User declined attendance\n- PENDING: Default/undecided status\n\n**Response includes:**\n- Current user's RSVP status (if any)\n- RSVP counts by status (CONFIRMED, PENDING, DECLINED, MAYBE)\n- List of all participants with their details\n- Whether max attendees limit is reached\n- Trestle board RSVP settings (isRSVP, maxAttendees)"
+          },
+          "response": []
+        },
+        {
+          "name": "Submit RSVP for Trestle Board",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trestle-board/{{trestle_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["trestle-board", "{{trestle_board_id}}", "rsvp"]
+            },
+            "description": "Submit or update RSVP for the current user.\n\n**Available RSVP Statuses:**\n- CONFIRMED: User will attend (counts toward max attendees)\n- MAYBE: User might attend (does not count toward limit)\n- DECLINED: User will not attend (does not count toward limit)\n- PENDING: Default/undecided status (does not count toward limit)\n\n**Request body:**\n```json\n{\n  \"status\": \"CONFIRMED\" // Required: One of [CONFIRMED, MAYBE, DECLINED, PENDING]\n}\n```\n\n**Business rules:**\n- Only CONFIRMED RSVPs count toward max attendees limit\n- System prevents overbooking when limit is reached\n- User gets notifications for RSVP updates\n- Admin users are notified of all RSVP changes"
+          },
+          "response": []
+        },
+        {
+          "name": "Remove RSVP for Trestle Board",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trestle-board/{{trestle_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["trestle-board", "{{trestle_board_id}}", "rsvp"]
+            },
+            "description": "Remove current user's RSVP from the trestle board.\n\n**Note:** This completely removes the user's RSVP record, regardless of previous status (CONFIRMED, MAYBE, DECLINED, or PENDING).\n\n**Response:** Success message confirming RSVP removal\n\n**Use case:** User wants to cancel their RSVP entirely rather than changing status to DECLINED"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All RSVP Participants (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trestle-board/{{trestle_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "trestle-board", "{{trestle_board_id}}", "rsvp"]
+            },
+            "description": "Get all RSVP participants for a trestle board (Admin only).\n\n**Available RSVP Statuses:**\n- CONFIRMED: User confirmed attendance\n- MAYBE: User might attend\n- DECLINED: User declined attendance\n- PENDING: Default/undecided status\n\n**Response includes:**\n- RSVP counts by status (total count for each status)\n- Participants grouped by status (separate arrays per status)\n- Complete participant list with user details (name, email, phone, etc.)\n- Trestle board RSVP settings (isRSVP, maxAttendees)\n- isMaxAttendeesReached flag\n\n**Admin features:**\n- View all participants regardless of status\n- See who signed up users (admin vs self)\n- Track RSVP trends and attendance patterns"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User RSVP (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"status\": \"CONFIRMED\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/trestle-board/{{trestle_board_id}}/rsvp",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "trestle-board", "{{trestle_board_id}}", "rsvp"]
+            },
+            "description": "Update any user's RSVP status (Admin only).\n\n**Available RSVP Statuses:**\n- CONFIRMED: User will attend (counts toward max attendees)\n- MAYBE: User might attend (does not count toward limit)\n- DECLINED: User will not attend (does not count toward limit)\n- PENDING: Default/undecided status (does not count toward limit)\n\n**Request body:**\n```json\n{\n  \"userId\": \"user_id_here\",  // Required: ID of user to update\n  \"status\": \"CONFIRMED\"       // Required: One of [CONFIRMED, MAYBE, DECLINED, PENDING]\n}\n```\n\n**Admin features:**\n- Can RSVP for any user\n- Can change any user's status\n- User gets notified of admin changes\n- Tracks which admin made the change\n- System validates max attendees limit"
+          },
+          "response": []
+        },
+        {
+          "name": "Remove User RSVP (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trestle-board/{{trestle_board_id}}/rsvp?userId={{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "trestle-board", "{{trestle_board_id}}", "rsvp"],
+              "query": [
+                { "key": "userId", "value": "{{user_id}}" }
+              ]
+            },
+            "description": "Remove any user's RSVP from the trestle board (Admin only).\n\n**Note:** This completely removes the user's RSVP record, regardless of their previous status (CONFIRMED, MAYBE, DECLINED, or PENDING).\n\n**Query parameters:**\n- userId: ID of the user to remove RSVP for (Required)\n\n**Response:** Success message confirming RSVP removal\n\n**Admin features:**\n- Can remove any user's RSVP\n- User gets notified of removal\n- Useful for managing overbooked events\n- Alternative to changing status to DECLINED when complete removal is preferred"
           },
           "response": []
         }
