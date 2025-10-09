@@ -5,17 +5,17 @@ interface MainLayoutProps {
 }
 
 export const metadata: Metadata = {
-    title: "PrimeReact APOLLO",
+    title: "FRATERNA Admin",
     description:
-        "The ultimate collection of design-agnostic, flexible and accessible React UI Components.",
+        "Administrative dashboard for FRATERNA community management",
     robots: { index: false, follow: false },
     openGraph: {
         type: "website",
-        title: "PrimeReact APOLLO-REACT",
+        title: "FRATERNA Admin",
         url: "https://www.primefaces.org/apollo-react",
         description:
             "The ultimate collection of design-agnostic, flexible and accessible React UI Components.",
-        images: ["https://www.primefaces.org/static/social/apollo-react.png"],
+        images: ["/images/logo.svg"],
         ttl: 604800,
     },
     icons: {
