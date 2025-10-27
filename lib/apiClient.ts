@@ -152,6 +152,7 @@ class ApiClient {
         status?: string;
         sortField?: string;
         sortOrder?: number;
+        showDeleted?: boolean;
     }) {
         return this.get<{
             users: any[];
@@ -197,6 +198,10 @@ class ApiClient {
 
     async deleteUser(id: string) {
         return this.delete(`/admin/users/${id}`);
+    }
+
+    async reactivateUser(id: string) {
+        return this.post<any>(`/admin/users/${id}/reactivate`, {});
     }
 
     // Membership card methods

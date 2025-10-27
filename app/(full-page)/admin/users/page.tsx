@@ -13,6 +13,7 @@ import { Dropdown } from "primereact/dropdown";
 import { Calendar } from "primereact/calendar";
 import { Toast } from "primereact/toast";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
+import { InputSwitch } from "primereact/inputswitch";
 import { FilterMatchMode, FilterOperator } from "primereact/api";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "primereact/skeleton";
@@ -37,6 +38,7 @@ interface User {
     paidDate?: string | null;
     lastLogin?: string;
     createdAt: string;
+    isDeleted?: boolean;
 }
 
 interface UserFormData {
@@ -103,6 +105,7 @@ export default function MembersPage() {
     const [sortField, setSortField] = useState<string | undefined>(undefined);
     const [sortOrder, setSortOrder] = useState<number | undefined>(undefined);
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+    const [showDeleted, setShowDeleted] = useState(false);
 
     // Use debounce hook for search
     const debouncedFilterValue = useDebounce(globalFilterValue, 500);
@@ -116,7 +119,7 @@ export default function MembersPage() {
 
     useEffect(() => {
         loadMembers();
-    }, [currentPage, rowsPerPage, debouncedFilterValue]);
+    }, [currentPage, rowsPerPage, debouncedFilterValue, showDeleted]);
 
     const loadMembers = async () => {
         setLoading(true);
@@ -128,6 +131,7 @@ export default function MembersPage() {
                 search: debouncedFilterValue,
                 sortField,
                 sortOrder,
+                showDeleted,
             });
 
             if (response.error) {
@@ -247,19 +251,7 @@ export default function MembersPage() {
         });
     };
 
-    const confirmBulkDeleteUsers = () => {
-        if (selectedUsers.length === 0) return;
-
-        confirmDialog({
-            message: `Are you sure you want to delete ${selectedUsers.length} selected user(s)?`,
-            header: "Bulk Delete Confirmation",
-            icon: "pi pi-exclamation-triangle",
-            acceptClassName: "p-button-danger",
-            accept: () => bulkDeleteUsers(),
-        });
-    };
-
-    const bulkDeleteUsers = async () => {
+    const bulkDeleteUsers = useCallback(async () => {
         if (selectedUsers.length === 0) return;
 
         try {
@@ -272,7 +264,46 @@ export default function MembersPage() {
         } catch (error) {
             showToast("error", "Error", "Failed to delete some users");
         }
-    };
+    }, [selectedUsers]);
+
+    const confirmBulkDeleteUsers = useCallback(() => {
+        if (selectedUsers.length === 0) return;
+
+        confirmDialog({
+            message: `Are you sure you want to delete ${selectedUsers.length} selected user(s)?`,
+            header: "Bulk Delete Confirmation",
+            icon: "pi pi-exclamation-triangle",
+            acceptClassName: "p-button-danger",
+            accept: () => bulkDeleteUsers(),
+        });
+    }, [selectedUsers.length, bulkDeleteUsers]);
+
+    const bulkReactivateUsers = useCallback(async () => {
+        if (selectedUsers.length === 0) return;
+
+        try {
+            const reactivatePromises = selectedUsers.map(user => apiClient.reactivateUser(user.id));
+            await Promise.all(reactivatePromises);
+
+            setSelectedUsers([]);
+            showToast("success", "Success", `${selectedUsers.length} user(s) reactivated successfully`);
+            loadMembers(); // Reload the list
+        } catch (error) {
+            showToast("error", "Error", "Failed to reactivate some users");
+        }
+    }, [selectedUsers]);
+
+    const confirmBulkReactivateUsers = useCallback(() => {
+        if (selectedUsers.length === 0) return;
+
+        confirmDialog({
+            message: `Are you sure you want to reactivate ${selectedUsers.length} selected user(s)?`,
+            header: "Bulk Reactivate Confirmation",
+            icon: "pi pi-refresh",
+            acceptClassName: "p-button-success",
+            accept: () => bulkReactivateUsers(),
+        });
+    }, [selectedUsers.length, bulkReactivateUsers]);
 
     const deleteUser = async (userId: string) => {
         try {
@@ -286,6 +317,22 @@ export default function MembersPage() {
             showToast("success", "Success", "Member deleted successfully");
         } catch (error) {
             showToast("error", "Error", "Failed to delete member");
+        }
+    };
+
+    const reactivateUser = async (userId: string) => {
+        try {
+            const response = await apiClient.reactivateUser(userId);
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            setUsers(users.filter(user => user.id !== userId));
+            showToast("success", "Success", "Member reactivated successfully");
+            loadMembers(); // Reload the list
+        } catch (error) {
+            showToast("error", "Error", "Failed to reactivate member");
         }
     };
 
@@ -474,7 +521,7 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
                     tooltip="View Details"
                     onClick={() => router.push(`/admin/users/${rowData.id}`)}
                 /> */}
-                {rowData.role !== "ADMIN" && <Button
+                {rowData.role !== "ADMIN" && !rowData.isDeleted && <Button
                     icon="pi pi-pencil"
                     size="small"
                     text
@@ -482,38 +529,80 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
                     tooltip="Edit Member"
                     onClick={() => openEditUserDialog(rowData)}
                 />}
-                {rowData.role !== "ADMIN" && <Button
+                {rowData.role !== "ADMIN" && !rowData.isDeleted && <Button
                     icon="pi pi-trash"
                     size="small"
                     text
                     severity="danger"
                     tooltip="Delete Member"
-                        onClick={() => confirmDeleteUser(rowData)}
-                    />}
-                </div>
-            );
-        };
+                    onClick={() => confirmDeleteUser(rowData)}
+                />}
+                {rowData.isDeleted && <Button
+                    icon="pi pi-refresh"
+                    size="small"
+                    text
+                    severity="success"
+                    tooltip="Reactivate Member"
+                    onClick={() => reactivateUser(rowData.id)}
+                />}
+            </div>
+        );
+    };
 
-        const header = useMemo(() => (
-            <>
-                <div className="w-full flex justify-content-end">
-                    {selectedUsers.length > 0 && (
-                        <Button
-                            label={`Delete Selected (${selectedUsers.length})`}
-                            icon="pi pi-trash"
-                            onClick={confirmBulkDeleteUsers}
-                            severity="danger"
-                            className="p-button-raised mb-4"
-                        />
-                    )}
+    const header = useMemo(() => (
+        <>
+            <div className="w-full flex justify-content-end align-items-center gap-3 mb-3">
+                {selectedUsers.length > 0 && (
+                    <Button
+                        label={showDeleted ? `Activate Selected (${selectedUsers.length})` : `Delete Selected (${selectedUsers.length})`}
+                        icon={showDeleted ? "pi pi-refresh" : "pi pi-trash"}
+                        onClick={showDeleted ? confirmBulkReactivateUsers : confirmBulkDeleteUsers}
+                        severity={showDeleted ? "success" : "danger"}
+                        className="p-button-raised"
+                        style={{height:"43px"}}
+                    />
+                )}
+                <div 
+                    className="flex align-items-center gap-2 py-4 px-3 border-1 border-200 border-round transition-all transition-duration-300"
+                    style={{ 
+                        backgroundColor: showDeleted ? '#fff3cd' : '#f8f9fa',
+                        transition: 'all 0.3s ease',
+                        height: '38px'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                        e.currentTarget.style.borderColor = showDeleted ? '#ffc107' : '#007bff';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                        e.currentTarget.style.borderColor = '#dee2e6';
+                    }}
+                >
+                    <i className={`pi ${showDeleted ? 'pi-eye' : 'pi-eye-slash'} text-color-secondary`}></i>
+                    <label htmlFor="showDeleted" className="font-medium text-color cursor-pointer" style={{ marginBottom: 0 }}>
+                        {showDeleted ? 'Showing Deleted' : 'Show Deleted'}
+                    </label>
+                    <InputSwitch
+                        id="showDeleted"
+                        checked={showDeleted}
+                        onChange={(e) => {
+                            setShowDeleted(e.value);
+                            setCurrentPage(1);
+                            setSelectedUsers([]);
+                        }}
+                    />
                 </div>
-                <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
+            </div>
+            <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center gap-3">
 
-                    <div className="flex flex-column">
-                        <h2 className="text-2xl font-bold m-0">Member Management</h2>
-                        <span className="text-600">Manage all registered members</span>
-                    </div>
-                    <div className="flex gap-2">
+                <div className="flex flex-column">
+                    <h2 className="text-2xl font-bold m-0">Member Management</h2>
+                    <span className="text-600">{showDeleted ? "Viewing deleted members" : "Manage all registered members"}</span>
+                </div>
+                <div className="flex gap-2 align-items-center">
+
                     <span className="p-input-icon-left">
                         <i className="pi pi-search" />
                         <InputText
@@ -540,7 +629,7 @@ Jane,Smith,jane.smith@example.com,+1234567891,ACTIVE,primo1235,2024-01-16,2024-0
             </div>
         </>
 
-    ), [globalFilterValue]);
+    ), [globalFilterValue, showDeleted, selectedUsers.length]);
 
     return (
         <div className="grid">

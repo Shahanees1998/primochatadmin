@@ -25,11 +25,12 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status') || '';
         const sortField = searchParams.get('sortField');
         const sortOrder = searchParams.get('sortOrder');
+        const showDeleted = searchParams.get('showDeleted') === 'true';
 
         const skip = (page - 1) * limit;
 
         // Build where clause
-        const where: any = { isDeleted: false };
+        const where: any = showDeleted ? { isDeleted: true } : { isDeleted: false };
         
         if (search) {
             where.OR = [
@@ -68,11 +69,13 @@ export async function GET(request: NextRequest) {
                     role: true,
                     status: true,
                     profileImage: true,
+                    profileImagePublicId: true,
                     membershipNumber: true,
                     joinDate: true,
                     paidDate: true,
                     lastLogin: true,
                     createdAt: true,
+                    isDeleted: true,
                 },
             }),
             prisma.user.count({ where }),
@@ -327,14 +330,18 @@ export async function POST(request: NextRequest) {
                         const appBaseUrl = process.env.NEXTAUTH_URL || 'https://primoochat.vercel.app';
                         const loginUrl = `${appBaseUrl}/auth/login`;
                         const emailContent = createWelcomeEmail(user.firstName, loginUrl, user.email, plainPassword);
-
-                        await sgMail.send({
+                        console.log('emailContent', emailContent);
+                        console.log('email', email);
+                        console.log('FROM_EMAIL', FROM_EMAIL);
+                        console.log('subject', `Welcome to ${APP_NAME}`);
+                        console.log('app base url', appBaseUrl);
+                        const res = await sgMail.send({
                             to: email,
                             from: FROM_EMAIL,
                             subject: `Welcome to ${APP_NAME}`,
                             html: emailContent,
                         });
-
+                        console.log('res', res);
                         console.log(`Welcome email sent to ${user.email}`);
                     } else {
                         console.log('SendGrid not configured. Skipping welcome email.');
